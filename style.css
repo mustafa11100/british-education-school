@@ -1,16 +1,47 @@
+/* =====================================================
+   نظام إدارة المدرسة - STYLE
+===================================================== */
+
 * {
   box-sizing: border-box;
 }
 
-html {
-  direction: rtl;
+:root {
+  --primary: #173b70;
+  --primary-dark: #102b52;
+  --secondary: #eef3f9;
+  --success: #16834b;
+  --danger: #c62828;
+  --warning: #d88900;
+  --text: #172033;
+  --muted: #6b7280;
+  --border: #e1e7ef;
+  --background: #f4f7fb;
+  --white: #ffffff;
+  --shadow: 0 8px 25px rgba(23, 59, 112, 0.08);
+  --radius: 14px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
 }
 
 body {
-  margin: 0;
+  background: var(--background);
+  color: var(--text);
   font-family: Tahoma, Arial, sans-serif;
-  background: #f4f7fb;
-  color: #172033;
+  direction: rtl;
+}
+
+/* =====================================================
+   عام
+===================================================== */
+
+.hidden {
+  display: none !important;
 }
 
 button,
@@ -24,14 +55,55 @@ button {
   cursor: pointer;
 }
 
-.hidden {
-  display: none !important;
+.btn {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 16px;
+  font-size: 14px;
+  transition: 0.2s ease;
 }
 
+.btn:hover {
+  transform: translateY(-1px);
+}
 
-/* =========================
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--primary);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-warning {
+  background: var(--warning);
+  color: white;
+}
+
+.btn-small {
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
+/* =====================================================
    LOGIN
-========================= */
+===================================================== */
 
 .login-page {
   min-height: 100vh;
@@ -39,50 +111,58 @@ button {
   align-items: center;
   justify-content: center;
   padding: 25px;
-  background: linear-gradient(
-    135deg,
-    #173b70,
-    #2d65a5
-  );
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(23, 59, 112, 0.12),
+      transparent 35%
+    ),
+    var(--background);
 }
 
 .login-card {
   width: 100%;
   max-width: 430px;
   background: white;
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 35px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
-  text-align: center;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .school-logo {
   width: 75px;
   height: 75px;
-  margin: 0 auto 15px;
+  margin: 0 auto 18px;
   border-radius: 50%;
-  background: #173b70;
+  background: var(--primary);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 35px;
+  font-size: 36px;
 }
 
 .login-card h1 {
-  margin: 10px 0;
-  color: #173b70;
+  text-align: center;
+  margin: 0;
+  color: var(--primary);
+  font-size: 25px;
 }
 
 .login-subtitle {
-  margin: 0 0 25px;
-  color: #718096;
-  font-size: 14px;
+  text-align: center;
+  color: var(--muted);
+  margin: 10px 0 28px;
+  font-size: 13px;
 }
+
+/* =====================================================
+   FORMS
+===================================================== */
 
 .form-group {
   margin-bottom: 17px;
-  text-align: right;
 }
 
 .form-group label {
@@ -92,26 +172,27 @@ button {
   font-size: 14px;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+input,
+select,
+textarea {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #d6deea;
-  border-radius: 9px;
-  outline: none;
+  border: 1px solid var(--border);
   background: white;
-  color: #172033;
+  border-radius: 9px;
+  padding: 11px 12px;
+  outline: none;
+  font-size: 14px;
+  color: var(--text);
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #2d65a5;
-  box-shadow: 0 0 0 3px rgba(45, 101, 165, 0.1);
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(23, 59, 112, 0.08);
 }
 
-.form-group textarea {
+textarea {
   min-height: 100px;
   resize: vertical;
 }
@@ -119,101 +200,38 @@ button {
 .login-button {
   width: 100%;
   margin-top: 5px;
+  padding: 13px;
+}
+
+.message {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 14px;
 }
 
 .demo-accounts {
   margin-top: 25px;
   padding: 15px;
+  background: #f7f9fc;
   border-radius: 10px;
-  background: #f4f7fb;
-  color: #5b677a;
-  font-size: 13px;
-  line-height: 1.9;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 2;
 }
 
 .demo-accounts strong {
+  color: var(--text);
   display: block;
-  color: #173b70;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
-.message {
-  margin-top: 12px;
-  font-size: 14px;
-  color: #c0392b;
-}
-
-
-/* =========================
-   BUTTONS
-========================= */
-
-.btn {
-  border: 0;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 14px;
-  transition: 0.2s;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn-primary {
-  background: #173b70;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #102f5d;
-}
-
-.btn-secondary {
-  background: #e8eef7;
-  color: #173b70;
-}
-
-.btn-secondary:hover {
-  background: #dce5f2;
-}
-
-.btn-danger {
-  background: #c0392b;
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #a93226;
-}
-
-.btn-success {
-  background: #218c5a;
-  color: white;
-}
-
-.btn-warning {
-  background: #d89b00;
-  color: white;
-}
-
-.btn-small {
-  padding: 7px 10px;
-  font-size: 12px;
-}
-
-
-/* =========================
+/* =====================================================
    TOPBAR
-========================= */
-
-.app-page {
-  min-height: 100vh;
-}
+===================================================== */
 
 .topbar {
   height: 70px;
-  background: #173b70;
+  background: var(--primary);
   color: white;
   display: flex;
   align-items: center;
@@ -222,6 +240,7 @@ button {
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
 }
 
 .topbar-right,
@@ -242,21 +261,20 @@ button {
 }
 
 .menu-button {
-  display: none;
   border: 0;
   background: transparent;
   color: white;
   font-size: 25px;
+  display: none;
 }
 
 .online-indicator {
-  color: #8ff0bd !important;
+  color: #8ff0b8 !important;
 }
 
-
-/* =========================
+/* =====================================================
    LAYOUT
-========================= */
+===================================================== */
 
 .layout {
   display: flex;
@@ -264,44 +282,47 @@ button {
 }
 
 .sidebar {
-  width: 240px;
+  width: 245px;
   background: white;
-  border-left: 1px solid #e1e7ef;
+  border-left: 1px solid var(--border);
   padding: 20px 12px;
   flex-shrink: 0;
 }
 
 .sidebar-title {
-  color: #8a95a6;
+  color: var(--muted);
   font-size: 12px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
+  font-weight: bold;
+  padding: 0 12px 12px;
 }
 
 .nav-item {
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 12px 15px;
-  border-radius: 9px;
+  padding: 12px 14px;
   margin-bottom: 5px;
-  color: #536174;
+  border-radius: 9px;
+  color: var(--text);
   text-align: right;
-  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 10px;
+  font-size: 14px;
 }
 
 .nav-item:hover {
-  background: #f0f4fa;
-  color: #173b70;
+  background: var(--secondary);
 }
 
 .nav-item.active {
-  background: #173b70;
+  background: var(--primary);
   color: white;
 }
+
+/* =====================================================
+   MAIN
+===================================================== */
 
 .main-content {
   flex: 1;
@@ -309,113 +330,107 @@ button {
   min-width: 0;
 }
 
-
-/* =========================
-   PAGE HEADER
-========================= */
+.page-section {
+  width: 100%;
+}
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  margin-bottom: 25px;
+  margin-bottom: 22px;
 }
 
 .page-header h1 {
   margin: 0 0 7px;
-  color: #173b70;
   font-size: 25px;
 }
 
 .page-header p {
   margin: 0;
-  color: #778397;
+  color: var(--muted);
   font-size: 14px;
 }
 
-
-/* =========================
+/* =====================================================
    CARDS
-========================= */
+===================================================== */
 
 .card {
   background: white;
-  border-radius: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 18px rgba(30, 50, 80, 0.06);
-  border: 1px solid #e7edf5;
+  box-shadow: var(--shadow);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 15px;
+  margin-bottom: 17px;
 }
 
 .card-header h3 {
   margin: 0;
-  color: #173b70;
+  font-size: 17px;
 }
 
-
-/* =========================
+/* =====================================================
    STATS
-========================= */
+===================================================== */
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 17px;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
-.stats-grid.small-stats {
+.small-stats {
   grid-template-columns: repeat(3, 1fr);
 }
 
 .stat-card {
   background: white;
-  border: 1px solid #e7edf5;
-  border-radius: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 20px;
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   gap: 15px;
-  box-shadow: 0 4px 18px rgba(30, 50, 80, 0.05);
-}
-
-.stat-card span {
-  display: block;
-  color: #7b8798;
-  font-size: 13px;
-  margin-bottom: 6px;
-}
-
-.stat-card strong {
-  display: block;
-  color: #173b70;
-  font-size: 27px;
 }
 
 .stat-icon {
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  background: #edf3fb;
+  background: var(--secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
 }
 
+.stat-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
 
-/* =========================
+.stat-card strong {
+  font-size: 25px;
+  color: var(--primary);
+}
+
+/* =====================================================
    DASHBOARD
-========================= */
+===================================================== */
 
 .dashboard-grid {
   display: grid;
@@ -424,32 +439,32 @@ button {
 }
 
 #healthStatus {
-  padding: 15px;
-  border-radius: 9px;
-  background: #eef8f2;
-  color: #218c5a;
-}
-
-#onlineUsersList {
   min-height: 80px;
+  display: flex;
+  align-items: center;
+  color: var(--success);
+  font-weight: bold;
 }
 
 .online-user {
-  padding: 10px;
-  border-bottom: 1px solid #edf0f4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .online-user:last-child {
   border-bottom: 0;
 }
 
+.online-dot {
+  color: var(--success);
+}
 
-/* =========================
-   TABLE
-========================= */
+/* =====================================================
+   TABLES
+===================================================== */
 
 .table-wrapper {
   width: 100%;
@@ -462,47 +477,31 @@ table {
   min-width: 700px;
 }
 
-thead {
-  background: #f5f7fa;
-}
-
 th,
 td {
   padding: 13px 12px;
+  border-bottom: 1px solid var(--border);
   text-align: right;
-  border-bottom: 1px solid #edf0f4;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 th {
-  color: #536174;
-  font-size: 13px;
-}
-
-td {
-  color: #293548;
-  font-size: 13px;
+  background: #f7f9fc;
+  color: var(--primary);
+  font-weight: bold;
 }
 
 tbody tr:hover {
-  background: #fafbfd;
+  background: #fafcff;
 }
 
-.actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-
-/* =========================
+/* =====================================================
    BADGES
-========================= */
+===================================================== */
 
 .badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   padding: 5px 9px;
   border-radius: 20px;
   font-size: 11px;
@@ -510,29 +509,38 @@ tbody tr:hover {
 }
 
 .badge-success {
-  background: #e5f7ee;
-  color: #218c5a;
+  background: #e8f7ef;
+  color: var(--success);
 }
 
 .badge-danger {
-  background: #fdecea;
-  color: #c0392b;
+  background: #fdeaea;
+  color: var(--danger);
 }
 
 .badge-warning {
-  background: #fff4d6;
-  color: #a87500;
+  background: #fff4dc;
+  color: #9a6400;
 }
 
-.badge-info {
-  background: #e8f0fb;
-  color: #2d65a5;
+.badge-primary {
+  background: #eaf0f8;
+  color: var(--primary);
 }
 
+/* =====================================================
+   ACTIONS
+===================================================== */
 
-/* =========================
-   FORMS
-========================= */
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* =====================================================
+   FORM ROW
+===================================================== */
 
 .form-row {
   display: grid;
@@ -543,42 +551,36 @@ tbody tr:hover {
 
 .button-group {
   display: flex;
-  align-items: flex-end;
+  align-items: end;
 }
 
-.button-group .btn {
-  width: 100%;
-}
-
-
-/* =========================
+/* =====================================================
    ATTENDANCE
-========================= */
+===================================================== */
 
 .attendance-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .attendance-tab {
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--border);
   background: white;
-  color: #536174;
+  color: var(--text);
+  border-radius: 9px;
   padding: 10px 18px;
-  border-radius: 8px;
 }
 
 .attendance-tab.active {
-  background: #173b70;
+  background: var(--primary);
   color: white;
-  border-color: #173b70;
+  border-color: var(--primary);
 }
 
-
-/* =========================
+/* =====================================================
    VIDEOS
-========================= */
+===================================================== */
 
 .videos-grid {
   display: grid;
@@ -588,15 +590,15 @@ tbody tr:hover {
 
 .video-card {
   background: white;
-  border: 1px solid #e5eaf1;
-  border-radius: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(30, 50, 80, 0.05);
+  box-shadow: var(--shadow);
 }
 
-.video-placeholder {
+.video-thumbnail {
   height: 150px;
-  background: #173b70;
+  background: var(--primary);
   color: white;
   display: flex;
   align-items: center;
@@ -604,146 +606,170 @@ tbody tr:hover {
   font-size: 45px;
 }
 
-.video-info {
-  padding: 15px;
+.video-content {
+  padding: 16px;
 }
 
-.video-info h3 {
+.video-content h3 {
   margin: 0 0 8px;
-  color: #173b70;
+  font-size: 16px;
 }
 
-.video-info p {
-  margin: 0;
-  color: #7b8798;
+.video-content p {
+  color: var(--muted);
   font-size: 12px;
 }
 
-
-/* =========================
+/* =====================================================
    MODAL
-========================= */
+===================================================== */
 
 .modal {
   position: fixed;
   inset: 0;
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
 .modal-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 20, 35, 0.55);
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .modal-box {
   position: relative;
-  width: calc(100% - 30px);
-  max-width: 650px;
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
+  z-index: 2;
   background: white;
-  margin: 20px auto;
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #173b70;
 }
 
 .modal-close {
   border: 0;
-  background: #f0f2f5;
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  font-size: 23px;
-  color: #536174;
+  background: transparent;
+  font-size: 28px;
+  color: var(--muted);
 }
 
+#modalBody {
+  padding: 20px;
+}
 
-/* =========================
+/* =====================================================
    TOAST
-========================= */
+===================================================== */
 
 .toast {
   position: fixed;
   left: 25px;
   bottom: 25px;
   z-index: 2000;
-  min-width: 250px;
-  max-width: 400px;
-  padding: 13px 18px;
-  background: #173b70;
+  background: #172033;
   color: white;
-  border-radius: 9px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-  transform: translateY(120px);
+  padding: 13px 18px;
+  border-radius: 10px;
   opacity: 0;
-  transition: 0.3s;
+  pointer-events: none;
+  transform: translateY(15px);
+  transition: 0.25s ease;
+  max-width: 350px;
+  font-size: 13px;
 }
 
 .toast.show {
-  transform: translateY(0);
   opacity: 1;
+  transform: translateY(0);
 }
 
-
-/* =========================
-   EMPTY STATE
-========================= */
+/* =====================================================
+   EMPTY
+===================================================== */
 
 .empty-state {
-  text-align: center;
   padding: 35px 15px;
-  color: #8a95a6;
+  text-align: center;
+  color: var(--muted);
 }
 
-.empty-state .empty-icon {
-  font-size: 35px;
-  margin-bottom: 10px;
-}
+/* =====================================================
+   LOGIN RESPONSIVE
+===================================================== */
 
-
-/* =========================
-   RESPONSIVE
-========================= */
-
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
   }
 
   .videos-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .sidebar {
+    width: 220px;
+  }
+
 }
 
-@media (max-width: 850px) {
+/* =====================================================
+   TABLET / MOBILE
+===================================================== */
+
+@media (max-width: 700px) {
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .topbar h2 {
+    font-size: 15px;
+  }
+
+  .topbar-left .btn {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
 
   .menu-button {
     display: block;
   }
 
+  .layout {
+    position: relative;
+  }
+
   .sidebar {
     position: fixed;
-    right: -260px;
     top: 70px;
-    bottom: 0;
-    z-index: 500;
-    transition: 0.3s;
+    right: -260px;
+    height: calc(100vh - 70px);
+    z-index: 90;
+    width: 245px;
+    transition: right 0.25s ease;
     box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
   }
 
@@ -752,46 +778,8 @@ tbody tr:hover {
   }
 
   .main-content {
+    padding: 15px;
     width: 100%;
-    padding: 18px;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-}
-
-@media (max-width: 600px) {
-
-  .topbar {
-    padding: 0 12px;
-  }
-
-  .topbar h2 {
-    font-size: 14px;
-  }
-
-  .topbar-left .online-indicator {
-    display: none;
-  }
-
-  .topbar .btn-danger {
-    padding: 8px 10px;
-    font-size: 11px;
-  }
-
-  .stats-grid,
-  .stats-grid.small-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .videos-grid {
-    grid-template-columns: 1fr;
   }
 
   .page-header {
@@ -803,8 +791,87 @@ tbody tr:hover {
     width: 100%;
   }
 
+  .stats-grid,
+  .small-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .videos-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 480px) {
+
+  .login-page {
+    padding: 12px;
+  }
+
   .login-card {
     padding: 25px 18px;
+  }
+
+  .school-logo {
+    width: 65px;
+    height: 65px;
+    font-size: 30px;
+  }
+
+  .login-card h1 {
+    font-size: 21px;
+  }
+
+  .topbar {
+    height: 62px;
+  }
+
+  .layout {
+    min-height: calc(100vh - 62px);
+  }
+
+  .sidebar {
+    top: 62px;
+    height: calc(100vh - 62px);
+  }
+
+  .main-content {
+    padding: 12px;
+  }
+
+  .stat-card {
+    padding: 15px;
+  }
+
+  .stat-card strong {
+    font-size: 21px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-box {
+    max-height: 95vh;
+  }
+
+  .toast {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: none;
   }
 
 }
