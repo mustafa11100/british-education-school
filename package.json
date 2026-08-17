@@ -1,13 +1,496 @@
-{
-  "name": "british-education-school-portal",
-  "version": "1.0.0",
-  "description": "School Management Portal",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^5.1.0",
-    "better-sqlite3": "^11.10.0"
-  }
+const express = require("express");
+const path = require("path");
+const Database = require("better-sqlite3");
+
+const app = express();
+
+const PORT = process.env.PORT || 3000;
+const HOST = "0.0.0.0";
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const db = new Database("school.db");
+
+db.pragma("journal_mode = WAL");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT DEFAULT 'user',
+    active INTEGER DEFAULT 1,
+    online INTEGER DEFAULT 0,
+    last_seen TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    class_name TEXT,
+    parent_phone TEXT,
+    status TEXT DEFAULT 'نشط'
+  );
+
+  CREATE TABLE IF NOT EXISTS employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_no TEXT,
+    name TEXT NOT NULL,
+    job TEXT,
+    department TEXT,
+    phone TEXT,
+    salary REAL DEFAULT 0,
+    status TEXT DEFAULT 'نشط'
+  );
+
+  CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT,
+    action TEXT,
+    details TEXT,
+    created_at TEXT NOT NULL
+  );
+`);
+
+const admin = db.prepare(
+  "SELECT id FROM users WHERE username = ?"
+).get("admin");
+
+if (!admin) {
+  db.prepare(`
+    INSERT INTO users
+    (username, password, name, role, active, online, last_seen)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    "admin",
+    "1234",
+    "مدير النظام",
+    "admin",
+    1,
+    0,
+    new Date().toISOString()
+  );
 }
+
+function logAction(username, action, details = "") {
+  db.prepare(`
+    INSERT INTO logs
+    (username, action, details, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(
+    username || "",
+    action,
+    details,
+    new Date().toISOString()
+  );
+}
+
+/* اختبار السيرفر */
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "School portal is running"
+  });
+});
+
+/* الصفحة الرئيسية */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+/* الملفات */
+app.use(express.static(__dirname));
+
+/* المستخدمون */
+app.get("/api/users", (req, res) => {
+  const users = db.prepare(`
+    SELECT
+      id,
+      username,
+      name,
+      role,
+      active,
+      online,
+      last_seen
+    FROM users
+    ORDER BY id DESC
+  `).all();
+
+  res.json(users);
+});
+
+/* إنشاء مستخدم */
+app.post("/api/users", (req, res) => {
+  const {
+    username,
+    password,
+    name,
+    role = "user"
+  } = req.body;
+
+  if (!username || !password || !name) {
+    return res.status(400).json({
+      error: "أكمل جميع البيانات"
+    });
+  }
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO users
+      (username, password, name, role, active, online, last_seen)
+      VALUES (?, ?, ?, ?, 1, 0, ?)
+    `).run(
+      username.trim(),
+      password,
+      name.trim(),
+      role,
+      new Date().toISOString()
+    );
+
+    logAction(
+      username,
+      "إنشاء مستخدم",
+      `تم إنشاء المستخدم ${username}`
+    );
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid,
+      message: "تم إنشاء الحساب بنجاح"
+    });
+
+  } catch (error) {
+
+    if (String(error.message).includes("UNIQUE")) {
+      return res.status(409).json({
+        error: "اسم المستخدم موجود بالفعل"
+      });
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+      error: "تعذر إنشاء الحساب"
+    });
+  }
+});
+
+/* تسجيل الدخول */
+app.post("/api/login", (req, res) => {
+  const {
+    username,
+    password
+  } = req.body;
+
+  const user = db.prepare(`
+    SELECT *
+    FROM users
+    WHERE username = ?
+    LIMIT 1
+  `).get(username);
+
+  if (!user) {
+    return res.status(401).json({
+      error: "اسم المستخدم أو كلمة المرور غير صحيحة"
+    });
+  }
+
+  if (!user.active) {
+    return res.status(403).json({
+      error: "الحساب موقوف"
+    });
+  }
+
+  if (user.password !== password) {
+    return res.status(401).json({
+      error: "اسم المستخدم أو كلمة المرور غير صحيحة"
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE users
+    SET online = 1,
+        last_seen = ?
+    WHERE id = ?
+  `).run(now, user.id);
+
+  logAction(
+    user.username,
+    "تسجيل الدخول",
+    "تم تسجيل الدخول للنظام"
+  );
+
+  res.json({
+    success: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role
+    }
+  });
+});
+
+/* تسجيل الخروج */
+app.post("/api/logout", (req, res) => {
+  const { userId } = req.body;
+
+  if (userId) {
+    const user = db.prepare(
+      "SELECT username FROM users WHERE id = ?"
+    ).get(userId);
+
+    db.prepare(`
+      UPDATE users
+      SET online = 0,
+          last_seen = ?
+      WHERE id = ?
+    `).run(
+      new Date().toISOString(),
+      userId
+    );
+
+    if (user) {
+      logAction(
+        user.username,
+        "تسجيل الخروج",
+        "تم تسجيل الخروج"
+      );
+    }
+  }
+
+  res.json({
+    success: true
+  });
+});
+
+/* إيقاف / تفعيل مستخدم */
+app.patch("/api/users/:id/status", (req, res) => {
+  const id = Number(req.params.id);
+  const { active } = req.body;
+
+  db.prepare(`
+    UPDATE users
+    SET active = ?,
+        online = CASE WHEN ? = 0 THEN 0 ELSE online END
+    WHERE id = ?
+  `).run(
+    active ? 1 : 0,
+    active ? 1 : 0,
+    id
+  );
+
+  res.json({
+    success: true
+  });
+});
+
+/* الطلاب */
+app.get("/api/students", (req, res) => {
+  const students = db.prepare(`
+    SELECT *
+    FROM students
+    ORDER BY id DESC
+  `).all();
+
+  res.json(students);
+});
+
+app.post("/api/students", (req, res) => {
+  const {
+    name,
+    class_name,
+    parent_phone,
+    status = "نشط"
+  } = req.body;
+
+  if (!name) {
+    return res.status(400).json({
+      error: "اسم الطالب مطلوب"
+    });
+  }
+
+  const result = db.prepare(`
+    INSERT INTO students
+    (name, class_name, parent_phone, status)
+    VALUES (?, ?, ?, ?)
+  `).run(
+    name,
+    class_name || "",
+    parent_phone || "",
+    status
+  );
+
+  res.json({
+    success: true,
+    id: result.lastInsertRowid
+  });
+});
+
+/* الموظفون */
+app.get("/api/employees", (req, res) => {
+  const employees = db.prepare(`
+    SELECT *
+    FROM employees
+    ORDER BY id DESC
+  `).all();
+
+  res.json(employees);
+});
+
+app.post("/api/employees", (req, res) => {
+  const {
+    employee_no,
+    name,
+    job,
+    department,
+    phone,
+    salary,
+    status = "نشط"
+  } = req.body;
+
+  if (!name) {
+    return res.status(400).json({
+      error: "اسم الموظف مطلوب"
+    });
+  }
+
+  const result = db.prepare(`
+    INSERT INTO employees
+    (employee_no, name, job, department, phone, salary, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    employee_no || "",
+    name,
+    job || "",
+    department || "",
+    phone || "",
+    Number(salary) || 0,
+    status
+  );
+
+  res.json({
+    success: true,
+    id: result.lastInsertRowid
+  });
+});
+
+/* الملاحظات */
+app.get("/api/notes", (req, res) => {
+  const notes = db.prepare(`
+    SELECT
+      notes.id,
+      notes.student_id,
+      notes.text,
+      notes.created_at,
+      students.name AS student_name
+    FROM notes
+    LEFT JOIN students
+      ON students.id = notes.student_id
+    ORDER BY notes.id DESC
+  `).all();
+
+  res.json(notes);
+});
+
+app.post("/api/notes", (req, res) => {
+  const {
+    student_id,
+    text
+  } = req.body;
+
+  if (!student_id || !text) {
+    return res.status(400).json({
+      error: "اختر الطالب واكتب الملاحظة"
+    });
+  }
+
+  const result = db.prepare(`
+    INSERT INTO notes
+    (student_id, text, created_at)
+    VALUES (?, ?, ?)
+  `).run(
+    student_id,
+    text,
+    new Date().toISOString()
+  );
+
+  res.json({
+    success: true,
+    id: result.lastInsertRowid
+  });
+});
+
+/* السجلات */
+app.get("/api/logs", (req, res) => {
+  const logs = db.prepare(`
+    SELECT *
+    FROM logs
+    ORDER BY id DESC
+    LIMIT 500
+  `).all();
+
+  res.json(logs);
+});
+
+/* Dashboard */
+app.get("/api/dashboard", (req, res) => {
+
+  const users = db.prepare(
+    "SELECT COUNT(*) AS count FROM users"
+  ).get().count;
+
+  const online = db.prepare(
+    "SELECT COUNT(*) AS count FROM users WHERE online = 1"
+  ).get().count;
+
+  const students = db.prepare(
+    "SELECT COUNT(*) AS count FROM students"
+  ).get().count;
+
+  const employees = db.prepare(
+    "SELECT COUNT(*) AS count FROM employees"
+  ).get().count;
+
+  const onlineUsers = db.prepare(`
+    SELECT id, username, name, role
+    FROM users
+    WHERE online = 1
+    ORDER BY name
+  `).all();
+
+  res.json({
+    users,
+    online,
+    students,
+    employees,
+    onlineUsers
+  });
+});
+
+/* أي خطأ */
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  res.status(500).json({
+    error: "حدث خطأ داخل السيرفر"
+  });
+});
+
+/* تشغيل السيرفر */
+app.listen(PORT, HOST, () => {
+  console.log(
+    `School portal running on http://${HOST}:${PORT}`
+  );
+});
