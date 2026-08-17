@@ -1,28 +1,1285 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+  <title>نظام إدارة المدرسة</title>
 
-  <title>مدرسة التعليم البريطاني</title>
-
-  <link
-    rel="stylesheet"
-    href="/style.css"
-  >
+  <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
 
-  <div id="app"></div>
+  <!-- =========================
+       شاشة تسجيل الدخول
+  ========================== -->
+
+  <div id="loginPage" class="login-page">
+
+    <div class="login-card">
+
+      <div class="school-logo">
+        🎓
+      </div>
+
+      <h1>نظام إدارة المدرسة</h1>
+
+      <p class="login-subtitle">
+        British Education School Portal
+      </p>
+
+      <form id="loginForm">
+
+        <div class="form-group">
+
+          <label for="username">
+            اسم المستخدم
+          </label>
+
+          <input
+            id="username"
+            type="text"
+            placeholder="أدخل اسم المستخدم"
+            autocomplete="username"
+            required
+          >
+
+        </div>
+
+        <div class="form-group">
+
+          <label for="password">
+            كلمة المرور
+          </label>
+
+          <input
+            id="password"
+            type="password"
+            placeholder="أدخل كلمة المرور"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary login-button"
+        >
+          تسجيل الدخول
+        </button>
+
+      </form>
+
+      <div id="loginMessage" class="message"></div>
+
+      <div class="demo-accounts">
+
+        <strong>الحسابات التجريبية</strong>
+
+        <div>المدير: admin / 1234</div>
+        <div>المعلم: teacher / 1234</div>
+        <div>ولي الأمر: parent / 1234</div>
+        <div>الطالب: student / 1234</div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       النظام الرئيسي
+  ========================== -->
+
+  <div id="appPage" class="app-page hidden">
+
+    <!-- الشريط العلوي -->
+
+    <header class="topbar">
+
+      <div class="topbar-right">
+
+        <button
+          id="menuButton"
+          class="menu-button"
+          type="button"
+        >
+          ☰
+        </button>
+
+        <div>
+
+          <h2>
+            نظام إدارة المدرسة
+          </h2>
+
+          <span id="currentUserName">
+            المستخدم
+          </span>
+
+        </div>
+
+      </div>
+
+      <div class="topbar-left">
+
+        <span
+          id="onlineIndicator"
+          class="online-indicator"
+        >
+          ● متصل
+        </span>
+
+        <button
+          id="logoutButton"
+          class="btn btn-danger"
+          type="button"
+        >
+          تسجيل الخروج
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <!-- المحتوى -->
+
+    <div class="layout">
+
+      <!-- القائمة الجانبية -->
+
+      <aside id="sidebar" class="sidebar">
+
+        <div class="sidebar-title">
+          القائمة الرئيسية
+        </div>
+
+        <button
+          class="nav-item active"
+          data-page="dashboard"
+          type="button"
+        >
+          🏠
+          <span>الرئيسية</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="users"
+          type="button"
+        >
+          👥
+          <span>المستخدمون</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="students"
+          type="button"
+        >
+          🎓
+          <span>الطلاب</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="employees"
+          type="button"
+        >
+          👨‍💼
+          <span>الموظفون</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="attendance"
+          type="button"
+        >
+          📋
+          <span>الحضور</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="payroll"
+          type="button"
+        >
+          💰
+          <span>الرواتب</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="notes"
+          type="button"
+        >
+          📝
+          <span>ملاحظات الطلاب</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="videos"
+          type="button"
+        >
+          🎥
+          <span>الحصص والفيديوهات</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="logs"
+          type="button"
+        >
+          📊
+          <span>سجل العمليات</span>
+        </button>
+
+      </aside>
+
+
+      <!-- المنطقة الرئيسية -->
+
+      <main class="main-content">
+
+
+        <!-- =========================
+             Dashboard
+        ========================== -->
+
+        <section
+          id="page-dashboard"
+          class="page-section"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                لوحة التحكم
+              </h1>
+
+              <p>
+                مرحباً بك في نظام إدارة المدرسة
+              </p>
+
+            </div>
+
+            <button
+              id="refreshDashboard"
+              class="btn btn-secondary"
+              type="button"
+            >
+              🔄 تحديث
+            </button>
+
+          </div>
+
+
+          <div class="stats-grid">
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                👥
+              </div>
+
+              <div>
+
+                <span>
+                  إجمالي المستخدمين
+                </span>
+
+                <strong id="statUsers">
+                  0
+                </strong>
+
+              </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                🟢
+              </div>
+
+              <div>
+
+                <span>
+                  المستخدمون المتصلون
+                </span>
+
+                <strong id="statOnline">
+                  0
+                </strong>
+
+              </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                🎓
+              </div>
+
+              <div>
+
+                <span>
+                  الطلاب
+                </span>
+
+                <strong id="statStudents">
+                  0
+                </strong>
+
+              </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                👨‍💼
+              </div>
+
+              <div>
+
+                <span>
+                  الموظفون
+                </span>
+
+                <strong id="statEmployees">
+                  0
+                </strong>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="dashboard-grid">
+
+            <div class="card">
+
+              <div class="card-header">
+
+                <h3>
+                  حالة النظام
+                </h3>
+
+              </div>
+
+              <div id="healthStatus">
+                جاري التحقق...
+              </div>
+
+            </div>
+
+
+            <div class="card">
+
+              <div class="card-header">
+
+                <h3>
+                  المستخدمون المتصلون الآن
+                </h3>
+
+              </div>
+
+              <div id="onlineUsersList">
+                لا توجد بيانات
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Users
+        ========================== -->
+
+        <section
+          id="page-users"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                إدارة المستخدمين
+              </h1>
+
+              <p>
+                متابعة المستخدمين وتفعيل أو إيقاف الحسابات
+              </p>
+
+            </div>
+
+            <button
+              id="addUserButton"
+              class="btn btn-primary"
+              type="button"
+            >
+              ➕ إضافة مستخدم
+            </button>
+
+          </div>
+
+
+          <div class="stats-grid small-stats">
+
+            <div class="stat-card">
+
+              <span>
+                الكل
+              </span>
+
+              <strong id="usersTotal">
+                0
+              </strong>
+
+            </div>
+
+            <div class="stat-card">
+
+              <span>
+                نشط
+              </span>
+
+              <strong id="usersActive">
+                0
+              </strong>
+
+            </div>
+
+            <div class="stat-card">
+
+              <span>
+                متصل الآن
+              </span>
+
+              <strong id="usersOnline">
+                0
+              </strong>
+
+            </div>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      #
+                    </th>
+
+                    <th>
+                      اسم المستخدم
+                    </th>
+
+                    <th>
+                      الاسم
+                    </th>
+
+                    <th>
+                      الصلاحية
+                    </th>
+
+                    <th>
+                      الحالة
+                    </th>
+
+                    <th>
+                      آخر ظهور
+                    </th>
+
+                    <th>
+                      الإجراءات
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="usersTableBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Students
+        ========================== -->
+
+        <section
+          id="page-students"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                الطلاب
+              </h1>
+
+              <p>
+                إدارة بيانات الطلاب والحضور
+              </p>
+
+            </div>
+
+            <button
+              id="addStudentButton"
+              class="btn btn-primary"
+              type="button"
+            >
+              ➕ إضافة طالب
+            </button>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      #
+                    </th>
+
+                    <th>
+                      الطالب
+                    </th>
+
+                    <th>
+                      الفصل
+                    </th>
+
+                    <th>
+                      هاتف ولي الأمر
+                    </th>
+
+                    <th>
+                      الحالة
+                    </th>
+
+                    <th>
+                      الإجراءات
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="studentsTableBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Employees
+        ========================== -->
+
+        <section
+          id="page-employees"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                الموظفون
+              </h1>
+
+              <p>
+                إدارة الموظفين والبيانات الوظيفية
+              </p>
+
+            </div>
+
+            <button
+              id="addEmployeeButton"
+              class="btn btn-primary"
+              type="button"
+            >
+              ➕ إضافة موظف
+            </button>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      #
+                    </th>
+
+                    <th>
+                      رقم الموظف
+                    </th>
+
+                    <th>
+                      الاسم
+                    </th>
+
+                    <th>
+                      الوظيفة
+                    </th>
+
+                    <th>
+                      القسم
+                    </th>
+
+                    <th>
+                      الهاتف
+                    </th>
+
+                    <th>
+                      الراتب
+                    </th>
+
+                    <th>
+                      الحالة
+                    </th>
+
+                    <th>
+                      الإجراءات
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="employeesTableBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Attendance
+        ========================== -->
+
+        <section
+          id="page-attendance"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                الحضور
+              </h1>
+
+              <p>
+                متابعة حضور الطلاب والموظفين
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="attendance-tabs">
+
+            <button
+              class="attendance-tab active"
+              data-attendance-type="students"
+              type="button"
+            >
+              حضور الطلاب
+            </button>
+
+            <button
+              class="attendance-tab"
+              data-attendance-type="employees"
+              type="button"
+            >
+              حضور الموظفين
+            </button>
+
+          </div>
+
+
+          <div
+            id="studentAttendancePanel"
+            class="card"
+          >
+
+            <div class="card-header">
+
+              <h3>
+                حضور الطلاب
+              </h3>
+
+              <button
+                id="refreshStudentAttendance"
+                class="btn btn-secondary"
+                type="button"
+              >
+                🔄 تحديث
+              </button>
+
+            </div>
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      الطالب
+                    </th>
+
+                    <th>
+                      الفصل
+                    </th>
+
+                    <th>
+                      الحالة
+                    </th>
+
+                    <th>
+                      الإجراء
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="attendanceStudentsBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="employeeAttendancePanel"
+            class="card hidden"
+          >
+
+            <div class="card-header">
+
+              <h3>
+                حضور الموظفين
+              </h3>
+
+            </div>
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      الموظف
+                    </th>
+
+                    <th>
+                      التاريخ
+                    </th>
+
+                    <th>
+                      الدخول
+                    </th>
+
+                    <th>
+                      الخروج
+                    </th>
+
+                    <th>
+                      الحالة
+                    </th>
+
+                    <th>
+                      التأخير
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="attendanceEmployeesBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Payroll
+        ========================== -->
+
+        <section
+          id="page-payroll"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                الرواتب
+              </h1>
+
+              <p>
+                الرواتب والمكافآت والخصومات
+              </p>
+
+            </div>
+
+            <button
+              id="payrollSettingsButton"
+              class="btn btn-secondary"
+              type="button"
+            >
+              ⚙️ إعدادات الرواتب
+            </button>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      الموظف
+                    </th>
+
+                    <th>
+                      الأساسي
+                    </th>
+
+                    <th>
+                      البدلات
+                    </th>
+
+                    <th>
+                      المكافآت
+                    </th>
+
+                    <th>
+                      الخصومات
+                    </th>
+
+                    <th>
+                      الصافي
+                    </th>
+
+                    <th>
+                      الإجراءات
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="payrollTableBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Notes
+        ========================== -->
+
+        <section
+          id="page-notes"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                ملاحظات الطلاب
+              </h1>
+
+              <p>
+                إضافة ومتابعة الملاحظات الخاصة بالطلاب
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="form-row">
+
+              <div class="form-group">
+
+                <label>
+                  الطالب
+                </label>
+
+                <select id="noteStudent">
+
+                  <option value="">
+                    اختر الطالب
+                  </option>
+
+                </select>
+
+              </div>
+
+              <div class="form-group">
+
+                <label>
+                  الملاحظة
+                </label>
+
+                <input
+                  id="noteText"
+                  type="text"
+                  placeholder="اكتب الملاحظة"
+                >
+
+              </div>
+
+              <div class="form-group button-group">
+
+                <button
+                  id="saveNoteButton"
+                  class="btn btn-primary"
+                  type="button"
+                >
+                  حفظ الملاحظة
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      الطالب
+                    </th>
+
+                    <th>
+                      الملاحظة
+                    </th>
+
+                    <th>
+                      التاريخ
+                    </th>
+
+                    <th>
+                      الإجراء
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="notesTableBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Videos
+        ========================== -->
+
+        <section
+          id="page-videos"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                الحصص والفيديوهات
+              </h1>
+
+              <p>
+                إدارة الحصص التعليمية
+              </p>
+
+            </div>
+
+            <button
+              id="addVideoButton"
+              class="btn btn-primary"
+              type="button"
+            >
+              ➕ إضافة حصة
+            </button>
+
+          </div>
+
+
+          <div
+            id="videosGrid"
+            class="videos-grid"
+          >
+
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             Logs
+        ========================== -->
+
+        <section
+          id="page-logs"
+          class="page-section hidden"
+        >
+
+          <div class="page-header">
+
+            <div>
+
+              <h1>
+                سجل العمليات
+              </h1>
+
+              <p>
+                جميع العمليات التي تمت داخل النظام
+              </p>
+
+            </div>
+
+            <button
+              id="refreshLogs"
+              class="btn btn-secondary"
+              type="button"
+            >
+              🔄 تحديث
+            </button>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      #
+                    </th>
+
+                    <th>
+                      المستخدم
+                    </th>
+
+                    <th>
+                      العملية
+                    </th>
+
+                    <th>
+                      التفاصيل
+                    </th>
+
+                    <th>
+                      التاريخ
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody id="logsTableBody">
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       Modal
+  ========================== -->
+
+  <div
+    id="modal"
+    class="modal hidden"
+  >
+
+    <div class="modal-overlay"></div>
+
+    <div class="modal-box">
+
+      <div class="modal-header">
+
+        <h3 id="modalTitle">
+          إضافة
+        </h3>
+
+        <button
+          id="modalClose"
+          class="modal-close"
+          type="button"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <div id="modalBody">
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       Toast
+  ========================== -->
+
+  <div
+    id="toast"
+    class="toast"
+  >
+  </div>
+
 
   <script src="/app.js"></script>
 
 </body>
-
 </html>
