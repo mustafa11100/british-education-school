@@ -2136,5 +2136,3 @@ document.addEventListener(
 
   }
 );
-window.editPayroll =
-  editPayroll;
