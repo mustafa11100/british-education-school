@@ -47,42 +47,89 @@ CREATE TABLE IF NOT EXISTS videos(
 `);
 
 /* =========================
-   إضافة الأعمدة لو كانت قاعدة البيانات قديمة
+   COMPATIBILITY WITH OLD DATABASE
 ========================= */
 
 try {
-  db.prepare("ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1").run();
+  db.prepare(
+    "ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1"
+  ).run();
 } catch (e) {}
 
 try {
-  db.prepare("ALTER TABLE users ADD COLUMN last_seen TEXT").run();
+  db.prepare(
+    "ALTER TABLE users ADD COLUMN last_seen TEXT"
+  ).run();
 } catch (e) {}
 
 /* =========================
-   USERS DEFAULT
+   DEFAULT USERS
 ========================= */
 
-const count = db.prepare("SELECT COUNT(*) c FROM users").get().c;
+const userCount = db
+  .prepare("SELECT COUNT(*) AS c FROM users")
+  .get().c;
 
-if (!count) {
-  const add = db.prepare(`
-    INSERT INTO users(username,password,role,name,active,last_seen)
+if (userCount === 0) {
+
+  const addUser = db.prepare(`
+    INSERT INTO users(
+      username,
+      password,
+      role,
+      name,
+      active,
+      last_seen
+    )
     VALUES(?,?,?,?,1,NULL)
   `);
 
-  add.run("admin", "1234", "admin", "مدير المدرسة");
-  add.run("teacher", "1234", "teacher", "الأستاذ أحمد");
-  add.run("parent", "1234", "parent", "ولي أمر محمد أحمد");
-  add.run("student", "1234", "student", "محمد أحمد");
+  addUser.run(
+    "admin",
+    "1234",
+    "admin",
+    "مدير المدرسة"
+  );
+
+  addUser.run(
+    "teacher",
+    "1234",
+    "teacher",
+    "الأستاذ أحمد"
+  );
+
+  addUser.run(
+    "parent",
+    "1234",
+    "parent",
+    "ولي أمر محمد أحمد"
+  );
+
+  addUser.run(
+    "student",
+    "1234",
+    "student",
+    "محمد أحمد"
+  );
 }
 
 /* =========================
    DEFAULT STUDENT
 ========================= */
 
-if (db.prepare("SELECT COUNT(*) c FROM students").get().c === 0) {
+const studentCount = db
+  .prepare("SELECT COUNT(*) AS c FROM students")
+  .get().c;
+
+if (studentCount === 0) {
+
   db.prepare(`
-    INSERT INTO students(name,class_name,parent_phone,status)
+    INSERT INTO students(
+      name,
+      class_name,
+      parent_phone,
+      status
+    )
     VALUES(?,?,?,?)
   `).run(
     "محمد أحمد",
@@ -100,19 +147,32 @@ app.post("/api/login", (req, res) => {
 
   const { username, password } = req.body || {};
 
-  const u = db.prepare(`
-    SELECT id,username,role,name,active,last_seen
+  if (!username || !password) {
+    return res.status(400).json({
+      error: "أدخل اسم المستخدم وكلمة المرور"
+    });
+  }
+
+  const user = db.prepare(`
+    SELECT
+      id,
+      username,
+      role,
+      name,
+      active,
+      last_seen
     FROM users
-    WHERE username=? AND password=?
+    WHERE username = ?
+      AND password = ?
   `).get(username, password);
 
-  if (!u) {
+  if (!user) {
     return res.status(401).json({
       error: "بيانات الدخول غير صحيحة"
     });
   }
 
-  if (!u.active) {
+  if (!user.active) {
     return res.status(403).json({
       error: "هذا الحساب موقوف من الإدارة"
     });
@@ -122,17 +182,17 @@ app.post("/api/login", (req, res) => {
 
   db.prepare(`
     UPDATE users
-    SET last_seen=?
-    WHERE id=?
-  `).run(now, u.id);
+    SET last_seen = ?
+    WHERE id = ?
+  `).run(now, user.id);
 
-  u.last_seen = now;
+  user.last_seen = now;
 
-  res.json(u);
+  res.json(user);
 });
 
 /* =========================
-   UPDATE USER ACTIVITY
+   USER ACTIVITY
 ========================= */
 
 app.post("/api/activity", (req, res) => {
@@ -146,9 +206,9 @@ app.post("/api/activity", (req, res) => {
   }
 
   const user = db.prepare(`
-    SELECT id,active
+    SELECT id, active
     FROM users
-    WHERE id=?
+    WHERE id = ?
   `).get(user_id);
 
   if (!user) {
@@ -167,8 +227,8 @@ app.post("/api/activity", (req, res) => {
 
   db.prepare(`
     UPDATE users
-    SET last_seen=?
-    WHERE id=?
+    SET last_seen = ?
+    WHERE id = ?
   `).run(now, user_id);
 
   res.json({
@@ -203,13 +263,12 @@ app.get("/api/users", (req, res) => {
 
     if (user.last_seen) {
 
-      const lastSeen = new Date(user.last_seen).getTime();
-
-      /* يعتبر المستخدم متصل إذا كان آخر نشاط خلال آخر 60 ثانية */
+      const lastSeen =
+        new Date(user.last_seen).getTime();
 
       online =
         user.active === 1 &&
-        (now - lastSeen) <= 60000;
+        now - lastSeen <= 60000;
     }
 
     return {
@@ -279,9 +338,9 @@ app.post("/api/users", (req, res) => {
 app.patch("/api/users/:id/disable", (req, res) => {
 
   const user = db.prepare(`
-    SELECT id,username
+    SELECT id, username
     FROM users
-    WHERE id=?
+    WHERE id = ?
   `).get(req.params.id);
 
   if (!user) {
@@ -298,8 +357,8 @@ app.patch("/api/users/:id/disable", (req, res) => {
 
   db.prepare(`
     UPDATE users
-    SET active=0
-    WHERE id=?
+    SET active = 0
+    WHERE id = ?
   `).run(req.params.id);
 
   res.json({
@@ -317,7 +376,7 @@ app.patch("/api/users/:id/enable", (req, res) => {
   const user = db.prepare(`
     SELECT id
     FROM users
-    WHERE id=?
+    WHERE id = ?
   `).get(req.params.id);
 
   if (!user) {
@@ -328,8 +387,8 @@ app.patch("/api/users/:id/enable", (req, res) => {
 
   db.prepare(`
     UPDATE users
-    SET active=1
-    WHERE id=?
+    SET active = 1
+    WHERE id = ?
   `).run(req.params.id);
 
   res.json({
@@ -345,9 +404,9 @@ app.patch("/api/users/:id/enable", (req, res) => {
 app.delete("/api/users/:id", (req, res) => {
 
   const user = db.prepare(`
-    SELECT id,username
+    SELECT id, username
     FROM users
-    WHERE id=?
+    WHERE id = ?
   `).get(req.params.id);
 
   if (!user) {
@@ -364,7 +423,7 @@ app.delete("/api/users/:id", (req, res) => {
 
   db.prepare(`
     DELETE FROM users
-    WHERE id=?
+    WHERE id = ?
   `).run(req.params.id);
 
   res.json({
@@ -388,6 +447,10 @@ app.get("/api/students", (req, res) => {
   res.json(students);
 });
 
+/* =========================
+   ADD STUDENT
+========================= */
+
 app.post("/api/students", (req, res) => {
 
   const {
@@ -402,13 +465,14 @@ app.post("/api/students", (req, res) => {
     });
   }
 
-  const r = db.prepare(`
+  const result = db.prepare(`
     INSERT INTO students(
       name,
       class_name,
-      parent_phone
+      parent_phone,
+      status
     )
-    VALUES(?,?,?)
+    VALUES(?,?,?,'حاضر')
   `).run(
     name,
     class_name,
@@ -416,41 +480,45 @@ app.post("/api/students", (req, res) => {
   );
 
   res.json({
-    id: r.lastInsertRowid
+    success: true,
+    id: result.lastInsertRowid
   });
 });
 
 /* =========================
-   STUDENT ATTENDANCE
+   ATTENDANCE
 ========================= */
 
 app.patch("/api/students/:id/status", (req, res) => {
 
-  const s = db.prepare(`
+  const student = db.prepare(`
     SELECT status
     FROM students
-    WHERE id=?
+    WHERE id = ?
   `).get(req.params.id);
 
-  if (!s) {
-    return res.sendStatus(404);
+  if (!student) {
+    return res.status(404).json({
+      error: "الطالب غير موجود"
+    });
   }
 
   const status =
-    s.status === "حاضر"
+    student.status === "حاضر"
       ? "غائب"
       : "حاضر";
 
   db.prepare(`
     UPDATE students
-    SET status=?
-    WHERE id=?
+    SET status = ?
+    WHERE id = ?
   `).run(
     status,
     req.params.id
   );
 
   res.json({
+    success: true,
     status
   });
 });
@@ -472,10 +540,22 @@ app.post("/api/notes", (req, res) => {
     });
   }
 
+  const student = db.prepare(`
+    SELECT id
+    FROM students
+    WHERE id = ?
+  `).get(student_id);
+
+  if (!student) {
+    return res.status(404).json({
+      error: "الطالب غير موجود"
+    });
+  }
+
   const now =
     new Date().toLocaleString("ar-EG");
 
-  const r = db.prepare(`
+  const result = db.prepare(`
     INSERT INTO notes(
       student_id,
       text,
@@ -489,21 +569,29 @@ app.post("/api/notes", (req, res) => {
   );
 
   res.json({
-    id: r.lastInsertRowid,
+    success: true,
+    id: result.lastInsertRowid,
     whatsapp_status: "pending_api_connection"
   });
 });
+
+/* =========================
+   GET NOTES
+========================= */
 
 app.get("/api/notes/:studentId", (req, res) => {
 
   const notes = db.prepare(`
     SELECT
-      n.*,
-      s.name student_name
+      n.id,
+      n.student_id,
+      n.text,
+      n.created_at,
+      s.name AS student_name
     FROM notes n
     JOIN students s
-      ON s.id=n.student_id
-    WHERE student_id=?
+      ON s.id = n.student_id
+    WHERE n.student_id = ?
     ORDER BY n.id DESC
   `).all(req.params.studentId);
 
@@ -530,7 +618,7 @@ app.post("/api/videos", (req, res) => {
   const now =
     new Date().toLocaleString("ar-EG");
 
-  const r = db.prepare(`
+  const result = db.prepare(`
     INSERT INTO videos(
       title,
       file_name,
@@ -544,9 +632,14 @@ app.post("/api/videos", (req, res) => {
   );
 
   res.json({
-    id: r.lastInsertRowid
+    success: true,
+    id: result.lastInsertRowid
   });
 });
+
+/* =========================
+   GET VIDEOS
+========================= */
 
 app.get("/api/videos", (req, res) => {
 
@@ -560,13 +653,27 @@ app.get("/api/videos", (req, res) => {
 });
 
 /* =========================
+   HEALTH CHECK
+========================= */
+
+app.get("/api/health", (req, res) => {
+
+  res.json({
+    success: true,
+    message: "School portal is running"
+  });
+});
+
+/* =========================
    START SERVER
 ========================= */
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
+
   console.log(
     "School portal running on port " + PORT
   );
+
 });
