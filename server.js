@@ -9,9 +9,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-/* =====================================================
-   HELPERS
-===================================================== */
+// =====================================================
+// أدوات مساعدة
+// =====================================================
 
 function nowISO() {
   return new Date().toISOString();
@@ -23,11 +23,6 @@ function today() {
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
-}
-
-function safeNumber(value, fallback = 0) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
 }
 
 function logAction(userId, action, details = "") {
@@ -43,53 +38,49 @@ function logAction(userId, action, details = "") {
   );
 }
 
-/* =====================================================
-   DATABASE
-===================================================== */
+// =====================================================
+// الجداول
+// =====================================================
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'employee',
+  role TEXT DEFAULT 'user',
   name TEXT NOT NULL,
-  job_title TEXT DEFAULT '',
-  department TEXT DEFAULT '',
-  phone TEXT DEFAULT '',
-  avatar TEXT DEFAULT '',
   active INTEGER DEFAULT 1,
-  last_seen TEXT,
-  created_at TEXT
+  last_seen TEXT
 );
 
 CREATE TABLE IF NOT EXISTS students (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
   name TEXT NOT NULL,
-  class_name TEXT DEFAULT '',
-  parent_phone TEXT DEFAULT '',
-  parent_user_id INTEGER,
-  status TEXT DEFAULT 'حاضر',
-  created_at TEXT
+  class_name TEXT,
+  parent_phone TEXT,
+  status TEXT DEFAULT 'حاضر'
 );
 
 CREATE TABLE IF NOT EXISTS notes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   student_id INTEGER NOT NULL,
   text TEXT NOT NULL,
-  created_by INTEGER,
   created_at TEXT,
-  parent_seen INTEGER DEFAULT 0,
-  parent_seen_at TEXT
+  created_by INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS note_views (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  note_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  viewed_at TEXT,
+  UNIQUE(note_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS videos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
-  file_name TEXT DEFAULT '',
-  description TEXT DEFAULT '',
-  created_by INTEGER,
+  file_name TEXT,
   created_at TEXT
 );
 
@@ -107,10 +98,10 @@ CREATE TABLE IF NOT EXISTS employees (
   user_id INTEGER,
   employee_number TEXT UNIQUE,
   name TEXT NOT NULL,
-  job_title TEXT DEFAULT '',
-  department TEXT DEFAULT '',
-  phone TEXT DEFAULT '',
-  hire_date TEXT DEFAULT '',
+  job_title TEXT,
+  department TEXT,
+  phone TEXT,
+  hire_date TEXT,
   basic_salary REAL DEFAULT 0,
   allowance REAL DEFAULT 0,
   active INTEGER DEFAULT 1,
@@ -153,129 +144,67 @@ CREATE TABLE IF NOT EXISTS bonuses (
 );
 
 CREATE TABLE IF NOT EXISTS payroll_settings (
-  id INTEGER PRIMARY KEY CHECK(id = 1),
+  id INTEGER PRIMARY KEY,
   absence_deduction REAL DEFAULT 300,
   late_deduction REAL DEFAULT 50,
   allowed_late_minutes INTEGER DEFAULT 15
-);
-
-CREATE TABLE IF NOT EXISTS employee_requests (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  employee_id INTEGER,
-  request_type TEXT NOT NULL,
-  amount REAL DEFAULT 0,
-  start_date TEXT,
-  end_date TEXT,
-  reason TEXT DEFAULT '',
-  status TEXT DEFAULT 'قيد المراجعة',
-  admin_note TEXT DEFAULT '',
-  created_at TEXT,
-  reviewed_at TEXT,
-  reviewed_by INTEGER
-);
-
-CREATE TABLE IF NOT EXISTS announcements (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  target_type TEXT DEFAULT 'all',
-  target_role TEXT DEFAULT '',
-  created_by INTEGER,
-  created_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS employee_messages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  employee_id INTEGER,
-  user_id INTEGER,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  is_read INTEGER DEFAULT 0,
-  read_at TEXT,
-  created_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS platform_settings (
-  id INTEGER PRIMARY KEY CHECK(id = 1),
-  institution_name TEXT DEFAULT 'نظام إدارة المدرسة',
-  subtitle TEXT DEFAULT 'School Management System',
-  logo TEXT DEFAULT '🎓',
-  primary_color TEXT DEFAULT '#173b70',
-  secondary_color TEXT DEFAULT '#f4f7fb',
-  accent_color TEXT DEFAULT '#2563eb',
-  welcome_message TEXT DEFAULT 'مرحباً بك في نظام إدارة المدرسة'
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER,
   action TEXT NOT NULL,
-  details TEXT DEFAULT '',
+  details TEXT,
   created_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  text TEXT NOT NULL,
+  target_type TEXT DEFAULT 'all',
+  created_by INTEGER,
+  created_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS announcement_views (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  announcement_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  viewed_at TEXT,
+  UNIQUE(announcement_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS employee_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id INTEGER NOT NULL,
+  request_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  details TEXT,
+  amount REAL DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  admin_note TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id INTEGER PRIMARY KEY,
+  institution_name TEXT DEFAULT 'نظام إدارة المدرسة',
+  subtitle TEXT DEFAULT 'British Education School Portal',
+  logo TEXT DEFAULT '🎓',
+  primary_color TEXT DEFAULT '#173b70',
+  secondary_color TEXT DEFAULT '#f4f7fb'
 );
 `);
 
-/* =====================================================
-   MIGRATION FOR OLD DATABASES
-===================================================== */
+// =====================================================
+// الإعدادات الافتراضية
+// =====================================================
 
-const userColumns = db.prepare(`PRAGMA table_info(users)`).all();
-const userColumnNames = userColumns.map(x => x.name);
-
-if (!userColumnNames.includes("job_title")) {
-  db.exec(`ALTER TABLE users ADD COLUMN job_title TEXT DEFAULT ''`);
-}
-
-if (!userColumnNames.includes("department")) {
-  db.exec(`ALTER TABLE users ADD COLUMN department TEXT DEFAULT ''`);
-}
-
-if (!userColumnNames.includes("phone")) {
-  db.exec(`ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''`);
-}
-
-if (!userColumnNames.includes("avatar")) {
-  db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''`);
-}
-
-if (!userColumnNames.includes("created_at")) {
-  db.exec(`ALTER TABLE users ADD COLUMN created_at TEXT`);
-}
-
-const noteColumns = db.prepare(`PRAGMA table_info(notes)`).all();
-const noteColumnNames = noteColumns.map(x => x.name);
-
-if (!noteColumnNames.includes("created_by")) {
-  db.exec(`ALTER TABLE notes ADD COLUMN created_by INTEGER`);
-}
-
-if (!noteColumnNames.includes("parent_seen")) {
-  db.exec(`ALTER TABLE notes ADD COLUMN parent_seen INTEGER DEFAULT 0`);
-}
-
-if (!noteColumnNames.includes("parent_seen_at")) {
-  db.exec(`ALTER TABLE notes ADD COLUMN parent_seen_at TEXT`);
-}
-
-const videoColumns = db.prepare(`PRAGMA table_info(videos)`).all();
-const videoColumnNames = videoColumns.map(x => x.name);
-
-if (!videoColumnNames.includes("description")) {
-  db.exec(`ALTER TABLE videos ADD COLUMN description TEXT DEFAULT ''`);
-}
-
-if (!videoColumnNames.includes("created_by")) {
-  db.exec(`ALTER TABLE videos ADD COLUMN created_by INTEGER`);
-}
-
-/* =====================================================
-   DEFAULT SETTINGS
-===================================================== */
-
-if (!db.prepare(`
-  SELECT id FROM payroll_settings WHERE id = 1
-`).get()) {
+if (
+  !db.prepare("SELECT * FROM payroll_settings WHERE id = 1").get()
+) {
   db.prepare(`
     INSERT INTO payroll_settings
     (id, absence_deduction, late_deduction, allowed_late_minutes)
@@ -283,193 +212,51 @@ if (!db.prepare(`
   `).run();
 }
 
-if (!db.prepare(`
-  SELECT id FROM platform_settings WHERE id = 1
-`).get()) {
+if (
+  !db.prepare("SELECT * FROM platform_settings WHERE id = 1").get()
+) {
   db.prepare(`
     INSERT INTO platform_settings
-    (
-      id,
-      institution_name,
-      subtitle,
-      logo,
-      primary_color,
-      secondary_color,
-      accent_color,
-      welcome_message
-    )
-    VALUES
-    (
-      1,
-      'نظام إدارة المدرسة',
-      'School Management System',
-      '🎓',
-      '#173b70',
-      '#f4f7fb',
-      '#2563eb',
-      'مرحباً بك في نظام إدارة المدرسة'
-    )
-  `).run();
+    (id, institution_name, subtitle, logo, primary_color, secondary_color)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    1,
+    "نظام إدارة المدرسة",
+    "British Education School Portal",
+    "🎓",
+    "#173b70",
+    "#f4f7fb"
+  );
 }
 
-/* =====================================================
-   DEFAULT ADMIN ONLY
-===================================================== */
+// =====================================================
+// حساب المدير فقط عند أول تشغيل
+// =====================================================
 
-const countUsers = db.prepare(`
-  SELECT COUNT(*) AS count FROM users
-`).get().count;
+const userCount = db
+  .prepare("SELECT COUNT(*) AS count FROM users")
+  .get().count;
 
-if (countUsers === 0) {
+if (userCount === 0) {
   db.prepare(`
     INSERT INTO users
-    (
-      username,
-      password,
-      role,
-      name,
-      job_title,
-      department,
-      active,
-      created_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+    (username, password, role, name, active)
+    VALUES (?, ?, ?, ?, 1)
   `).run(
     "admin",
     "1234",
     "admin",
-    "مدير المؤسسة",
-    "مدير المؤسسة",
-    "الإدارة",
-    nowISO()
+    "مدير المؤسسة"
   );
 }
 
-/* =====================================================
-   ROLE DEFINITIONS
-===================================================== */
-
-const roles = [
-  "admin",
-  "teacher",
-  "student",
-  "parent",
-  "hr",
-  "accountant",
-  "worker",
-  "reviewer",
-  "employee",
-  "manager",
-  "supervisor"
-];
-
-const roleNames = {
-  admin: "مدير المؤسسة",
-  teacher: "معلم",
-  student: "طالب",
-  parent: "ولي أمر",
-  hr: "موارد بشرية",
-  accountant: "محاسب",
-  worker: "عامل",
-  reviewer: "مراجع",
-  employee: "موظف",
-  manager: "مدير",
-  supervisor: "مشرف"
-};
-
-/* =====================================================
-   HEALTH
-===================================================== */
-
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "School portal is running",
-    time: nowISO()
-  });
-});
-
-/* =====================================================
-   PLATFORM SETTINGS
-===================================================== */
-
-app.get("/api/settings", (req, res) => {
-  try {
-    const settings = db.prepare(`
-      SELECT * FROM platform_settings
-      WHERE id = 1
-    `).get();
-
-    res.json(settings);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "تعذر جلب إعدادات المنصة"
-    });
-  }
-});
-
-app.patch("/api/settings", (req, res) => {
-  try {
-    const {
-      institution_name,
-      subtitle,
-      logo,
-      primary_color,
-      secondary_color,
-      accent_color,
-      welcome_message
-    } = req.body || {};
-
-    db.prepare(`
-      UPDATE platform_settings
-      SET
-        institution_name = COALESCE(?, institution_name),
-        subtitle = COALESCE(?, subtitle),
-        logo = COALESCE(?, logo),
-        primary_color = COALESCE(?, primary_color),
-        secondary_color = COALESCE(?, secondary_color),
-        accent_color = COALESCE(?, accent_color),
-        welcome_message = COALESCE(?, welcome_message)
-      WHERE id = 1
-    `).run(
-      institution_name,
-      subtitle,
-      logo,
-      primary_color,
-      secondary_color,
-      accent_color,
-      welcome_message
-    );
-
-    logAction(
-      null,
-      "UPDATE_PLATFORM_SETTINGS",
-      "تعديل إعدادات وشكل المنصة"
-    );
-
-    res.json({
-      success: true,
-      message: "تم حفظ إعدادات المنصة"
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "تعذر حفظ إعدادات المنصة"
-    });
-  }
-});
-
-/* =====================================================
-   LOGIN
-===================================================== */
+// =====================================================
+// LOGIN
+// =====================================================
 
 app.post("/api/login", (req, res) => {
   try {
-    const {
-      username,
-      password
-    } = req.body || {};
+    const { username, password } = req.body || {};
 
     if (!username || !password) {
       return res.status(400).json({
@@ -478,7 +265,7 @@ app.post("/api/login", (req, res) => {
     }
 
     const user = db.prepare(`
-      SELECT *
+      SELECT id, username, role, name, active, last_seen
       FROM users
       WHERE username = ?
       AND password = ?
@@ -492,43 +279,39 @@ app.post("/api/login", (req, res) => {
 
     if (!user.active) {
       return res.status(403).json({
-        error: "هذا الحساب موقوف من الإدارة"
+        error: "هذا الحساب موقوف"
       });
     }
 
-    const now = nowISO();
+    const time = nowISO();
 
     db.prepare(`
       UPDATE users
       SET last_seen = ?
       WHERE id = ?
-    `).run(now, user.id);
+    `).run(time, user.id);
+
+    user.last_seen = time;
 
     logAction(
       user.id,
       "LOGIN",
-      `دخول ${user.name}`
+      `تسجيل دخول ${user.name}`
     );
 
-    delete user.password;
-
-    res.json({
-      ...user,
-      role_name: roleNames[user.role] || user.role
-    });
+    res.json(user);
 
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "حدث خطأ أثناء تسجيل الدخول"
     });
   }
 });
 
-/* =====================================================
-   ACTIVITY
-===================================================== */
+// =====================================================
+// نشاط المستخدم
+// =====================================================
 
 app.post("/api/activity", (req, res) => {
   try {
@@ -570,150 +353,43 @@ app.post("/api/activity", (req, res) => {
       success: true,
       last_seen: time
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
-      error: "تعذر تحديث النشاط"
+      error: "حدث خطأ"
     });
   }
 });
 
-/* =====================================================
-   CURRENT USER
-===================================================== */
-
-app.get("/api/users/:id", (req, res) => {
-  try {
-    const user = db.prepare(`
-      SELECT
-        id,
-        username,
-        role,
-        name,
-        job_title,
-        department,
-        phone,
-        avatar,
-        active,
-        last_seen,
-        created_at
-      FROM users
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
-
-    user.role_name = roleNames[user.role] || user.role;
-
-    res.json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "تعذر جلب بيانات المستخدم"
-    });
-  }
-});
-
-/* =====================================================
-   UPDATE USER PROFILE
-===================================================== */
-
-app.patch("/api/users/:id/profile", (req, res) => {
-  try {
-    const {
-      name,
-      job_title,
-      department,
-      phone,
-      avatar
-    } = req.body || {};
-
-    const user = db.prepare(`
-      SELECT id FROM users WHERE id = ?
-    `).get(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
-
-    db.prepare(`
-      UPDATE users
-      SET
-        name = COALESCE(?, name),
-        job_title = COALESCE(?, job_title),
-        department = COALESCE(?, department),
-        phone = COALESCE(?, phone),
-        avatar = COALESCE(?, avatar)
-      WHERE id = ?
-    `).run(
-      name,
-      job_title,
-      department,
-      phone,
-      avatar,
-      user.id
-    );
-
-    logAction(
-      user.id,
-      "UPDATE_PROFILE",
-      `تعديل الملف الشخصي`
-    );
-
-    res.json({
-      success: true,
-      message: "تم تحديث الملف الشخصي"
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "تعذر تحديث الملف الشخصي"
-    });
-  }
-});
-
-/* =====================================================
-   USERS
-===================================================== */
+// =====================================================
+// المستخدمون
+// =====================================================
 
 app.get("/api/users", (req, res) => {
   try {
     const users = db.prepare(`
-      SELECT
-        id,
-        username,
-        role,
-        name,
-        job_title,
-        department,
-        phone,
-        avatar,
-        active,
-        last_seen,
-        created_at
+      SELECT id, username, role, name, active, last_seen
       FROM users
       ORDER BY id DESC
     `).all();
 
-    const now = Date.now();
+    const current = Date.now();
 
     const result = users.map(user => {
-      const online =
-        user.active === 1 &&
-        user.last_seen &&
-        now - new Date(user.last_seen).getTime() <= 60000;
+      let online = false;
+
+      if (user.last_seen) {
+        const last = new Date(user.last_seen).getTime();
+
+        online =
+          user.active === 1 &&
+          current - last <= 60000;
+      }
 
       return {
         ...user,
-        role_name: roleNames[user.role] || user.role,
-        online: Boolean(online)
+        online
       };
     });
 
@@ -723,6 +399,7 @@ app.get("/api/users", (req, res) => {
       online_count: result.filter(x => x.online).length,
       active_count: result.filter(x => x.active === 1).length
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -731,9 +408,9 @@ app.get("/api/users", (req, res) => {
   }
 });
 
-/* =====================================================
-   ADD USER
-===================================================== */
+// =====================================================
+// إضافة مستخدم
+// =====================================================
 
 app.post("/api/users", (req, res) => {
   try {
@@ -741,10 +418,7 @@ app.post("/api/users", (req, res) => {
       username,
       password,
       role,
-      name,
-      job_title,
-      department,
-      phone
+      name
     } = req.body || {};
 
     if (!username || !password || !name) {
@@ -753,50 +427,30 @@ app.post("/api/users", (req, res) => {
       });
     }
 
-    const selectedRole = role || "employee";
-
-    if (!roles.includes(selectedRole)) {
-      return res.status(400).json({
-        error: "نوع المستخدم غير صحيح"
-      });
-    }
+    const finalRole = role || "user";
 
     const result = db.prepare(`
       INSERT INTO users
-      (
-        username,
-        password,
-        role,
-        name,
-        job_title,
-        department,
-        phone,
-        active,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+      (username, password, role, name, active)
+      VALUES (?, ?, ?, ?, 1)
     `).run(
       username,
       password,
-      selectedRole,
-      name,
-      job_title || roleNames[selectedRole] || "",
-      department || "",
-      phone || "",
-      nowISO()
+      finalRole,
+      name
     );
 
     logAction(
       null,
       "ADD_USER",
-      `إضافة ${name} - ${roleNames[selectedRole]}`
+      `إضافة ${name}`
     );
 
     res.json({
       success: true,
-      id: result.lastInsertRowid,
-      message: "تم إنشاء الحساب"
+      id: result.lastInsertRowid
     });
+
   } catch (error) {
     console.error(error);
 
@@ -807,19 +461,19 @@ app.post("/api/users", (req, res) => {
     }
 
     res.status(500).json({
-      error: "تعذر إنشاء الحساب"
+      error: "تعذر إضافة المستخدم"
     });
   }
 });
 
-/* =====================================================
-   ENABLE / DISABLE USER
-===================================================== */
+// =====================================================
+// تفعيل / إيقاف المستخدم
+// =====================================================
 
 app.patch("/api/users/:id/disable", (req, res) => {
   try {
     const user = db.prepare(`
-      SELECT id, username, role
+      SELECT *
       FROM users
       WHERE id = ?
     `).get(req.params.id);
@@ -830,9 +484,9 @@ app.patch("/api/users/:id/disable", (req, res) => {
       });
     }
 
-    if (user.role === "admin") {
+    if (user.username === "admin") {
       return res.status(400).json({
-        error: "لا يمكن إيقاف مدير المؤسسة الرئيسي"
+        error: "لا يمكن إيقاف المدير الرئيسي"
       });
     }
 
@@ -842,29 +496,48 @@ app.patch("/api/users/:id/disable", (req, res) => {
       WHERE id = ?
     `).run(user.id);
 
-    logAction(
-      null,
-      "DISABLE_USER",
-      `إيقاف ${user.username}`
-    );
-
     res.json({
       success: true,
-      message: "تم إيقاف الحساب"
+      message: "تم إيقاف المستخدم"
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
-      error: "تعذر إيقاف الحساب"
+      error: "تعذر إيقاف المستخدم"
     });
   }
 });
 
 app.patch("/api/users/:id/enable", (req, res) => {
   try {
+    db.prepare(`
+      UPDATE users
+      SET active = 1
+      WHERE id = ?
+    `).run(req.params.id);
+
+    res.json({
+      success: true,
+      message: "تم تفعيل المستخدم"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "تعذر تفعيل المستخدم"
+    });
+  }
+});
+
+// =====================================================
+// حذف مستخدم
+// =====================================================
+
+app.delete("/api/users/:id", (req, res) => {
+  try {
     const user = db.prepare(`
-      SELECT id, username
+      SELECT *
       FROM users
       WHERE id = ?
     `).get(req.params.id);
@@ -875,34 +548,33 @@ app.patch("/api/users/:id/enable", (req, res) => {
       });
     }
 
+    if (user.username === "admin") {
+      return res.status(400).json({
+        error: "لا يمكن حذف المدير الرئيسي"
+      });
+    }
+
     db.prepare(`
-      UPDATE users
-      SET active = 1
+      DELETE FROM users
       WHERE id = ?
     `).run(user.id);
 
-    logAction(
-      null,
-      "ENABLE_USER",
-      `تفعيل ${user.username}`
-    );
-
     res.json({
       success: true,
-      message: "تم تفعيل الحساب"
+      message: "تم حذف المستخدم"
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
-      error: "تعذر تفعيل الحساب"
+      error: "تعذر حذف المستخدم"
     });
   }
 });
 
-/* =====================================================
-   CHANGE PASSWORD
-===================================================== */
+// =====================================================
+// تغيير كلمة المرور
+// =====================================================
 
 app.patch("/api/users/:id/password", (req, res) => {
   try {
@@ -913,7 +585,7 @@ app.patch("/api/users/:id/password", (req, res) => {
 
     if (!new_password || String(new_password).length < 4) {
       return res.status(400).json({
-        error: "كلمة المرور الجديدة يجب أن تكون 4 أحرف أو أكثر"
+        error: "كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل"
       });
     }
 
@@ -947,94 +619,33 @@ app.patch("/api/users/:id/password", (req, res) => {
       user.id
     );
 
-    logAction(
-      user.id,
-      "CHANGE_PASSWORD",
-      "تغيير كلمة المرور"
-    );
-
     res.json({
       success: true,
       message: "تم تغيير كلمة المرور"
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر تغيير كلمة المرور"
     });
   }
 });
 
-/* =====================================================
-   DELETE USER
-===================================================== */
-
-app.delete("/api/users/:id", (req, res) => {
-  try {
-    const user = db.prepare(`
-      SELECT id, username, role
-      FROM users
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
-
-    if (user.role === "admin") {
-      return res.status(400).json({
-        error: "لا يمكن حذف مدير المؤسسة الرئيسي"
-      });
-    }
-
-    db.prepare(`
-      DELETE FROM users
-      WHERE id = ?
-    `).run(user.id);
-
-    logAction(
-      null,
-      "DELETE_USER",
-      `حذف ${user.username}`
-    );
-
-    res.json({
-      success: true,
-      message: "تم حذف المستخدم"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف المستخدم"
-    });
-  }
-});
-
-/* =====================================================
-   STUDENTS
-===================================================== */
+// =====================================================
+// الطلاب
+// =====================================================
 
 app.get("/api/students", (req, res) => {
   try {
-    const students = db.prepare(`
-      SELECT
-        s.*,
-        u.username AS username,
-        u.name AS account_name
-      FROM students s
-      LEFT JOIN users u
-        ON u.id = s.user_id
-      ORDER BY s.id DESC
-    `).all();
-
-    res.json(students);
+    res.json(
+      db.prepare(`
+        SELECT *
+        FROM students
+        ORDER BY id DESC
+      `).all()
+    );
   } catch (error) {
-    console.error(error);
-
     res.status(500).json({
       error: "تعذر جلب الطلاب"
     });
@@ -1046,9 +657,7 @@ app.post("/api/students", (req, res) => {
     const {
       name,
       class_name,
-      parent_phone,
-      parent_user_id,
-      user_id
+      parent_phone
     } = req.body || {};
 
     if (!name) {
@@ -1059,85 +668,30 @@ app.post("/api/students", (req, res) => {
 
     const result = db.prepare(`
       INSERT INTO students
-      (
-        user_id,
-        name,
-        class_name,
-        parent_phone,
-        parent_user_id,
-        status,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, 'حاضر', ?)
+      (name, class_name, parent_phone, status)
+      VALUES (?, ?, ?, 'حاضر')
     `).run(
-      user_id || null,
       name,
       class_name || "",
-      parent_phone || "",
-      parent_user_id || null,
-      nowISO()
-    );
-
-    logAction(
-      null,
-      "ADD_STUDENT",
-      `إضافة الطالب ${name}`
+      parent_phone || ""
     );
 
     res.json({
       success: true,
       id: result.lastInsertRowid
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر إضافة الطالب"
     });
   }
 });
 
-/* =====================================================
-   STUDENT ATTENDANCE
-===================================================== */
-
-app.get("/api/students/:id/attendance", (req, res) => {
-  try {
-    const records = db.prepare(`
-      SELECT *
-      FROM student_attendance
-      WHERE student_id = ?
-      ORDER BY date DESC
-    `).all(req.params.id);
-
-    const present = records.filter(
-      x => x.status === "حاضر"
-    ).length;
-
-    const absent = records.filter(
-      x => x.status === "غائب"
-    ).length;
-
-    const total = records.length;
-
-    res.json({
-      records,
-      present,
-      absent,
-      total,
-      percentage:
-        total
-          ? Math.round((present / total) * 100)
-          : 0
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب حضور الطالب"
-    });
-  }
-});
+// =====================================================
+// حضور الطلاب
+// =====================================================
 
 app.patch("/api/students/:id/status", (req, res) => {
   try {
@@ -1162,10 +716,7 @@ app.patch("/api/students/:id/status", (req, res) => {
       UPDATE students
       SET status = ?
       WHERE id = ?
-    `).run(
-      status,
-      student.id
-    );
+    `).run(status, student.id);
 
     db.prepare(`
       INSERT INTO student_attendance
@@ -1186,9 +737,9 @@ app.patch("/api/students/:id/status", (req, res) => {
       success: true,
       status
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر تحديث الحضور"
     });
@@ -1202,21 +753,15 @@ app.patch("/api/students/:id/attendance", (req, res) => {
       status
     } = req.body || {};
 
-    if (!date || !["حاضر", "غائب"].includes(status)) {
+    if (!date || !status) {
       return res.status(400).json({
         error: "التاريخ والحالة مطلوبان"
       });
     }
 
-    const student = db.prepare(`
-      SELECT id
-      FROM students
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!student) {
-      return res.status(404).json({
-        error: "الطالب غير موجود"
+    if (!["حاضر", "غائب"].includes(status)) {
+      return res.status(400).json({
+        error: "الحالة غير صحيحة"
       });
     }
 
@@ -1229,7 +774,7 @@ app.patch("/api/students/:id/attendance", (req, res) => {
         status = excluded.status,
         created_at = excluded.created_at
     `).run(
-      student.id,
+      req.params.id,
       date,
       status,
       nowISO()
@@ -1242,26 +787,58 @@ app.patch("/api/students/:id/attendance", (req, res) => {
         WHERE id = ?
       `).run(
         status,
-        student.id
+        req.params.id
       );
     }
 
     res.json({
-      success: true,
-      message: "تم تحديث الحضور"
+      success: true
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
-      error: "تعذر تحديث الحضور"
+      error: "تعذر تحديث سجل الحضور"
     });
   }
 });
 
-/* =====================================================
-   EMPLOYEES
-===================================================== */
+app.get("/api/students/:id/attendance", (req, res) => {
+  try {
+    const records = db.prepare(`
+      SELECT *
+      FROM student_attendance
+      WHERE student_id = ?
+      ORDER BY date DESC
+    `).all(req.params.id);
+
+    const present =
+      records.filter(x => x.status === "حاضر").length;
+
+    const absent =
+      records.filter(x => x.status === "غائب").length;
+
+    res.json({
+      records,
+      present,
+      absent,
+      total: records.length,
+      percentage:
+        records.length
+          ? Math.round((present / records.length) * 100)
+          : 0
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب الحضور"
+    });
+  }
+});
+
+// =====================================================
+// الموظفون
+// =====================================================
 
 app.get("/api/employees", (req, res) => {
   try {
@@ -1269,19 +846,18 @@ app.get("/api/employees", (req, res) => {
       SELECT
         e.*,
         u.username,
-        u.role,
         u.active AS account_active,
         u.last_seen
       FROM employees e
       LEFT JOIN users u
-        ON u.id = e.user_id
+      ON u.id = e.user_id
       ORDER BY e.id DESC
     `).all();
 
     res.json(employees);
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر جلب الموظفين"
     });
@@ -1332,48 +908,30 @@ app.post("/api/employees", (req, res) => {
       department || "",
       phone || "",
       hire_date || "",
-      safeNumber(basic_salary),
-      safeNumber(allowance),
+      Number(basic_salary || 0),
+      Number(allowance || 0),
       nowISO()
-    );
-
-    logAction(
-      null,
-      "ADD_EMPLOYEE",
-      `إضافة الموظف ${name}`
     );
 
     res.json({
       success: true,
       id: result.lastInsertRowid
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(400).json({
       error: "تعذر إضافة الموظف. تأكد من رقم الموظف."
     });
   }
 });
 
-/* =====================================================
-   EMPLOYEE ATTENDANCE
-===================================================== */
+// =====================================================
+// حضور الموظفين
+// =====================================================
 
 app.post("/api/employees/:id/attendance", (req, res) => {
   try {
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
-      });
-    }
-
     const {
       date,
       check_in,
@@ -1382,6 +940,7 @@ app.post("/api/employees/:id/attendance", (req, res) => {
     } = req.body || {};
 
     const attendanceDate = date || today();
+
     let finalStatus = status || "حاضر";
     let lateMinutes = 0;
 
@@ -1392,14 +951,11 @@ app.post("/api/employees/:id/attendance", (req, res) => {
     `).get();
 
     if (check_in) {
-      const [h, m] =
-        String(check_in)
-          .split(":")
-          .map(Number);
+      const parts = check_in.split(":").map(Number);
 
       const arrival =
-        (h || 0) * 60 +
-        (m || 0);
+        (parts[0] || 0) * 60 +
+        (parts[1] || 0);
 
       const start = 8 * 60;
 
@@ -1433,7 +989,7 @@ app.post("/api/employees/:id/attendance", (req, res) => {
         status = excluded.status,
         late_minutes = excluded.late_minutes
     `).run(
-      employee.id,
+      req.params.id,
       attendanceDate,
       check_in || null,
       check_out || null,
@@ -1447,9 +1003,9 @@ app.post("/api/employees/:id/attendance", (req, res) => {
       status: finalStatus,
       late_minutes: lateMinutes
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر تسجيل حضور الموظف"
     });
@@ -1467,664 +1023,43 @@ app.get("/api/employees/:id/attendance", (req, res) => {
 
     res.json({
       records,
-      present: records.filter(
-        x =>
-          x.status === "حاضر" ||
-          x.status === "متأخر"
-      ).length,
-      absent: records.filter(
-        x => x.status === "غائب"
-      ).length,
-      late: records.filter(
-        x => x.status === "متأخر"
-      ).length,
+      present:
+        records.filter(
+          x =>
+            x.status === "حاضر" ||
+            x.status === "متأخر"
+        ).length,
+      absent:
+        records.filter(
+          x => x.status === "غائب"
+        ).length,
+      late:
+        records.filter(
+          x => x.status === "متأخر"
+        ).length,
       total: records.length
     });
-  } catch (error) {
-    console.error(error);
 
+  } catch (error) {
     res.status(500).json({
-      error: "تعذر جلب حضور الموظف"
+      error: "تعذر جلب الحضور"
     });
   }
 });
 
-/* =====================================================
-   EMPLOYEE REQUESTS
-   إجازة - سلفة - طلبات أخرى
-===================================================== */
-
-app.get("/api/requests", (req, res) => {
-  try {
-    const requests = db.prepare(`
-      SELECT
-        r.*,
-        u.name AS user_name,
-        u.username,
-        e.employee_number
-      FROM employee_requests r
-      LEFT JOIN users u
-        ON u.id = r.user_id
-      LEFT JOIN employees e
-        ON e.id = r.employee_id
-      ORDER BY r.id DESC
-    `).all();
-
-    res.json(requests);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الطلبات"
-    });
-  }
-});
-
-app.get("/api/users/:id/requests", (req, res) => {
-  try {
-    const requests = db.prepare(`
-      SELECT *
-      FROM employee_requests
-      WHERE user_id = ?
-      ORDER BY id DESC
-    `).all(req.params.id);
-
-    res.json(requests);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الطلبات"
-    });
-  }
-});
-
-app.post("/api/requests", (req, res) => {
-  try {
-    const {
-      user_id,
-      employee_id,
-      request_type,
-      amount,
-      start_date,
-      end_date,
-      reason
-    } = req.body || {};
-
-    if (!user_id || !request_type) {
-      return res.status(400).json({
-        error: "المستخدم ونوع الطلب مطلوبان"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO employee_requests
-      (
-        user_id,
-        employee_id,
-        request_type,
-        amount,
-        start_date,
-        end_date,
-        reason,
-        status,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'قيد المراجعة', ?)
-    `).run(
-      user_id,
-      employee_id || null,
-      request_type,
-      safeNumber(amount),
-      start_date || "",
-      end_date || "",
-      reason || "",
-      nowISO()
-    );
-
-    logAction(
-      user_id,
-      "CREATE_REQUEST",
-      `${request_type}`
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid,
-      message: "تم إرسال الطلب للإدارة"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إرسال الطلب"
-    });
-  }
-});
-
-app.patch("/api/requests/:id", (req, res) => {
-  try {
-    const {
-      status,
-      admin_note,
-      reviewed_by
-    } = req.body || {};
-
-    const allowed = [
-      "قيد المراجعة",
-      "مقبول",
-      "مرفوض",
-      "مكتمل"
-    ];
-
-    if (!allowed.includes(status)) {
-      return res.status(400).json({
-        error: "حالة الطلب غير صحيحة"
-      });
-    }
-
-    const request = db.prepare(`
-      SELECT *
-      FROM employee_requests
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!request) {
-      return res.status(404).json({
-        error: "الطلب غير موجود"
-      });
-    }
-
-    db.prepare(`
-      UPDATE employee_requests
-      SET
-        status = ?,
-        admin_note = ?,
-        reviewed_at = ?,
-        reviewed_by = ?
-      WHERE id = ?
-    `).run(
-      status,
-      admin_note || "",
-      nowISO(),
-      reviewed_by || null,
-      request.id
-    );
-
-    res.json({
-      success: true,
-      message: "تم تحديث الطلب"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تحديث الطلب"
-    });
-  }
-});
-
-/* =====================================================
-   ANNOUNCEMENTS
-===================================================== */
-
-app.get("/api/announcements", (req, res) => {
-  try {
-    const announcements = db.prepare(`
-      SELECT
-        a.*,
-        u.name AS creator_name
-      FROM announcements a
-      LEFT JOIN users u
-        ON u.id = a.created_by
-      ORDER BY a.id DESC
-    `).all();
-
-    res.json(announcements);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الإعلانات"
-    });
-  }
-});
-
-app.post("/api/announcements", (req, res) => {
-  try {
-    const {
-      title,
-      message,
-      target_type,
-      target_role,
-      created_by
-    } = req.body || {};
-
-    if (!title || !message) {
-      return res.status(400).json({
-        error: "العنوان والرسالة مطلوبان"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO announcements
-      (
-        title,
-        message,
-        target_type,
-        target_role,
-        created_by,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      title,
-      message,
-      target_type || "all",
-      target_role || "",
-      created_by || null,
-      nowISO()
-    );
-
-    logAction(
-      created_by,
-      "CREATE_ANNOUNCEMENT",
-      title
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid,
-      message: "تم نشر الإعلان"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر نشر الإعلان"
-    });
-  }
-});
-
-/* =====================================================
-   EMPLOYEE MESSAGES
-===================================================== */
-
-app.get("/api/messages/:userId", (req, res) => {
-  try {
-    const messages = db.prepare(`
-      SELECT *
-      FROM employee_messages
-      WHERE user_id = ?
-      ORDER BY id DESC
-    `).all(req.params.userId);
-
-    res.json(messages);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الرسائل"
-    });
-  }
-});
-
-app.post("/api/messages", (req, res) => {
-  try {
-    const {
-      employee_id,
-      user_id,
-      title,
-      message
-    } = req.body || {};
-
-    if (!user_id || !title || !message) {
-      return res.status(400).json({
-        error: "المستخدم والعنوان والرسالة مطلوبة"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO employee_messages
-      (
-        employee_id,
-        user_id,
-        title,
-        message,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      employee_id || null,
-      user_id,
-      title,
-      message,
-      nowISO()
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إرسال الرسالة"
-    });
-  }
-});
-
-app.patch("/api/messages/:id/read", (req, res) => {
-  try {
-    db.prepare(`
-      UPDATE employee_messages
-      SET
-        is_read = 1,
-        read_at = ?
-      WHERE id = ?
-    `).run(
-      nowISO(),
-      req.params.id
-    );
-
-    res.json({
-      success: true
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تحديث الرسالة"
-    });
-  }
-});
-
-/* =====================================================
-   STUDENT NOTES
-   + ولي الأمر شاف / ما شاف
-===================================================== */
-
-app.post("/api/notes", (req, res) => {
-  try {
-    const {
-      student_id,
-      text,
-      created_by
-    } = req.body || {};
-
-    if (!student_id || !text) {
-      return res.status(400).json({
-        error: "الطالب والملاحظة مطلوبان"
-      });
-    }
-
-    const student = db.prepare(`
-      SELECT *
-      FROM students
-      WHERE id = ?
-    `).get(student_id);
-
-    if (!student) {
-      return res.status(404).json({
-        error: "الطالب غير موجود"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO notes
-      (
-        student_id,
-        text,
-        created_by,
-        created_at,
-        parent_seen
-      )
-      VALUES (?, ?, ?, ?, 0)
-    `).run(
-      student_id,
-      text,
-      created_by || null,
-      nowISO()
-    );
-
-    logAction(
-      created_by,
-      "ADD_NOTE",
-      `ملاحظة للطالب ${student.name}`
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid,
-      parent_seen: false,
-      message: "تم حفظ الملاحظة"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حفظ الملاحظة"
-    });
-  }
-});
-
-app.get("/api/notes/:studentId", (req, res) => {
-  try {
-    const notes = db.prepare(`
-      SELECT
-        n.*,
-        u.name AS created_by_name
-      FROM notes n
-      LEFT JOIN users u
-        ON u.id = n.created_by
-      WHERE n.student_id = ?
-      ORDER BY n.id DESC
-    `).all(req.params.studentId);
-
-    res.json(notes);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الملاحظات"
-    });
-  }
-});
-
-/* ولي الأمر يفتح الملاحظة */
-
-app.patch("/api/notes/:id/seen", (req, res) => {
-  try {
-    const note = db.prepare(`
-      SELECT *
-      FROM notes
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!note) {
-      return res.status(404).json({
-        error: "الملاحظة غير موجودة"
-      });
-    }
-
-    db.prepare(`
-      UPDATE notes
-      SET
-        parent_seen = 1,
-        parent_seen_at = ?
-      WHERE id = ?
-    `).run(
-      nowISO(),
-      note.id
-    );
-
-    res.json({
-      success: true,
-      parent_seen: true,
-      parent_seen_at: nowISO()
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تسجيل مشاهدة الملاحظة"
-    });
-  }
-});
-
-/* معرفة حالة مشاهدة الملاحظات */
-
-app.get("/api/notes/status/all", (req, res) => {
-  try {
-    const result = db.prepare(`
-      SELECT
-        n.id,
-        n.student_id,
-        n.text,
-        n.created_at,
-        n.parent_seen,
-        n.parent_seen_at,
-        s.name AS student_name
-      FROM notes n
-      LEFT JOIN students s
-        ON s.id = n.student_id
-      ORDER BY n.id DESC
-    `).all();
-
-    res.json(result);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب حالة الملاحظات"
-    });
-  }
-});
-
-app.delete("/api/notes/:id", (req, res) => {
-  try {
-    const note = db.prepare(`
-      SELECT id FROM notes WHERE id = ?
-    `).get(req.params.id);
-
-    if (!note) {
-      return res.status(404).json({
-        error: "الملاحظة غير موجودة"
-      });
-    }
-
-    db.prepare(`
-      DELETE FROM notes
-      WHERE id = ?
-    `).run(req.params.id);
-
-    res.json({
-      success: true,
-      message: "تم حذف الملاحظة"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف الملاحظة"
-    });
-  }
-});
-
-/* =====================================================
-   VIDEOS
-===================================================== */
-
-app.get("/api/videos", (req, res) => {
-  try {
-    const videos = db.prepare(`
-      SELECT
-        v.*,
-        u.name AS creator_name
-      FROM videos v
-      LEFT JOIN users u
-        ON u.id = v.created_by
-      ORDER BY v.id DESC
-    `).all();
-
-    res.json(videos);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الحصص"
-    });
-  }
-});
-
-app.post("/api/videos", (req, res) => {
-  try {
-    const {
-      title,
-      file_name,
-      description,
-      created_by
-    } = req.body || {};
-
-    if (!title) {
-      return res.status(400).json({
-        error: "اسم الحصة مطلوب"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO videos
-      (
-        title,
-        file_name,
-        description,
-        created_by,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      title,
-      file_name || "",
-      description || "",
-      created_by || null,
-      nowISO()
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إضافة الحصة"
-    });
-  }
-});
-
-/* =====================================================
-   DEDUCTIONS
-===================================================== */
+// =====================================================
+// الخصومات والمكافآت
+// =====================================================
 
 app.get("/api/employees/:id/deductions", (req, res) => {
-  try {
-    const rows = db.prepare(`
+  res.json(
+    db.prepare(`
       SELECT *
       FROM deductions
       WHERE employee_id = ?
-      ORDER BY date DESC, id DESC
-    `).all(req.params.id);
-
-    res.json(rows);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الخصومات"
-    });
-  }
+      ORDER BY id DESC
+    `).all(req.params.id)
+  );
 });
 
 app.post("/api/employees/:id/deductions", (req, res) => {
@@ -2132,25 +1067,12 @@ app.post("/api/employees/:id/deductions", (req, res) => {
     const {
       amount,
       reason,
-      month,
-      created_by
+      month
     } = req.body || {};
 
-    if (safeNumber(amount) <= 0 || !reason) {
+    if (!amount || !reason) {
       return res.status(400).json({
-        error: "قيمة الخصم وسببه مطلوبان"
-      });
-    }
-
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
+        error: "القيمة والسبب مطلوبان"
       });
     }
 
@@ -2163,17 +1085,15 @@ app.post("/api/employees/:id/deductions", (req, res) => {
         date,
         month,
         automatic,
-        created_by,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+      VALUES (?, ?, ?, ?, ?, 0, ?)
     `).run(
-      employee.id,
-      safeNumber(amount),
+      req.params.id,
+      Number(amount),
       reason,
       today(),
       month || currentMonth(),
-      created_by || null,
       nowISO()
     );
 
@@ -2181,56 +1101,24 @@ app.post("/api/employees/:id/deductions", (req, res) => {
       success: true,
       id: result.lastInsertRowid
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر إضافة الخصم"
     });
   }
 });
 
-app.delete("/api/deductions/:id", (req, res) => {
-  try {
-    db.prepare(`
-      DELETE FROM deductions
-      WHERE id = ?
-    `).run(req.params.id);
-
-    res.json({
-      success: true,
-      message: "تم حذف الخصم"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف الخصم"
-    });
-  }
-});
-
-/* =====================================================
-   BONUSES
-===================================================== */
-
 app.get("/api/employees/:id/bonuses", (req, res) => {
-  try {
-    const rows = db.prepare(`
+  res.json(
+    db.prepare(`
       SELECT *
       FROM bonuses
       WHERE employee_id = ?
-      ORDER BY date DESC, id DESC
-    `).all(req.params.id);
-
-    res.json(rows);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب المكافآت"
-    });
-  }
+      ORDER BY id DESC
+    `).all(req.params.id)
+  );
 });
 
 app.post("/api/employees/:id/bonuses", (req, res) => {
@@ -2238,25 +1126,12 @@ app.post("/api/employees/:id/bonuses", (req, res) => {
     const {
       amount,
       reason,
-      month,
-      created_by
+      month
     } = req.body || {};
 
-    if (safeNumber(amount) <= 0 || !reason) {
+    if (!amount || !reason) {
       return res.status(400).json({
-        error: "قيمة المكافأة وسببها مطلوبان"
-      });
-    }
-
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
+        error: "القيمة والسبب مطلوبان"
       });
     }
 
@@ -2268,17 +1143,15 @@ app.post("/api/employees/:id/bonuses", (req, res) => {
         reason,
         date,
         month,
-        created_by,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      employee.id,
-      safeNumber(amount),
+      req.params.id,
+      Number(amount),
       reason,
       today(),
       month || currentMonth(),
-      created_by || null,
       nowISO()
     );
 
@@ -2286,38 +1159,18 @@ app.post("/api/employees/:id/bonuses", (req, res) => {
       success: true,
       id: result.lastInsertRowid
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر إضافة المكافأة"
     });
   }
 });
 
-app.delete("/api/bonuses/:id", (req, res) => {
-  try {
-    db.prepare(`
-      DELETE FROM bonuses
-      WHERE id = ?
-    `).run(req.params.id);
-
-    res.json({
-      success: true,
-      message: "تم حذف المكافأة"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف المكافأة"
-    });
-  }
-});
-
-/* =====================================================
-   PAYROLL
-===================================================== */
+// =====================================================
+// الرواتب
+// =====================================================
 
 app.get("/api/employees/:id/payroll", (req, res) => {
   try {
@@ -2357,65 +1210,47 @@ app.get("/api/employees/:id/payroll", (req, res) => {
     ).total;
 
     const basic =
-      safeNumber(employee.basic_salary);
+      Number(employee.basic_salary || 0);
 
     const allowance =
-      safeNumber(employee.allowance);
-
-    const bonus =
-      safeNumber(bonuses);
-
-    const deduction =
-      safeNumber(deductions);
+      Number(employee.allowance || 0);
 
     const gross =
       basic +
       allowance +
-      bonus;
+      Number(bonuses || 0);
 
     const net =
       gross -
-      deduction;
+      Number(deductions || 0);
 
     res.json({
       month,
       employee,
       basic_salary: basic,
       allowance,
-      bonuses: bonus,
-      deductions: deduction,
+      bonuses: Number(bonuses || 0),
+      deductions: Number(deductions || 0),
       gross,
       net
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر حساب الراتب"
     });
   }
 });
 
-/* =====================================================
-   PAYROLL SETTINGS
-===================================================== */
-
 app.get("/api/payroll-settings", (req, res) => {
-  try {
-    const settings = db.prepare(`
+  res.json(
+    db.prepare(`
       SELECT *
       FROM payroll_settings
       WHERE id = 1
-    `).get();
-
-    res.json(settings);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب إعدادات الرواتب"
-    });
-  }
+    `).get()
+  );
 });
 
 app.patch("/api/payroll-settings", (req, res) => {
@@ -2434,27 +1269,492 @@ app.patch("/api/payroll-settings", (req, res) => {
         allowed_late_minutes = ?
       WHERE id = 1
     `).run(
-      safeNumber(absence_deduction),
-      safeNumber(late_deduction),
-      safeNumber(allowed_late_minutes)
+      Number(absence_deduction || 0),
+      Number(late_deduction || 0),
+      Number(allowed_late_minutes || 0)
     );
 
     res.json({
-      success: true,
-      message: "تم تحديث إعدادات الرواتب"
+      success: true
     });
-  } catch (error) {
-    console.error(error);
 
+  } catch (error) {
     res.status(500).json({
-      error: "تعذر تحديث إعدادات الرواتب"
+      error: "تعذر تحديث الإعدادات"
     });
   }
 });
 
-/* =====================================================
-   AUDIT LOGS
-===================================================== */
+// =====================================================
+// ملاحظات الطلاب + معرفة المشاهدة
+// =====================================================
+
+app.post("/api/notes", (req, res) => {
+  try {
+    const {
+      student_id,
+      text,
+      created_by
+    } = req.body || {};
+
+    if (!student_id || !text) {
+      return res.status(400).json({
+        error: "الطالب والملاحظة مطلوبان"
+      });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO notes
+      (student_id, text, created_at, created_by)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      student_id,
+      text,
+      nowISO(),
+      created_by || null
+    );
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "تعذر حفظ الملاحظة"
+    });
+  }
+});
+
+app.get("/api/notes/:studentId", (req, res) => {
+  try {
+    const notes = db.prepare(`
+      SELECT
+        n.*,
+        s.name AS student_name,
+        COUNT(nv.id) AS view_count
+      FROM notes n
+      LEFT JOIN students s
+      ON s.id = n.student_id
+      LEFT JOIN note_views nv
+      ON nv.note_id = n.id
+      WHERE n.student_id = ?
+      GROUP BY n.id
+      ORDER BY n.id DESC
+    `).all(req.params.studentId);
+
+    res.json(notes);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "تعذر جلب الملاحظات"
+    });
+  }
+});
+
+// تسجيل أن المستخدم شاهد الملاحظة
+app.post("/api/notes/:id/view", (req, res) => {
+  try {
+    const {
+      user_id
+    } = req.body || {};
+
+    if (!user_id) {
+      return res.status(400).json({
+        error: "user_id مطلوب"
+      });
+    }
+
+    db.prepare(`
+      INSERT INTO note_views
+      (note_id, user_id, viewed_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(note_id, user_id)
+      DO UPDATE SET
+        viewed_at = excluded.viewed_at
+    `).run(
+      req.params.id,
+      user_id,
+      nowISO()
+    );
+
+    res.json({
+      success: true,
+      viewed_at: nowISO()
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "تعذر تسجيل المشاهدة"
+    });
+  }
+});
+
+// معرفة من شاهد الملاحظة
+app.get("/api/notes/:id/views", (req, res) => {
+  try {
+    const views = db.prepare(`
+      SELECT
+        nv.*,
+        u.name,
+        u.username,
+        u.role
+      FROM note_views nv
+      LEFT JOIN users u
+      ON u.id = nv.user_id
+      WHERE nv.note_id = ?
+      ORDER BY nv.viewed_at DESC
+    `).all(req.params.id);
+
+    res.json({
+      views,
+      viewed: views.length > 0
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب المشاهدات"
+    });
+  }
+});
+
+app.delete("/api/notes/:id", (req, res) => {
+  try {
+    db.prepare(`
+      DELETE FROM note_views
+      WHERE note_id = ?
+    `).run(req.params.id);
+
+    db.prepare(`
+      DELETE FROM notes
+      WHERE id = ?
+    `).run(req.params.id);
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر حذف الملاحظة"
+    });
+  }
+});
+
+// =====================================================
+// تعاميم وملاحظات الموظفين
+// =====================================================
+
+app.post("/api/announcements", (req, res) => {
+  try {
+    const {
+      title,
+      text,
+      target_type,
+      created_by
+    } = req.body || {};
+
+    if (!title || !text) {
+      return res.status(400).json({
+        error: "العنوان والنص مطلوبان"
+      });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO announcements
+      (title, text, target_type, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      title,
+      text,
+      target_type || "all",
+      created_by || null,
+      nowISO()
+    );
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر إرسال التعميم"
+    });
+  }
+});
+
+app.get("/api/announcements", (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT
+        a.*,
+        u.name AS creator_name
+      FROM announcements a
+      LEFT JOIN users u
+      ON u.id = a.created_by
+      ORDER BY a.id DESC
+    `).all();
+
+    res.json(rows);
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب التعميمات"
+    });
+  }
+});
+
+app.post("/api/announcements/:id/view", (req, res) => {
+  try {
+    const {
+      user_id
+    } = req.body || {};
+
+    if (!user_id) {
+      return res.status(400).json({
+        error: "user_id مطلوب"
+      });
+    }
+
+    db.prepare(`
+      INSERT INTO announcement_views
+      (announcement_id, user_id, viewed_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(announcement_id, user_id)
+      DO UPDATE SET
+        viewed_at = excluded.viewed_at
+    `).run(
+      req.params.id,
+      user_id,
+      nowISO()
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر تسجيل المشاهدة"
+    });
+  }
+});
+
+// =====================================================
+// طلبات الموظفين
+// =====================================================
+
+app.post("/api/employee-requests", (req, res) => {
+  try {
+    const {
+      employee_id,
+      request_type,
+      title,
+      details,
+      amount
+    } = req.body || {};
+
+    if (!employee_id || !request_type || !title) {
+      return res.status(400).json({
+        error: "بيانات الطلب ناقصة"
+      });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO employee_requests
+      (
+        employee_id,
+        request_type,
+        title,
+        details,
+        amount,
+        status,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+    `).run(
+      employee_id,
+      request_type,
+      title,
+      details || "",
+      Number(amount || 0),
+      nowISO(),
+      nowISO()
+    );
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "تعذر إرسال الطلب"
+    });
+  }
+});
+
+app.get("/api/employee-requests", (req, res) => {
+  try {
+    const requests = db.prepare(`
+      SELECT
+        r.*,
+        e.name AS employee_name,
+        e.job_title,
+        e.department
+      FROM employee_requests r
+      LEFT JOIN employees e
+      ON e.id = r.employee_id
+      ORDER BY r.id DESC
+    `).all();
+
+    res.json(requests);
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب الطلبات"
+    });
+  }
+});
+
+app.get("/api/employee-requests/:employeeId", (req, res) => {
+  try {
+    const requests = db.prepare(`
+      SELECT *
+      FROM employee_requests
+      WHERE employee_id = ?
+      ORDER BY id DESC
+    `).all(req.params.employeeId);
+
+    res.json(requests);
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب الطلبات"
+    });
+  }
+});
+
+app.patch("/api/employee-requests/:id", (req, res) => {
+  try {
+    const {
+      status,
+      admin_note
+    } = req.body || {};
+
+    const allowed = [
+      "pending",
+      "approved",
+      "rejected"
+    ];
+
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        error: "حالة الطلب غير صحيحة"
+      });
+    }
+
+    db.prepare(`
+      UPDATE employee_requests
+      SET
+        status = ?,
+        admin_note = ?,
+        updated_at = ?
+      WHERE id = ?
+    `).run(
+      status,
+      admin_note || "",
+      nowISO(),
+      req.params.id
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر تحديث الطلب"
+    });
+  }
+});
+
+// =====================================================
+// إعدادات المنصة
+// =====================================================
+
+app.get("/api/platform-settings", (req, res) => {
+  try {
+    const settings = db.prepare(`
+      SELECT *
+      FROM platform_settings
+      WHERE id = 1
+    `).get();
+
+    res.json(settings);
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب إعدادات المنصة"
+    });
+  }
+});
+
+app.patch("/api/platform-settings", (req, res) => {
+  try {
+    const {
+      institution_name,
+      subtitle,
+      logo,
+      primary_color,
+      secondary_color
+    } = req.body || {};
+
+    const old = db.prepare(`
+      SELECT *
+      FROM platform_settings
+      WHERE id = 1
+    `).get();
+
+    db.prepare(`
+      UPDATE platform_settings
+      SET
+        institution_name = ?,
+        subtitle = ?,
+        logo = ?,
+        primary_color = ?,
+        secondary_color = ?
+      WHERE id = 1
+    `).run(
+      institution_name ?? old.institution_name,
+      subtitle ?? old.subtitle,
+      logo ?? old.logo,
+      primary_color ?? old.primary_color,
+      secondary_color ?? old.secondary_color
+    );
+
+    res.json({
+      success: true,
+      message: "تم تحديث إعدادات المنصة"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "تعذر تحديث إعدادات المنصة"
+    });
+  }
+});
+
+// =====================================================
+// سجل العمليات
+// =====================================================
 
 app.get("/api/audit-logs", (req, res) => {
   try {
@@ -2465,93 +1765,135 @@ app.get("/api/audit-logs", (req, res) => {
         u.username
       FROM audit_logs a
       LEFT JOIN users u
-        ON u.id = a.user_id
+      ON u.id = a.user_id
       ORDER BY a.id DESC
       LIMIT 500
     `).all();
 
     res.json(logs);
-  } catch (error) {
-    console.error(error);
 
+  } catch (error) {
     res.status(500).json({
       error: "تعذر جلب سجل العمليات"
     });
   }
 });
 
-/* =====================================================
-   DASHBOARD
-===================================================== */
+// =====================================================
+// الفيديوهات
+// =====================================================
+
+app.post("/api/videos", (req, res) => {
+  try {
+    const {
+      title,
+      file_name
+    } = req.body || {};
+
+    if (!title) {
+      return res.status(400).json({
+        error: "اسم الحصة مطلوب"
+      });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO videos
+      (title, file_name, created_at)
+      VALUES (?, ?, ?)
+    `).run(
+      title,
+      file_name || "",
+      nowISO()
+    );
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر إضافة الحصة"
+    });
+  }
+});
+
+app.get("/api/videos", (req, res) => {
+  try {
+    res.json(
+      db.prepare(`
+        SELECT *
+        FROM videos
+        ORDER BY id DESC
+      `).all()
+    );
+  } catch (error) {
+    res.status(500).json({
+      error: "تعذر جلب الحصص"
+    });
+  }
+});
+
+// =====================================================
+// Dashboard
+// =====================================================
 
 app.get("/api/dashboard", (req, res) => {
   try {
     const users = db.prepare(`
-      SELECT *
+      SELECT COUNT(*) AS count
       FROM users
-    `).all();
+    `).get().count;
 
-    const students =
-      db.prepare(`
-        SELECT COUNT(*) AS count
-        FROM students
-      `).get().count;
+    const online = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM users
+      WHERE active = 1
+      AND last_seen IS NOT NULL
+      AND datetime(last_seen) >= datetime('now', '-60 seconds')
+    `).get().count;
 
-    const employees =
-      db.prepare(`
-        SELECT COUNT(*) AS count
-        FROM employees
-        WHERE active = 1
-      `).get().count;
+    const students = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM students
+    `).get().count;
 
-    const now = Date.now();
-
-    const onlineUsers = users.filter(user => {
-      return (
-        user.active === 1 &&
-        user.last_seen &&
-        now - new Date(user.last_seen).getTime() <= 60000
-      );
-    });
+    const employees = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM employees
+      WHERE active = 1
+    `).get().count;
 
     res.json({
-      users_total: users.length,
-      users_online: onlineUsers.length,
+      users,
+      online,
       students,
-      employees,
-      online_users: onlineUsers.map(user => ({
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        role_name:
-          roleNames[user.role] || user.role
-      }))
+      employees
     });
+
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       error: "تعذر تحميل لوحة التحكم"
     });
   }
 });
 
-/* =====================================================
-   ROLE LIST
-===================================================== */
+// =====================================================
+// Health
+// =====================================================
 
-app.get("/api/roles", (req, res) => {
-  res.json(
-    roles.map(role => ({
-      value: role,
-      name: roleNames[role] || role
-    }))
-  );
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "School portal is running",
+    time: nowISO()
+  });
 });
 
-/* =====================================================
-   ROOT
-===================================================== */
+// =====================================================
+// الصفحة الرئيسية
+// =====================================================
 
 app.get("/", (req, res) => {
   res.sendFile(
@@ -2559,19 +1901,14 @@ app.get("/", (req, res) => {
   );
 });
 
-/* =====================================================
-   START SERVER
-===================================================== */
+// =====================================================
+// تشغيل السيرفر
+// =====================================================
 
-const PORT =
-  process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-app.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-    console.log(
-      `School portal running on port ${PORT}`
-    );
-  }
-);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(
+    `School portal running on port ${PORT}`
+  );
+});
