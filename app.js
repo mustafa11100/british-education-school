@@ -1,89 +1,189 @@
-const loginForm = document.getElementById("loginForm");
-const loginPage = document.getElementById("loginPage");
-const appPage = document.getElementById("appPage");
-const loginMessage = document.getElementById("loginMessage");
+const loginBox =
+  document.getElementById("loginBox");
 
-let currentUser = null;
+const registerBox =
+  document.getElementById("registerBox");
 
-loginForm.addEventListener("submit", async (event) => {
+const showRegisterButton =
+  document.getElementById("showRegisterButton");
 
-  event.preventDefault();
+const backToLoginButton =
+  document.getElementById("backToLoginButton");
 
-  const username =
-    document.getElementById("username").value.trim();
+const registerForm =
+  document.getElementById("registerForm");
 
-  const password =
-    document.getElementById("password").value;
+const registerMessage =
+  document.getElementById("registerMessage");
 
-  if (!username || !password) {
-    loginMessage.textContent =
-      "أدخل اسم المستخدم وكلمة المرور";
 
-    return;
+/* فتح صفحة إنشاء الحساب */
+
+showRegisterButton.addEventListener(
+  "click",
+  () => {
+
+    loginBox.classList.add("hidden");
+
+    registerBox.classList.remove("hidden");
+
+    registerMessage.textContent = "";
+
   }
+);
 
-  loginMessage.textContent =
-    "جاري تسجيل الدخول...";
 
-  try {
+/* الرجوع لتسجيل الدخول */
 
-    const response = await fetch("/api/login", {
+backToLoginButton.addEventListener(
+  "click",
+  () => {
 
-      method: "POST",
+    registerBox.classList.add("hidden");
 
-      headers: {
-        "Content-Type": "application/json"
-      },
+    loginBox.classList.remove("hidden");
 
-      body: JSON.stringify({
-        username,
-        password
-      })
+    registerMessage.textContent = "";
 
-    });
+  }
+);
 
-    const data = await response.json();
 
-    if (!response.ok) {
+/* إنشاء الحساب */
 
-      loginMessage.textContent =
-        data.error || "بيانات الدخول غير صحيحة";
+registerForm.addEventListener(
+  "submit",
+  async (event) => {
+
+    event.preventDefault();
+
+    const name =
+      document
+        .getElementById("registerName")
+        .value
+        .trim();
+
+    const username =
+      document
+        .getElementById("registerUsername")
+        .value
+        .trim();
+
+    const password =
+      document
+        .getElementById("registerPassword")
+        .value;
+
+    const confirmPassword =
+      document
+        .getElementById("registerPasswordConfirm")
+        .value;
+
+
+    if (!name || !username || !password) {
+
+      registerMessage.textContent =
+        "أكمل جميع البيانات";
 
       return;
     }
 
-    currentUser = data;
 
-    localStorage.setItem(
-      "schoolUser",
-      JSON.stringify(data)
-    );
+    if (password.length < 4) {
 
-    loginPage.classList.add("hidden");
+      registerMessage.textContent =
+        "كلمة المرور يجب أن تكون 4 أحرف على الأقل";
 
-    appPage.classList.remove("hidden");
-
-    const currentUserName =
-      document.getElementById("currentUserName");
-
-    if (currentUserName) {
-      currentUserName.textContent =
-        data.name;
+      return;
     }
 
-    loginMessage.textContent = "";
 
-    startActivity();
+    if (password !== confirmPassword) {
 
-    loadDashboard();
+      registerMessage.textContent =
+        "كلمتا المرور غير متطابقتين";
 
-  } catch (error) {
+      return;
+    }
 
-    console.error(error);
 
-    loginMessage.textContent =
-      "تعذر الاتصال بالسيرفر";
+    registerMessage.textContent =
+      "جاري إنشاء الحساب...";
+
+
+    try {
+
+      const response =
+        await fetch("/api/users", {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+
+            username,
+            password,
+            name,
+
+            // أي تسجيل ذاتي = مستخدم عادي
+            role: "user"
+
+          })
+
+        });
+
+
+      const data =
+        await response.json();
+
+
+      if (!response.ok) {
+
+        registerMessage.textContent =
+          data.error ||
+          "تعذر إنشاء الحساب";
+
+        return;
+      }
+
+
+      registerMessage.textContent =
+        "تم إنشاء الحساب بنجاح ✅";
+
+
+      registerForm.reset();
+
+
+      setTimeout(() => {
+
+        registerBox.classList.add("hidden");
+
+        loginBox.classList.remove("hidden");
+
+        document
+          .getElementById("username")
+          .value = username;
+
+        document
+          .getElementById("password")
+          .value = "";
+
+        registerMessage.textContent = "";
+
+      }, 1000);
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      registerMessage.textContent =
+        "تعذر الاتصال بالسيرفر";
+
+    }
 
   }
-
-});
+);
