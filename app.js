@@ -1,4 +1,3 @@
-```javascript
 const app = document.getElementById("app");
 
 let me = null;
@@ -139,9 +138,7 @@ async function login() {
         .value;
 
     if (!username || !password) {
-      alert(
-        "أدخل اسم المستخدم وكلمة المرور"
-      );
+      alert("أدخل اسم المستخدم وكلمة المرور");
       return;
     }
 
@@ -528,9 +525,7 @@ async function adminDashboard() {
                   <td>
                     ${
                       user.last_seen
-                        ? dateText(
-                            user.last_seen
-                          )
+                        ? dateText(user.last_seen)
                         : "لم يدخل بعد"
                     }
                   </td>
@@ -708,9 +703,7 @@ async function adminUsers() {
                   <td>
                     ${
                       user.last_seen
-                        ? dateText(
-                            user.last_seen
-                          )
+                        ? dateText(user.last_seen)
                         : "لم يدخل بعد"
                     }
                   </td>
@@ -819,11 +812,7 @@ async function addUser() {
 
 async function disableUser(id) {
 
-  if (
-    !confirm(
-      "هل تريد إيقاف هذا المستخدم؟"
-    )
-  ) {
+  if (!confirm("هل تريد إيقاف هذا المستخدم؟")) {
     return;
   }
 
@@ -890,9 +879,7 @@ async function deleteUser(id) {
 async function changeUserPassword(id) {
 
   const newPassword =
-    prompt(
-      "اكتب كلمة المرور الجديدة:"
-    );
+    prompt("اكتب كلمة المرور الجديدة:");
 
   if (!newPassword) {
     return;
@@ -905,15 +892,12 @@ async function changeUserPassword(id) {
       {
         method: "PATCH",
         body: JSON.stringify({
-          new_password:
-            newPassword
+          new_password: newPassword
         })
       }
     );
 
-    alert(
-      "تم تغيير كلمة المرور"
-    );
+    alert("تم تغيير كلمة المرور");
 
   } catch (error) {
     alert(error.message);
@@ -1001,15 +985,11 @@ async function adminStudents() {
                   </td>
 
                   <td>
-                    ${statusBadge(
-                      student.status
-                    )}
+                    ${statusBadge(student.status)}
                   </td>
 
                   <td>
-                    ${esc(
-                      student.parent_phone
-                    )}
+                    ${esc(student.parent_phone)}
                   </td>
 
                   <td>
@@ -1074,9 +1054,7 @@ async function addStudent() {
       !payload.name ||
       !payload.class_name
     ) {
-      alert(
-        "أدخل اسم الطالب والفصل"
-      );
+      alert("أدخل اسم الطالب والفصل");
       return;
     }
 
@@ -1178,9 +1156,7 @@ async function showStudentAttendance(id) {
                     </td>
 
                     <td>
-                      ${statusBadge(
-                        record.status
-                      )}
+                      ${statusBadge(record.status)}
                     </td>
 
                   </tr>
@@ -1289,9 +1265,7 @@ async function adminEmployees() {
                 user =>
                   !employees.some(
                     emp =>
-                      Number(
-                        emp.user_id
-                      ) ===
+                      Number(emp.user_id) ===
                       Number(user.id)
                   )
               )
@@ -1312,9 +1286,7 @@ async function adminEmployees() {
 
           </select>
 
-          <button
-            onclick="addEmployee()"
-          >
+          <button onclick="addEmployee()">
             ➕ إضافة الموظف
           </button>
 
@@ -1332,29 +1304,12 @@ async function adminEmployees() {
 
           <tr>
 
-            <th>
-              الاسم
-            </th>
-
-            <th>
-              الوظيفة
-            </th>
-
-            <th>
-              القسم
-            </th>
-
-            <th>
-              الراتب
-            </th>
-
-            <th>
-              الحساب
-            </th>
-
-            <th>
-              إجراء
-            </th>
+            <th>الاسم</th>
+            <th>الوظيفة</th>
+            <th>القسم</th>
+            <th>الراتب</th>
+            <th>الحساب</th>
+            <th>إجراء</th>
 
           </tr>
 
@@ -1366,40 +1321,28 @@ async function adminEmployees() {
                   <tr>
 
                     <td>
-                      ${esc(
-                        employee.name
-                      )}
+                      ${esc(employee.name)}
                     </td>
 
                     <td>
-                      ${esc(
-                        employee.job_title
-                      )}
+                      ${esc(employee.job_title)}
                     </td>
 
                     <td>
-                      ${esc(
-                        employee.department
-                      )}
+                      ${esc(employee.department)}
                     </td>
 
                     <td>
                       ${money(
-                        Number(
-                          employee.basic_salary
-                        ) +
-                        Number(
-                          employee.allowance
-                        )
+                        Number(employee.basic_salary) +
+                        Number(employee.allowance)
                       )}
                     </td>
 
                     <td>
                       ${
                         employee.username
-                          ? esc(
-                              employee.username
-                            )
+                          ? esc(employee.username)
                           : "بدون حساب"
                       }
                     </td>
@@ -1509,9 +1452,7 @@ async function addEmployee() {
     };
 
     if (!payload.name) {
-      alert(
-        "أدخل اسم الموظف"
-      );
+      alert("أدخل اسم الموظف");
       return;
     }
 
@@ -1537,8 +1478,7 @@ async function employeeDetails(id) {
     const employee =
       employees.find(
         item =>
-          Number(item.id) ===
-          Number(id)
+          Number(item.id) === Number(id)
       );
 
     if (!employee) {
@@ -1564,55 +1504,37 @@ async function employeeDetails(id) {
 
         <p>
           رقم الموظف:
-          ${esc(
-            employee.employee_number
-          )}
+          ${esc(employee.employee_number)}
         </p>
 
         <p>
           الوظيفة:
-          ${esc(
-            employee.job_title
-          )}
+          ${esc(employee.job_title)}
         </p>
 
         <p>
           القسم:
-          ${esc(
-            employee.department
-          )}
+          ${esc(employee.department)}
         </p>
 
         <p>
           الهاتف:
-          ${esc(
-            employee.phone
-          )}
+          ${esc(employee.phone)}
         </p>
 
         <p>
           تاريخ التعيين:
-          ${esc(
-            employee.hire_date
-          )}
+          ${esc(employee.hire_date)}
         </p>
 
         <p>
           الراتب الأساسي:
-          <b>
-            ${money(
-              employee.basic_salary
-            )}
-          </b>
+          <b>${money(employee.basic_salary)}</b>
         </p>
 
         <p>
           البدلات:
-          <b>
-            ${money(
-              employee.allowance
-            )}
-          </b>
+          <b>${money(employee.allowance)}</b>
         </p>
 
       </div>
@@ -1668,25 +1590,11 @@ async function employeeAttendance(id) {
 
           <tr>
 
-            <th>
-              التاريخ
-            </th>
-
-            <th>
-              الدخول
-            </th>
-
-            <th>
-              الخروج
-            </th>
-
-            <th>
-              الحالة
-            </th>
-
-            <th>
-              التأخير
-            </th>
+            <th>التاريخ</th>
+            <th>الدخول</th>
+            <th>الخروج</th>
+            <th>الحالة</th>
+            <th>التأخير</th>
 
           </tr>
 
@@ -1698,36 +1606,23 @@ async function employeeAttendance(id) {
                   <tr>
 
                     <td>
-                      ${esc(
-                        record.date
-                      )}
+                      ${esc(record.date)}
                     </td>
 
                     <td>
-                      ${esc(
-                        record.checkIn ||
-                        "-"
-                      )}
+                      ${esc(record.checkIn || "-")}
                     </td>
 
                     <td>
-                      ${esc(
-                        record.checkOut ||
-                        "-"
-                      )}
+                      ${esc(record.checkOut || "-")}
                     </td>
 
                     <td>
-                      ${statusBadge(
-                        record.status
-                      )}
+                      ${statusBadge(record.status)}
                     </td>
 
                     <td>
-                      ${
-                        record.lateMinutes ||
-                        0
-                      }
+                      ${record.lateMinutes || 0}
                     </td>
 
                   </tr>
@@ -1760,8 +1655,7 @@ async function employeeAttendance(id) {
 
 function currentMonthValue() {
 
-  const now =
-    new Date();
+  const now = new Date();
 
   return `${now.getFullYear()}-${String(
     now.getMonth() + 1
@@ -1777,9 +1671,7 @@ async function employeeMoney(id) {
 
     const payroll =
       await api(
-        `/api/employees/${id}/payroll?month=${encodeURIComponent(
-          month
-        )}`
+        `/api/employees/${id}/payroll?month=${encodeURIComponent(month)}`
       );
 
     const deductions =
@@ -1806,11 +1698,8 @@ async function employeeMoney(id) {
       <div class="card">
 
         <h2>
-          💰 التفاصيل المالية
-          —
-          ${esc(
-            payroll.employee.name
-          )}
+          💰 التفاصيل المالية —
+          ${esc(payroll.employee.name)}
         </h2>
 
         <div class="cards">
@@ -1818,45 +1707,35 @@ async function employeeMoney(id) {
           <div class="card">
             الأساسي
             <div class="num">
-              ${money(
-                payroll.basic_salary
-              )}
+              ${money(payroll.basic_salary)}
             </div>
           </div>
 
           <div class="card">
             البدلات
             <div class="num">
-              ${money(
-                payroll.allowance
-              )}
+              ${money(payroll.allowance)}
             </div>
           </div>
 
           <div class="card">
             المكافآت
             <div class="num">
-              ${money(
-                payroll.bonuses
-              )}
+              ${money(payroll.bonuses)}
             </div>
           </div>
 
           <div class="card">
             الخصومات
             <div class="num">
-              ${money(
-                payroll.deductions
-              )}
+              ${money(payroll.deductions)}
             </div>
           </div>
 
           <div class="card">
             الصافي
             <div class="num">
-              ${money(
-                payroll.net
-              )}
+              ${money(payroll.net)}
             </div>
           </div>
 
@@ -1879,9 +1758,7 @@ async function employeeMoney(id) {
             placeholder="سبب الخصم"
           >
 
-          <button
-            onclick="addDeduction(${id})"
-          >
+          <button onclick="addDeduction(${id})">
             إضافة الخصم
           </button>
 
@@ -1904,9 +1781,7 @@ async function employeeMoney(id) {
             placeholder="سبب المكافأة"
           >
 
-          <button
-            onclick="addBonus(${id})"
-          >
+          <button onclick="addBonus(${id})">
             إضافة المكافأة
           </button>
 
@@ -1934,21 +1809,15 @@ async function employeeMoney(id) {
                   <tr>
 
                     <td>
-                      ${esc(
-                        item.date
-                      )}
+                      ${esc(item.date)}
                     </td>
 
                     <td>
-                      ${money(
-                        item.amount
-                      )}
+                      ${money(item.amount)}
                     </td>
 
                     <td>
-                      ${esc(
-                        item.reason
-                      )}
+                      ${esc(item.reason)}
                     </td>
 
                     <td>
@@ -2006,21 +1875,15 @@ async function employeeMoney(id) {
                   <tr>
 
                     <td>
-                      ${esc(
-                        item.date
-                      )}
+                      ${esc(item.date)}
                     </td>
 
                     <td>
-                      ${money(
-                        item.amount
-                      )}
+                      ${money(item.amount)}
                     </td>
 
                     <td>
-                      ${esc(
-                        item.reason
-                      )}
+                      ${esc(item.reason)}
                     </td>
 
                     <td>
@@ -2070,16 +1933,12 @@ async function addDeduction(id) {
 
     const reason =
       document
-        .getElementById(
-          "dedReason"
-        )
+        .getElementById("dedReason")
         .value
         .trim();
 
     if (!amount || !reason) {
-      alert(
-        "أدخل مبلغ وسبب الخصم"
-      );
+      alert("أدخل مبلغ وسبب الخصم");
       return;
     }
 
@@ -2106,11 +1965,7 @@ async function deleteDeduction(
   employeeId
 ) {
 
-  if (
-    !confirm(
-      "حذف الخصم؟"
-    )
-  ) {
+  if (!confirm("حذف الخصم؟")) {
     return;
   }
 
@@ -2123,9 +1978,7 @@ async function deleteDeduction(
       }
     );
 
-    await employeeMoney(
-      employeeId
-    );
+    await employeeMoney(employeeId);
 
   } catch (error) {
     alert(error.message);
@@ -2145,16 +1998,12 @@ async function addBonus(id) {
 
     const reason =
       document
-        .getElementById(
-          "bonusReason"
-        )
+        .getElementById("bonusReason")
         .value
         .trim();
 
     if (!amount || !reason) {
-      alert(
-        "أدخل مبلغ وسبب المكافأة"
-      );
+      alert("أدخل مبلغ وسبب المكافأة");
       return;
     }
 
@@ -2181,11 +2030,7 @@ async function deleteBonus(
   employeeId
 ) {
 
-  if (
-    !confirm(
-      "حذف المكافأة؟"
-    )
-  ) {
+  if (!confirm("حذف المكافأة؟")) {
     return;
   }
 
@@ -2198,9 +2043,7 @@ async function deleteBonus(
       }
     );
 
-    await employeeMoney(
-      employeeId
-    );
+    await employeeMoney(employeeId);
 
   } catch (error) {
     alert(error.message);
@@ -2218,9 +2061,7 @@ async function adminPayroll() {
 
   const data =
     await api(
-      `/api/payroll?month=${encodeURIComponent(
-        month
-      )}`
+      `/api/payroll?month=${encodeURIComponent(month)}`
     );
 
   app.innerHTML =
@@ -2260,46 +2101,32 @@ async function adminPayroll() {
                   <tr>
 
                     <td>
-                      ${esc(
-                        employee.name
-                      )}
+                      ${esc(employee.name)}
                     </td>
 
                     <td>
-                      ${money(
-                        employee.basic_salary
-                      )}
+                      ${money(employee.basic_salary)}
                     </td>
 
                     <td>
-                      ${money(
-                        employee.allowance
-                      )}
+                      ${money(employee.allowance)}
                     </td>
 
                     <td>
-                      ${money(
-                        employee.bonuses
-                      )}
+                      ${money(employee.bonuses)}
                     </td>
 
                     <td>
-                      ${money(
-                        employee.deductions
-                      )}
+                      ${money(employee.deductions)}
                     </td>
 
                     <td>
-                      ${money(
-                        employee.gross
-                      )}
+                      ${money(employee.gross)}
                     </td>
 
                     <td>
                       <b>
-                        ${money(
-                          employee.net
-                        )}
+                        ${money(employee.net)}
                       </b>
                     </td>
 
@@ -2330,9 +2157,7 @@ async function adminPayroll() {
 async function adminLogs() {
 
   const logs =
-    await api(
-      "/api/audit-logs"
-    );
+    await api("/api/audit-logs");
 
   app.innerHTML =
     layout(`
@@ -2377,15 +2202,11 @@ async function adminLogs() {
                     </td>
 
                     <td>
-                      ${esc(
-                        log.action
-                      )}
+                      ${esc(log.action)}
                     </td>
 
                     <td>
-                      ${esc(
-                        log.details
-                      )}
+                      ${esc(log.details)}
                     </td>
 
                   </tr>
@@ -2415,9 +2236,7 @@ async function adminLogs() {
 async function adminSettings() {
 
   const settings =
-    await api(
-      "/api/payroll-settings"
-    );
+    await api("/api/payroll-settings");
 
   app.innerHTML =
     layout(`
@@ -2439,8 +2258,7 @@ async function adminSettings() {
           type="number"
           value="${
             Number(
-              settings.absence_deduction ||
-              0
+              settings.absence_deduction || 0
             )
           }"
         >
@@ -2454,8 +2272,7 @@ async function adminSettings() {
           type="number"
           value="${
             Number(
-              settings.late_deduction ||
-              0
+              settings.late_deduction || 0
             )
           }"
         >
@@ -2469,8 +2286,7 @@ async function adminSettings() {
           type="number"
           value="${
             Number(
-              settings.allowed_late_minutes ||
-              0
+              settings.allowed_late_minutes || 0
             )
           }"
         >
@@ -2484,8 +2300,7 @@ async function adminSettings() {
           type="time"
           value="${
             esc(
-              settings.work_start ||
-              "08:00"
+              settings.work_start || "08:00"
             )
           }"
         >
@@ -2507,6 +2322,7 @@ async function saveSettings() {
       {
         method: "PATCH",
         body: JSON.stringify({
+
           absence_deduction:
             Number(
               document
@@ -2545,9 +2361,7 @@ async function saveSettings() {
       }
     );
 
-    alert(
-      "تم حفظ الإعدادات"
-    );
+    alert("تم حفظ الإعدادات");
 
   } catch (error) {
     alert(error.message);
@@ -2561,37 +2375,23 @@ async function saveSettings() {
 async function renderTeacher() {
 
   if (
-    currentSection !==
-      "dashboard" &&
-    currentSection !==
-      "attendance" &&
-    currentSection !==
-      "notes" &&
-    currentSection !==
-      "videos"
+    currentSection !== "dashboard" &&
+    currentSection !== "attendance" &&
+    currentSection !== "notes" &&
+    currentSection !== "videos"
   ) {
-    currentSection =
-      "dashboard";
+    currentSection = "dashboard";
   }
 
-  if (
-    currentSection ===
-    "attendance"
-  ) {
+  if (currentSection === "attendance") {
     return teacherAttendance();
   }
 
-  if (
-    currentSection ===
-    "notes"
-  ) {
+  if (currentSection === "notes") {
     return teacherNotes();
   }
 
-  if (
-    currentSection ===
-    "videos"
-  ) {
+  if (currentSection === "videos") {
     return teacherVideos();
   }
 
@@ -2626,9 +2426,7 @@ function teacherNav() {
 async function teacherDashboard() {
 
   const students =
-    await api(
-      "/api/students"
-    );
+    await api("/api/students");
 
   app.innerHTML =
     layout(`
@@ -2654,8 +2452,7 @@ async function teacherDashboard() {
             ${
               students.filter(
                 student =>
-                  student.status ===
-                  "حاضر"
+                  student.status === "حاضر"
               ).length
             }
           </div>
@@ -2667,8 +2464,7 @@ async function teacherDashboard() {
             ${
               students.filter(
                 student =>
-                  student.status ===
-                  "غائب"
+                  student.status === "غائب"
               ).length
             }
           </div>
@@ -2681,9 +2477,7 @@ async function teacherDashboard() {
 async function teacherAttendance() {
 
   const students =
-    await api(
-      "/api/students"
-    );
+    await api("/api/students");
 
   app.innerHTML =
     layout(`
@@ -2700,21 +2494,10 @@ async function teacherAttendance() {
 
           <tr>
 
-            <th>
-              الطالب
-            </th>
-
-            <th>
-              الفصل
-            </th>
-
-            <th>
-              الحالة
-            </th>
-
-            <th>
-              إجراء
-            </th>
+            <th>الطالب</th>
+            <th>الفصل</th>
+            <th>الحالة</th>
+            <th>إجراء</th>
 
           </tr>
 
@@ -2726,21 +2509,15 @@ async function teacherAttendance() {
                   <tr>
 
                     <td>
-                      ${esc(
-                        student.name
-                      )}
+                      ${esc(student.name)}
                     </td>
 
                     <td>
-                      ${esc(
-                        student.class_name
-                      )}
+                      ${esc(student.class_name)}
                     </td>
 
                     <td>
-                      ${statusBadge(
-                        student.status
-                      )}
+                      ${statusBadge(student.status)}
                     </td>
 
                     <td>
@@ -2791,9 +2568,7 @@ async function toggleStudent(id) {
 async function teacherNotes() {
 
   const students =
-    await api(
-      "/api/students"
-    );
+    await api("/api/students");
 
   app.innerHTML =
     layout(`
@@ -2813,12 +2588,8 @@ async function teacherNotes() {
               .map(
                 student => `
 
-                  <option
-                    value="${student.id}"
-                  >
-                    ${esc(
-                      student.name
-                    )}
+                  <option value="${student.id}">
+                    ${esc(student.name)}
                   </option>
 
                 `
@@ -2833,9 +2604,7 @@ async function teacherNotes() {
           placeholder="اكتب الملاحظة"
         ></textarea>
 
-        <button
-          onclick="saveNote()"
-        >
+        <button onclick="saveNote()">
           💾 حفظ الملاحظة
         </button>
 
@@ -2860,24 +2629,18 @@ async function saveNote() {
     const studentId =
       Number(
         document
-          .getElementById(
-            "noteStudent"
-          )
+          .getElementById("noteStudent")
           .value
       );
 
     const text =
       document
-        .getElementById(
-          "noteText"
-        )
+        .getElementById("noteText")
         .value
         .trim();
 
     if (!text) {
-      alert(
-        "اكتب الملاحظة"
-      );
+      alert("اكتب الملاحظة");
       return;
     }
 
@@ -2886,16 +2649,13 @@ async function saveNote() {
       {
         method: "POST",
         body: JSON.stringify({
-          student_id:
-            studentId,
+          student_id: studentId,
           text
         })
       }
     );
 
-    alert(
-      "تم حفظ الملاحظة"
-    );
+    alert("تم حفظ الملاحظة");
 
     await teacherNotes();
 
@@ -2911,9 +2671,7 @@ async function saveNote() {
 async function teacherVideos() {
 
   const videos =
-    await api(
-      "/api/videos"
-    );
+    await api("/api/videos");
 
   app.innerHTML =
     layout(`
@@ -2937,9 +2695,7 @@ async function teacherVideos() {
           accept="video/*"
         >
 
-        <button
-          onclick="saveVideo()"
-        >
+        <button onclick="saveVideo()">
           💾 حفظ الحصة
         </button>
 
@@ -2967,9 +2723,7 @@ async function teacherVideos() {
                   <tr>
 
                     <td>
-                      ${esc(
-                        video.title
-                      )}
+                      ${esc(video.title)}
                     </td>
 
                     <td>
@@ -3013,23 +2767,17 @@ async function saveVideo() {
 
     const title =
       document
-        .getElementById(
-          "videoTitle"
-        )
+        .getElementById("videoTitle")
         .value
         .trim();
 
     const file =
       document
-        .getElementById(
-          "videoFile"
-        )
+        .getElementById("videoFile")
         .files[0];
 
     if (!title) {
-      alert(
-        "اكتب اسم الحصة"
-      );
+      alert("اكتب اسم الحصة");
       return;
     }
 
@@ -3047,9 +2795,7 @@ async function saveVideo() {
       }
     );
 
-    alert(
-      "تم حفظ بيانات الحصة"
-    );
+    alert("تم حفظ بيانات الحصة");
 
     await teacherVideos();
 
@@ -3065,9 +2811,7 @@ async function saveVideo() {
 async function renderFamily() {
 
   const students =
-    await api(
-      "/api/students"
-    );
+    await api("/api/students");
 
   const student =
     students[0];
@@ -3096,9 +2840,7 @@ async function renderFamily() {
     );
 
   const videos =
-    await api(
-      "/api/videos"
-    );
+    await api("/api/videos");
 
   const attendance =
     await api(
@@ -3118,15 +2860,11 @@ async function renderFamily() {
           الطالب
 
           <div class="num">
-            ${esc(
-              student.name
-            )}
+            ${esc(student.name)}
           </div>
 
           <p>
-            ${esc(
-              student.class_name
-            )}
+            ${esc(student.class_name)}
           </p>
 
         </div>
@@ -3135,9 +2873,7 @@ async function renderFamily() {
           حالة اليوم
 
           <div class="num">
-            ${esc(
-              student.status
-            )}
+            ${esc(student.status)}
           </div>
         </div>
 
@@ -3171,9 +2907,7 @@ async function renderFamily() {
 
                 <br>
 
-                ${esc(
-                  note.text
-                )}
+                ${esc(note.text)}
 
               </div>
 
@@ -3208,15 +2942,11 @@ async function renderFamily() {
                   <tr>
 
                     <td>
-                      ${esc(
-                        record.date
-                      )}
+                      ${esc(record.date)}
                     </td>
 
                     <td>
-                      ${statusBadge(
-                        record.status
-                      )}
+                      ${statusBadge(record.status)}
                     </td>
 
                   </tr>
@@ -3249,9 +2979,7 @@ async function renderFamily() {
               <div class="card">
 
                 🎥
-                ${esc(
-                  video.title
-                )}
+                ${esc(video.title)}
 
                 <br>
 
@@ -3321,9 +3049,7 @@ function showPasswordModal() {
 
           <div class="row">
 
-            <button
-              onclick="changeMyPassword()"
-            >
+            <button onclick="changeMyPassword()">
               حفظ
             </button>
 
@@ -3349,25 +3075,19 @@ async function changeMyPassword() {
 
     const currentPassword =
       document
-        .getElementById(
-          "currentPassword"
-        )
+        .getElementById("currentPassword")
         .value;
 
     const newPassword =
       document
-        .getElementById(
-          "newPassword"
-        )
+        .getElementById("newPassword")
         .value;
 
     if (
       !currentPassword ||
       !newPassword
     ) {
-      alert(
-        "أدخل كلمات المرور"
-      );
+      alert("أدخل كلمات المرور");
       return;
     }
 
@@ -3385,9 +3105,7 @@ async function changeMyPassword() {
       }
     );
 
-    alert(
-      "تم تغيير كلمة المرور"
-    );
+    alert("تم تغيير كلمة المرور");
 
     const modal =
       document.getElementById(
@@ -3410,18 +3128,14 @@ async function changeMyPassword() {
 try {
 
   me = JSON.parse(
-    localStorage.getItem(
-      "me"
-    ) || "null"
+    localStorage.getItem("me") || "null"
   );
 
 } catch {
 
   me = null;
 
-  localStorage.removeItem(
-    "me"
-  );
+  localStorage.removeItem("me");
 }
 
 if (me) {
@@ -3429,4 +3143,3 @@ if (me) {
 }
 
 render();
-```
