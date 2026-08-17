@@ -12,64 +12,178 @@
       British Education School Portal
     </p>
 
-    <form id="loginForm">
+    <!-- تسجيل الدخول -->
 
-      <div class="form-group">
+    <div id="loginBox">
 
-        <label for="username">
-          اسم المستخدم
-        </label>
+      <h2>تسجيل الدخول</h2>
 
-        <input
-          id="username"
-          name="username"
-          type="text"
-          placeholder="مثال: mustafa"
-          autocomplete="username"
-          required
+      <form id="loginForm">
+
+        <div class="form-group">
+
+          <label for="username">
+            اسم المستخدم
+          </label>
+
+          <input
+            id="username"
+            type="text"
+            placeholder="مثال: ahmed123"
+            autocomplete="username"
+            required
+          >
+
+        </div>
+
+        <div class="form-group">
+
+          <label for="password">
+            كلمة المرور
+          </label>
+
+          <input
+            id="password"
+            type="password"
+            placeholder="أدخل كلمة المرور"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary login-button"
         >
+          تسجيل الدخول
+        </button>
+
+      </form>
+
+      <div id="loginMessage" class="message"></div>
+
+      <div class="register-link">
+
+        <span>
+          ليس لديك حساب؟
+        </span>
+
+        <button
+          id="showRegisterButton"
+          type="button"
+          class="btn btn-secondary"
+        >
+          إنشاء حساب جديد
+        </button>
 
       </div>
 
-      <div class="form-group">
+      <div class="demo-accounts">
 
-        <label for="password">
-          كلمة المرور
-        </label>
+        <strong>حساب المدير</strong>
 
-        <input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="اكتب كلمة المرور"
-          autocomplete="current-password"
-          required
-        >
+        <div>
+          admin / 1234
+        </div>
 
       </div>
+
+    </div>
+
+
+    <!-- إنشاء حساب -->
+
+    <div id="registerBox" class="hidden">
+
+      <h2>إنشاء حساب جديد</h2>
+
+      <form id="registerForm">
+
+        <div class="form-group">
+
+          <label for="registerName">
+            الاسم
+          </label>
+
+          <input
+            id="registerName"
+            type="text"
+            placeholder="اكتب اسمك"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="registerUsername">
+            اسم المستخدم
+          </label>
+
+          <input
+            id="registerUsername"
+            type="text"
+            placeholder="مثال: ahmed123"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="registerPassword">
+            كلمة المرور
+          </label>
+
+          <input
+            id="registerPassword"
+            type="password"
+            placeholder="أدخل كلمة المرور"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="registerPasswordConfirm">
+            تأكيد كلمة المرور
+          </label>
+
+          <input
+            id="registerPasswordConfirm"
+            type="password"
+            placeholder="أعد كتابة كلمة المرور"
+            required
+          >
+
+        </div>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary login-button"
+        >
+          إنشاء الحساب
+        </button>
+
+      </form>
+
+
+      <div id="registerMessage" class="message"></div>
+
 
       <button
-        type="submit"
-        class="btn btn-primary login-button"
+        id="backToLoginButton"
+        type="button"
+        class="btn btn-secondary"
       >
-        تسجيل الدخول
+        العودة لتسجيل الدخول
       </button>
-
-    </form>
-
-    <div id="loginMessage" class="message"></div>
-
-    <div class="demo-accounts">
-
-      <strong>الحساب الافتراضي للمدير</strong>
-
-      <div>
-        اسم المستخدم: admin
-      </div>
-
-      <div>
-        كلمة المرور: 1234
-      </div>
 
     </div>
 
