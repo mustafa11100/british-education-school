@@ -1,16 +1,16 @@
 let me = null;
+
 const app = document.getElementById("app");
 
-async function api(url, opt = {}) {
-const options = {
-...opt,
+async function api(url, options = {}) {
+const response = await fetch(url, {
+...options,
 headers: {
 "Content-Type": "application/json",
-...(opt.headers || {})
+...(options.headers || {})
 }
-};
+});
 
-const response = await fetch(url, options);
 const data = await response.json().catch(() => ({}));
 
 if (!response.ok) {
@@ -20,75 +20,89 @@ throw new Error(data.error || "حدث خطأ");
 return data;
 }
 
-function escapeHtml(value) {
+function esc(value) {
 return String(value ?? "")
-.replaceAll("&", "&")
-.replaceAll("<", "<")
-.replaceAll(">", ">")
-.replaceAll('"', """)
-.replaceAll("'", "'");
+.replace(/&/g, "&")
+.replace(/</g, "<")
+.replace(/>/g, ">")
+.replace(/"/g, """)
+.replace(/'/g, "'");
 }
 
 function roleName(role) {
-const roles = {
+const names = {
 admin: "مدير",
 teacher: "مدرس",
 parent: "ولي أمر",
 student: "طالب"
 };
 
-return roles[role] || role;
+return names[role] || role;
 }
 
-function formatDate(date) {
-if (!date) return "لم يدخل بعد";
+function formatDate(value) {
+if (!value) return "لم يدخل بعد";
 
-const d = new Date(date);
+const date = new Date(value);
 
-if (Number.isNaN(d.getTime())) {
-return date;
+if (Number.isNaN(date.getTime())) {
+return value;
 }
 
-return d.toLocaleString("ar-EG");
+return date.toLocaleString("ar-EG");
 }
 
 function logout() {
 localStorage.removeItem("me");
 me = null;
-render();
+loginPage();
 }
 
+/* =========================
+LOGIN
+========================= */
+
 function loginPage() {
-app.innerHTML = `
-<div class="login">
-<h1>🏫 بوابة مدرسة التعليم البريطاني</h1>
+app.innerHTML = ` <div class="login">
 
-  <input id="usernameInput"
-         placeholder="اسم المستخدم"
-         autocomplete="username">
+```
+  <h1>🏫 بوابة مدرسة التعليم البريطاني</h1>
 
-  <input id="passwordInput"
-         type="password"
-         placeholder="كلمة المرور"
-         autocomplete="current-password">
+  <input
+    id="loginUsername"
+    placeholder="اسم المستخدم"
+  >
 
-  <button onclick="login()">دخول</button>
+  <input
+    id="loginPassword"
+    type="password"
+    placeholder="كلمة المرور"
+  >
+
+  <button onclick="login()">
+    دخول
+  </button>
 
   <div class="notice">
-    <b>حسابات التجربة</b><br>
-    الإدارة: admin / 1234<br>
-    المدرس: teacher / 1234<br>
-    ولي الأمر: parent / 1234<br>
-    الطالب: student / 1234
+    <b>حسابات التجربة:</b><br>
+    admin / 1234<br>
+    teacher / 1234<br>
+    parent / 1234<br>
+    student / 1234
   </div>
+
 </div>
+```
 
 `;
 }
 
 async function login() {
-const username = document.getElementById("usernameInput").value.trim();
-const password = document.getElementById("passwordInput").value;
+const username =
+document.getElementById("loginUsername").value.trim();
+
+const password =
+document.getElementById("loginPassword").value;
 
 if (!username || !password) {
 alert("أدخل اسم المستخدم وكلمة المرور");
@@ -96,7 +110,7 @@ return;
 }
 
 try {
-me = await api("/api/login", {
+const user = await api("/api/login", {
 method: "POST",
 body: JSON.stringify({
 username,
@@ -104,17 +118,28 @@ password
 })
 });
 
-localStorage.setItem("me", JSON.stringify(me));
+```
+me = user;
+
+localStorage.setItem(
+  "me",
+  JSON.stringify(user)
+);
 
 render();
+```
 
 } catch (error) {
 alert(error.message);
 }
 }
 
-async function sendActivity() {
-if (!me?.id) return;
+/* =========================
+ACTIVITY
+========================= */
+
+async function activity() {
+if (!me || !me.id) return;
 
 try {
 const result = await api("/api/activity", {
@@ -124,101 +149,143 @@ user_id: me.id
 })
 });
 
+```
 me.last_seen = result.last_seen;
-localStorage.setItem("me", JSON.stringify(me));
+
+localStorage.setItem(
+  "me",
+  JSON.stringify(me)
+);
+```
 
 } catch (error) {
+
+```
 if (
-error.message.includes("موقوف") ||
-error.message.includes("الحساب")
+  error.message.includes("موقوف") ||
+  error.message.includes("الحساب")
 ) {
-logout();
+  logout();
 }
+```
+
 }
 }
 
+/* =========================
+RENDER
+========================= */
+
 async function render() {
+
 if (!me) {
 loginPage();
 return;
 }
 
-await sendActivity();
+await activity();
 
 if (me.role === "admin") {
-return adminPage();
+await adminPage();
+return;
 }
 
 if (me.role === "teacher") {
-return teacherPage();
+await teacherPage();
+return;
 }
 
 if (me.role === "parent") {
-return parentPage();
+await parentPage();
+return;
 }
 
 if (me.role === "student") {
-return studentPage();
+await studentPage();
+return;
 }
 
-app.innerHTML = <div class="wrap"> <h1>حساب غير معروف</h1> <button onclick="logout()">خروج</button> </div> ;
+app.innerHTML = `     <div class="wrap">       <h1>حساب غير معروف</h1>       <button onclick="logout()">خروج</button>     </div>
+  `;
 }
 
-/* =========================================================
-ADMIN
-========================================================= */
+/* =========================
+ADMIN PAGE
+========================= */
 
 async function adminPage() {
+
 try {
-const [students, users] = await Promise.all([
-api("/api/students"),
-api("/api/users")
-]);
 
-const present = students.filter(
-  x => x.status === "حاضر"
-).length;
+```
+const students =
+  await api("/api/students");
 
-const absent = students.filter(
-  x => x.status === "غائب"
-).length;
+const users =
+  await api("/api/users");
 
-const online = users.filter(
-  x => x.online
-).length;
+const present =
+  students.filter(
+    student => student.status === "حاضر"
+  ).length;
+
+const absent =
+  students.filter(
+    student => student.status === "غائب"
+  ).length;
+
+const online =
+  users.filter(
+    user => user.online
+  ).length;
 
 app.innerHTML = `
+
   <div class="wrap">
 
     <div class="page-title">
+
       <div>
         <h1>لوحة الإدارة</h1>
-        <p>مرحباً ${escapeHtml(me.name)}</p>
+        <p>
+          مرحباً ${esc(me.name)}
+        </p>
       </div>
 
-      <button onclick="logout()">خروج</button>
+      <button onclick="logout()">
+        خروج
+      </button>
+
     </div>
 
     <div class="cards">
 
       <div class="card">
         الطلاب
-        <div class="num">${students.length}</div>
+        <div class="num">
+          ${students.length}
+        </div>
       </div>
 
       <div class="card">
         الحاضرون
-        <div class="num">${present}</div>
+        <div class="num">
+          ${present}
+        </div>
       </div>
 
       <div class="card">
         الغائبون
-        <div class="num">${absent}</div>
+        <div class="num">
+          ${absent}
+        </div>
       </div>
 
       <div class="card">
         المتصلون الآن
-        <div class="num">${online}</div>
+        <div class="num">
+          ${online}
+        </div>
       </div>
 
     </div>
@@ -232,24 +299,35 @@ app.innerHTML = `
       <div class="form row">
 
         <input
-          id="newUserName"
-          placeholder="الاسم">
-
-        <input
-          id="newUsername"
+          id="newName"
           placeholder="اسم المستخدم">
 
         <input
+          id="newUsername"
+          placeholder="اسم الدخول">
+
+        <input
           id="newPassword"
-          placeholder="كلمة المرور"
-          type="password">
+          type="password"
+          placeholder="كلمة المرور">
 
         <select id="newRole">
 
-          <option value="teacher">مدرس</option>
-          <option value="parent">ولي أمر</option>
-          <option value="student">طالب</option>
-          <option value="admin">مدير</option>
+          <option value="teacher">
+            مدرس
+          </option>
+
+          <option value="parent">
+            ولي أمر
+          </option>
+
+          <option value="student">
+            طالب
+          </option>
+
+          <option value="admin">
+            مدير
+          </option>
 
         </select>
 
@@ -269,79 +347,89 @@ app.innerHTML = `
             <th>الصلاحية</th>
             <th>الحالة</th>
             <th>آخر نشاط</th>
-            <th>إجراء</th>
+            <th>الإجراء</th>
           </tr>
 
-          ${
-            users.map(user => {
+          ${users.map(user => {
 
-              const status = !user.active
-                ? `<b>🔴 موقوف</b>`
-                : user.online
-                  ? `<b>🟢 متصل الآن</b>`
-                  : `⚪ غير متصل`;
+            let status = "";
 
-              let action = "";
+            if (!user.active) {
+              status = "🔴 موقوف";
+            } else if (user.online) {
+              status = "🟢 متصل الآن";
+            } else {
+              status = "⚪ غير متصل";
+            }
 
-              if (user.username === "admin") {
+            let action = "";
 
-                action = `<b>المدير الرئيسي</b>`;
+            if (user.username === "admin") {
 
-              } else {
-
-                action = user.active
-                  ? `
-                    <button
-                      onclick="disableUser(${user.id})">
-                      ⛔ إيقاف
-                    </button>
-                  `
-                  : `
-                    <button
-                      onclick="enableUser(${user.id})">
-                      ✅ تفعيل
-                    </button>
-                  `;
-
-                action += `
-                  <button
-                    onclick="deleteUser(${user.id})">
-                    🗑️ حذف
-                  </button>
-                `;
-              }
-
-              return `
-                <tr>
-
-                  <td>
-                    ${escapeHtml(user.name)}
-                  </td>
-
-                  <td>
-                    ${escapeHtml(user.username)}
-                  </td>
-
-                  <td>
-                    ${roleName(user.role)}
-                  </td>
-
-                  <td>
-                    ${status}
-                  </td>
-
-                  <td>
-                    ${formatDate(user.last_seen)}
-                  </td>
-
-                  <td>
-                    ${action}
-                  </td>
-
-                </tr>
+              action = `
+                <b>المدير الرئيسي</b>
               `;
-            }).join("")
-          }
+
+            } else if (user.active) {
+
+              action = `
+                <button
+                  onclick="disableUser(${user.id})">
+                  ⛔ إيقاف
+                </button>
+
+                <button
+                  onclick="deleteUser(${user.id})">
+                  🗑️ حذف
+                </button>
+              `;
+
+            } else {
+
+              action = `
+                <button
+                  onclick="enableUser(${user.id})">
+                  ✅ تفعيل
+                </button>
+
+                <button
+                  onclick="deleteUser(${user.id})">
+                  🗑️ حذف
+                </button>
+              `;
+            }
+
+            return `
+              <tr>
+
+                <td>
+                  ${esc(user.name)}
+                </td>
+
+                <td>
+                  ${esc(user.username)}
+                </td>
+
+                <td>
+                  ${roleName(user.role)}
+                </td>
+
+                <td>
+                  ${status}
+                </td>
+
+                <td>
+                  ${formatDate(user.last_seen)}
+                </td>
+
+                <td>
+                  ${action}
+                </td>
+
+              </tr>
+            `;
+
+          }).join("")}
 
         </table>
 
@@ -351,7 +439,7 @@ app.innerHTML = `
 
     <section class="panel">
 
-      <h2>👨‍🎓 إدارة الطلاب</h2>
+      <h2>👨‍🎓 الطلاب</h2>
 
       <div style="overflow-x:auto">
 
@@ -362,52 +450,35 @@ app.innerHTML = `
             <th>الفصل</th>
             <th>الحالة</th>
             <th>WhatsApp ولي الأمر</th>
-            <th>إجراء</th>
           </tr>
 
-          ${
-            students.map(student => `
+          ${students.map(student => `
 
-              <tr>
+            <tr>
 
-                <td>
-                  ${escapeHtml(student.name)}
-                </td>
+              <td>
+                ${esc(student.name)}
+              </td>
 
-                <td>
-                  ${escapeHtml(student.class_name)}
-                </td>
+              <td>
+                ${esc(student.class_name)}
+              </td>
 
-                <td>
-                  ${
-                    student.status === "حاضر"
-                      ? "🟢 حاضر"
-                      : "🔴 غائب"
-                  }
-                </td>
+              <td>
+                ${
+                  student.status === "حاضر"
+                    ? "🟢 حاضر"
+                    : "🔴 غائب"
+                }
+              </td>
 
-                <td>
-                  ${escapeHtml(student.parent_phone)}
-                </td>
+              <td>
+                ${esc(student.parent_phone)}
+              </td>
 
-                <td>
+            </tr>
 
-                  <button
-                    onclick="editStudent(${student.id})">
-                    ✏️ تعديل
-                  </button>
-
-                  <button
-                    onclick="deleteStudent(${student.id})">
-                    🗑️ حذف
-                  </button>
-
-                </td>
-
-              </tr>
-
-            `).join("")
-          }
+          `).join("")}
 
         </table>
 
@@ -434,7 +505,7 @@ app.innerHTML = `
           placeholder="رقم WhatsApp ولي الأمر">
 
         <button onclick="addStudent()">
-          إضافة الطالب
+          إضافة
         </button>
 
       </div>
@@ -442,33 +513,41 @@ app.innerHTML = `
     </section>
 
   </div>
+
 `;
+```
 
 } catch (error) {
 
+```
 app.innerHTML = `
   <div class="wrap">
+
     <h2>حدث خطأ</h2>
+
     <div class="notice">
-      ${escapeHtml(error.message)}
+      ${esc(error.message)}
     </div>
+
     <button onclick="adminPage()">
       إعادة المحاولة
     </button>
+
   </div>
 `;
+```
 
 }
 }
 
-/* =========================================================
-USERS
-========================================================= */
+/* =========================
+ADD USER
+========================= */
 
 async function addUser() {
 
 const name =
-document.getElementById("newUserName").value.trim();
+document.getElementById("newName").value.trim();
 
 const username =
 document.getElementById("newUsername").value.trim();
@@ -479,13 +558,14 @@ document.getElementById("newPassword").value;
 const role =
 document.getElementById("newRole").value;
 
-if (!name || !username || !password || !role) {
-alert("أكمل جميع بيانات المستخدم");
+if (!name || !username || !password) {
+alert("أكمل بيانات المستخدم");
 return;
 }
 
 try {
 
+```
 await api("/api/users", {
   method: "POST",
   body: JSON.stringify({
@@ -496,16 +576,23 @@ await api("/api/users", {
   })
 });
 
-alert("تم إضافة المستخدم بنجاح");
+alert("تم إضافة المستخدم");
 
 adminPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
+
+/* =========================
+DISABLE USER
+========================= */
 
 async function disableUser(id) {
 
@@ -515,35 +602,57 @@ return;
 
 try {
 
-await api(`/api/users/${id}/disable`, {
-  method: "PATCH"
-});
+```
+await api(
+  `/api/users/${id}/disable`,
+  {
+    method: "PATCH"
+  }
+);
 
 adminPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
+
+/* =========================
+ENABLE USER
+========================= */
 
 async function enableUser(id) {
 
 try {
 
-await api(`/api/users/${id}/enable`, {
-  method: "PATCH"
-});
+```
+await api(
+  `/api/users/${id}/enable`,
+  {
+    method: "PATCH"
+  }
+);
 
 adminPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
+
+/* =========================
+DELETE USER
+========================= */
 
 async function deleteUser(id) {
 
@@ -553,22 +662,29 @@ return;
 
 try {
 
-await api(`/api/users/${id}`, {
-  method: "DELETE"
-});
+```
+await api(
+  `/api/users/${id}`,
+  {
+    method: "DELETE"
+  }
+);
 
 adminPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
 
-/* =========================================================
-STUDENTS
-========================================================= */
+/* =========================
+ADD STUDENT
+========================= */
 
 async function addStudent() {
 
@@ -588,6 +704,7 @@ return;
 
 try {
 
+```
 await api("/api/students", {
   method: "POST",
   body: JSON.stringify({
@@ -600,130 +717,51 @@ await api("/api/students", {
 alert("تم إضافة الطالب بنجاح");
 
 adminPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
 
-async function deleteStudent(id) {
-
-if (!confirm(
-"هل أنت متأكد من حذف الطالب؟"
-)) {
-return;
-}
-
-try {
-
-await api(`/api/students/${id}`, {
-  method: "DELETE"
-});
-
-adminPage();
-
-} catch (error) {
-
-alert(
-  "السيرفر الحالي لا يحتوي على أمر حذف الطالب. سنضيفه في الخطوة التالية."
-);
-
-}
-}
-
-async function editStudent(id) {
-
-const students =
-await api("/api/students");
-
-const student =
-students.find(x => Number(x.id) === Number(id));
-
-if (!student) {
-alert("الطالب غير موجود");
-return;
-}
-
-const name = prompt(
-"اسم الطالب:",
-student.name
-);
-
-if (name === null) return;
-
-const className = prompt(
-"الفصل:",
-student.class_name
-);
-
-if (className === null) return;
-
-const phone = prompt(
-"رقم WhatsApp ولي الأمر:",
-student.parent_phone
-);
-
-if (phone === null) return;
-
-try {
-
-await api(`/api/students/${id}`, {
-  method: "PATCH",
-  body: JSON.stringify({
-    name,
-    class_name: className,
-    parent_phone: phone
-  })
-});
-
-alert("تم تعديل بيانات الطالب");
-
-adminPage();
-
-} catch (error) {
-
-alert(
-  "السيرفر الحالي يحتاج إضافة API تعديل الطالب."
-);
-
-}
-}
-
-/* =========================================================
+/* =========================
 TEACHER
-========================================================= */
+========================= */
 
 async function teacherPage() {
 
+try {
+
+```
 const students =
-await api("/api/students");
+  await api("/api/students");
 
 app.innerHTML = `
 
-<div class="wrap">
+  <div class="wrap">
 
-  <div class="page-title">
+    <div class="page-title">
 
-    <div>
-      <h1>👨‍🏫 بوابة المدرس</h1>
-      <p>
-        ${escapeHtml(me.name)}
-      </p>
+      <div>
+        <h1>👨‍🏫 بوابة المدرس</h1>
+        <p>
+          ${esc(me.name)}
+        </p>
+      </div>
+
+      <button onclick="logout()">
+        خروج
+      </button>
+
     </div>
 
-    <button onclick="logout()">
-      خروج
-    </button>
+    <section class="panel">
 
-  </div>
-
-  <section class="panel">
-
-    <h2>📋 الحضور والغياب</h2>
-
-    <div style="overflow-x:auto">
+      <h2>📋 الحضور والغياب</h2>
 
       <table class="table">
 
@@ -734,113 +772,130 @@ app.innerHTML = `
           <th>الإجراء</th>
         </tr>
 
-        ${
-          students.map(student => `
+        ${students.map(student => `
 
-            <tr>
+          <tr>
 
-              <td>
-                ${escapeHtml(student.name)}
-              </td>
+            <td>
+              ${esc(student.name)}
+            </td>
 
-              <td>
-                ${escapeHtml(student.class_name)}
-              </td>
+            <td>
+              ${esc(student.class_name)}
+            </td>
 
-              <td>
-                ${
-                  student.status === "حاضر"
-                    ? "🟢 حاضر"
-                    : "🔴 غائب"
-                }
-              </td>
+            <td>
+              ${
+                student.status === "حاضر"
+                  ? "🟢 حاضر"
+                  : "🔴 غائب"
+              }
+            </td>
 
-              <td>
+            <td>
 
-                <button
-                  onclick="toggleStatus(${student.id})">
-                  تغيير الحالة
-                </button>
+              <button
+                onclick="toggleStatus(${student.id})">
+                تغيير الحالة
+              </button>
 
-              </td>
+            </td>
 
-            </tr>
+          </tr>
 
-          `).join("")
-        }
+        `).join("")}
 
       </table>
 
-    </div>
+    </section>
 
-  </section>
+    <section class="panel">
 
-  <section class="panel">
+      <h2>📝 ملاحظة لولي الأمر</h2>
 
-    <h2>📝 ملاحظة لولي الأمر</h2>
+      <select id="noteStudent">
 
-    <select id="noteStudent">
+        ${students.map(student => `
 
-      ${
-        students.map(student => `
           <option value="${student.id}">
-            ${escapeHtml(student.name)}
+            ${esc(student.name)}
           </option>
-        `).join("")
-      }
 
-    </select>
+        `).join("")}
 
-    <textarea
-      id="noteText"
-      placeholder="اكتب الملاحظة اليومية">
-    </textarea>
+      </select>
 
-    <button onclick="saveNote()">
-      💾 حفظ الملاحظة
-    </button>
+      <textarea
+        id="noteText"
+        placeholder="اكتب الملاحظة">
+      </textarea>
 
-    <div class="notice">
-      الملاحظة تحفظ داخل النظام.
-      ربط الإرسال الفعلي عبر WhatsApp يحتاج
-      WhatsApp Business API.
-    </div>
+      <button onclick="saveNote()">
+        💾 حفظ الملاحظة
+      </button>
 
-  </section>
+    </section>
 
-  <section class="panel">
+    <section class="panel">
 
-    <h2>🎥 الحصص والفيديوهات</h2>
+      <h2>🎥 فيديو الحصة</h2>
 
-    <input
-      id="videoTitle"
-      placeholder="اسم المادة والحصة">
+      <input
+        id="videoTitle"
+        placeholder="اسم المادة والحصة">
 
-    <input
-      id="videoFile"
-      type="file"
-      accept="video/*">
+      <input
+        id="videoFile"
+        type="file"
+        accept="video/*">
 
-    <button onclick="saveVideo()">
-      حفظ بيانات الحصة
-    </button>
+      <button onclick="saveVideo()">
+        حفظ بيانات الفيديو
+      </button>
 
-    <div class="notice">
-      حالياً يتم حفظ اسم الفيديو فقط.
-      رفع الفيديو فعلياً يحتاج تخزيناً سحابياً.
-    </div>
+      <div class="notice">
+        حالياً يتم حفظ بيانات الفيديو فقط.
+      </div>
 
-  </section>
+    </section>
 
-</div>
+  </div>
 
 `;
+```
+
+} catch (error) {
+
+```
+app.innerHTML = `
+  <div class="wrap">
+
+    <h2>حدث خطأ</h2>
+
+    <div class="notice">
+      ${esc(error.message)}
+    </div>
+
+    <button onclick="teacherPage()">
+      إعادة المحاولة
+    </button>
+
+  </div>
+`;
+```
+
 }
+}
+
+/* =========================
+TOGGLE ATTENDANCE
+========================= */
 
 async function toggleStatus(id) {
 
 try {
 
+```
 await api(
   `/api/students/${id}/status`,
   {
@@ -849,13 +904,20 @@ await api(
 );
 
 teacherPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
+
+/* =========================
+SAVE NOTE
+========================= */
 
 async function saveNote() {
 
@@ -872,6 +934,7 @@ return;
 
 try {
 
+```
 await api("/api/notes", {
   method: "POST",
   body: JSON.stringify({
@@ -883,13 +946,20 @@ await api("/api/notes", {
 alert("تم حفظ الملاحظة");
 
 teacherPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
+
+/* =========================
+SAVE VIDEO
+========================= */
 
 async function saveVideo() {
 
@@ -906,6 +976,7 @@ return;
 
 try {
 
+```
 await api("/api/videos", {
   method: "POST",
   body: JSON.stringify({
@@ -916,358 +987,410 @@ await api("/api/videos", {
 
 alert("تم حفظ بيانات الحصة");
 
-document.getElementById("videoTitle").value = "";
-document.getElementById("videoFile").value = "";
+teacherPage();
+```
 
 } catch (error) {
 
+```
 alert(error.message);
+```
 
 }
 }
 
-/* =========================================================
+/* =========================
 PARENT
-========================================================= */
+========================= */
 
 async function parentPage() {
 
+try {
+
+```
 const students =
-await api("/api/students");
+  await api("/api/students");
+
+const videos =
+  await api("/api/videos");
 
 if (!students.length) {
 
+  app.innerHTML = `
+    <div class="wrap">
+
+      <h1>👨‍👩‍👦 بوابة ولي الأمر</h1>
+
+      <div class="notice">
+        لا يوجد طلاب حالياً.
+      </div>
+
+      <button onclick="logout()">
+        خروج
+      </button>
+
+    </div>
+  `;
+
+  return;
+}
+
+const student =
+  students[0];
+
+const notes =
+  await api(
+    `/api/notes/${student.id}`
+  );
+
+app.innerHTML = `
+
+  <div class="wrap">
+
+    <div class="page-title">
+
+      <div>
+        <h1>👨‍👩‍👦 بوابة ولي الأمر</h1>
+        <p>
+          ${esc(me.name)}
+        </p>
+      </div>
+
+      <button onclick="logout()">
+        خروج
+      </button>
+
+    </div>
+
+    <div class="cards">
+
+      <div class="card">
+
+        الطالب
+
+        <div class="num">
+          ${esc(student.name)}
+        </div>
+
+        <p>
+          ${esc(student.class_name)}
+        </p>
+
+      </div>
+
+      <div class="card">
+
+        الحضور
+
+        <div class="num">
+          ${
+            student.status === "حاضر"
+              ? "🟢 حاضر"
+              : "🔴 غائب"
+          }
+        </div>
+
+      </div>
+
+    </div>
+
+    <section class="panel">
+
+      <h2>📝 ملاحظات المدرسة</h2>
+
+      ${
+        notes.length
+          ? notes.map(note => `
+
+            <div class="notice">
+
+              <b>
+                ${esc(note.created_at)}
+              </b>
+
+              <br><br>
+
+              ${esc(note.text)}
+
+            </div>
+
+          `).join("")
+          : `
+            <div class="card">
+              لا توجد ملاحظات.
+            </div>
+          `
+      }
+
+    </section>
+
+    <section class="panel">
+
+      <h2>🎥 الحصص</h2>
+
+      ${
+        videos.length
+          ? videos.map(video => `
+
+            <div class="card">
+
+              🎥 ${esc(video.title)}
+
+              <br>
+
+              <small>
+                ${esc(video.created_at)}
+              </small>
+
+            </div>
+
+          `).join("")
+          : `
+            <div class="card">
+              لا توجد حصص.
+            </div>
+          `
+      }
+
+    </section>
+
+  </div>
+
+`;
+```
+
+} catch (error) {
+
+```
 app.innerHTML = `
   <div class="wrap">
 
-    <h1>👨‍👩‍👦 بوابة ولي الأمر</h1>
+    <h2>حدث خطأ</h2>
 
     <div class="notice">
-      لا يوجد طالب مرتبط بهذا الحساب حالياً.
+      ${esc(error.message)}
     </div>
 
-    <button onclick="logout()">
-      خروج
+    <button onclick="parentPage()">
+      إعادة المحاولة
     </button>
 
   </div>
 `;
-
-return;
+```
 
 }
-
-let student = students[0];
-
-const notes =
-await api(/api/notes/${student.id});
-
-const videos =
-await api("/api/videos");
-
-app.innerHTML = `
-
-<div class="wrap">
-
-  <div class="page-title">
-
-    <div>
-      <h1>👨‍👩‍👦 بوابة ولي الأمر</h1>
-      <p>
-        ${escapeHtml(me.name)}
-      </p>
-    </div>
-
-    <button onclick="logout()">
-      خروج
-    </button>
-
-  </div>
-
-  <div class="cards">
-
-    <div class="card">
-
-      الطالب
-
-      <div class="num">
-        ${escapeHtml(student.name)}
-      </div>
-
-      <p>
-        ${escapeHtml(student.class_name)}
-      </p>
-
-    </div>
-
-    <div class="card">
-
-      حالة الطالب
-
-      <div class="num">
-        ${
-          student.status === "حاضر"
-            ? "🟢 حاضر"
-            : "🔴 غائب"
-        }
-      </div>
-
-    </div>
-
-  </div>
-
-  <section class="panel">
-
-    <h2>📝 ملاحظات المدرسة</h2>
-
-    ${
-      notes.length
-        ? notes.map(note => `
-
-          <div class="notice">
-
-            <b>
-              ${escapeHtml(note.created_at)}
-            </b>
-
-            <br><br>
-
-            ${escapeHtml(note.text)}
-
-          </div>
-
-        `).join("")
-        : `
-          <div class="card">
-            لا توجد ملاحظات حالياً.
-          </div>
-        `
-    }
-
-  </section>
-
-  <section class="panel">
-
-    <h2>🎥 الحصص</h2>
-
-    ${
-      videos.length
-        ? videos.map(video => `
-
-          <div class="card">
-
-            🎥
-            ${escapeHtml(video.title)}
-
-            <br>
-
-            <small>
-              ${escapeHtml(video.created_at)}
-            </small>
-
-          </div>
-
-        `).join("")
-        : `
-          <div class="card">
-            لا توجد حصص حالياً.
-          </div>
-        `
-    }
-
-  </section>
-
-</div>
-
-`;
 }
 
-/* =========================================================
+/* =========================
 STUDENT
-========================================================= */
+========================= */
 
 async function studentPage() {
 
+try {
+
+```
 const students =
-await api("/api/students");
+  await api("/api/students");
+
+const videos =
+  await api("/api/videos");
 
 const student =
-students.find(
-x =>
-x.name === me.name
-) || students[0];
+  students.find(
+    item => item.name === me.name
+  ) || students[0];
 
 if (!student) {
 
-app.innerHTML = `
-  <div class="wrap">
-    <h1>بوابة الطالب</h1>
-
-    <div class="notice">
-      لم يتم العثور على بيانات الطالب.
-    </div>
-
-    <button onclick="logout()">
-      خروج
-    </button>
-  </div>
-`;
-
-return;
-
-}
-
-const notes =
-await api(/api/notes/${student.id});
-
-const videos =
-await api("/api/videos");
-
-app.innerHTML = `
-
-<div class="wrap">
-
-  <div class="page-title">
-
-    <div>
+  app.innerHTML = `
+    <div class="wrap">
 
       <h1>🎓 بوابة الطالب</h1>
 
-      <p>
-        ${escapeHtml(me.name)}
-      </p>
+      <div class="notice">
+        لم يتم العثور على بيانات الطالب.
+      </div>
+
+      <button onclick="logout()">
+        خروج
+      </button>
+
+    </div>
+  `;
+
+  return;
+}
+
+const notes =
+  await api(
+    `/api/notes/${student.id}`
+  );
+
+app.innerHTML = `
+
+  <div class="wrap">
+
+    <div class="page-title">
+
+      <div>
+
+        <h1>🎓 بوابة الطالب</h1>
+
+        <p>
+          ${esc(me.name)}
+        </p>
+
+      </div>
+
+      <button onclick="logout()">
+        خروج
+      </button>
 
     </div>
 
-    <button onclick="logout()">
-      خروج
+    <div class="cards">
+
+      <div class="card">
+
+        الاسم
+
+        <div class="num">
+          ${esc(student.name)}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        الفصل
+
+        <div class="num">
+          ${esc(student.class_name)}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        الحضور
+
+        <div class="num">
+          ${
+            student.status === "حاضر"
+              ? "🟢 حاضر"
+              : "🔴 غائب"
+          }
+        </div>
+
+      </div>
+
+    </div>
+
+    <section class="panel">
+
+      <h2>📝 الملاحظات</h2>
+
+      ${
+        notes.length
+          ? notes.map(note => `
+
+            <div class="notice">
+
+              <b>
+                ${esc(note.created_at)}
+              </b>
+
+              <br><br>
+
+              ${esc(note.text)}
+
+            </div>
+
+          `).join("")
+          : `
+            <div class="card">
+              لا توجد ملاحظات.
+            </div>
+          `
+      }
+
+    </section>
+
+    <section class="panel">
+
+      <h2>🎥 الحصص التعليمية</h2>
+
+      ${
+        videos.length
+          ? videos.map(video => `
+
+            <div class="card">
+
+              🎥 ${esc(video.title)}
+
+              <br>
+
+              <small>
+                ${esc(video.created_at)}
+              </small>
+
+            </div>
+
+          `).join("")
+          : `
+            <div class="card">
+              لا توجد حصص.
+            </div>
+          `
+      }
+
+    </section>
+
+  </div>
+
+`;
+```
+
+} catch (error) {
+
+```
+app.innerHTML = `
+  <div class="wrap">
+
+    <h2>حدث خطأ</h2>
+
+    <div class="notice">
+      ${esc(error.message)}
+    </div>
+
+    <button onclick="studentPage()">
+      إعادة المحاولة
     </button>
 
   </div>
-
-  <div class="cards">
-
-    <div class="card">
-
-      الاسم
-
-      <div class="num">
-        ${escapeHtml(student.name)}
-      </div>
-
-    </div>
-
-    <div class="card">
-
-      الفصل
-
-      <div class="num">
-        ${escapeHtml(student.class_name)}
-      </div>
-
-    </div>
-
-    <div class="card">
-
-      الحضور
-
-      <div class="num">
-        ${
-          student.status === "حاضر"
-            ? "🟢 حاضر"
-            : "🔴 غائب"
-        }
-      </div>
-
-    </div>
-
-  </div>
-
-  <section class="panel">
-
-    <h2>📝 ملاحظات المدرسين</h2>
-
-    ${
-      notes.length
-        ? notes.map(note => `
-
-          <div class="notice">
-
-            <b>
-              ${escapeHtml(note.created_at)}
-            </b>
-
-            <br><br>
-
-            ${escapeHtml(note.text)}
-
-          </div>
-
-        `).join("")
-        : `
-          <div class="card">
-            لا توجد ملاحظات.
-          </div>
-        `
-    }
-
-  </section>
-
-  <section class="panel">
-
-    <h2>🎥 الحصص التعليمية</h2>
-
-    ${
-      videos.length
-        ? videos.map(video => `
-
-          <div class="card">
-
-            🎥
-            ${escapeHtml(video.title)}
-
-            <br>
-
-            <small>
-              ${escapeHtml(video.created_at)}
-            </small>
-
-          </div>
-
-        `).join("")
-        : `
-          <div class="card">
-            لا توجد حصص.
-          </div>
-        `
-    }
-
-  </section>
-
-</div>
-
 `;
+```
+
+}
 }
 
-/* =========================================================
-AUTO ACTIVITY
-========================================================= */
+/* =========================
+ACTIVITY EVERY 30 SECONDS
+========================= */
 
-setInterval(async () => {
+setInterval(() => {
 
-if (!me) return;
-
-try {
-
-await sendActivity();
-
-} catch (error) {}
+if (me) {
+activity();
+}
 
 }, 30000);
 
-/* =========================================================
-START
-========================================================= */
+/* =========================
+START APP
+========================= */
 
 try {
 
@@ -1278,8 +1401,8 @@ localStorage.getItem("me") || "null"
 } catch (error) {
 
 me = null;
-localStorage.removeItem("me");
 
+localStorage.removeItem("me");
 }
 
 render();
