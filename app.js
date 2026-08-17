@@ -1,220 +1,271 @@
 let me = null;
 const app = document.getElementById("app");
 
-/* =========================
-   API
-========================= */
-
 async function api(url, opt = {}) {
-  const options = {
-    ...opt,
-    headers: {
-      "Content-Type": "application/json",
-      ...(opt.headers || {})
-    }
-  };
+const options = {
+...opt,
+headers: {
+"Content-Type": "application/json",
+...(opt.headers || {})
+}
+};
 
-  const r = await fetch(url, options);
-  const d = await r.json().catch(() => ({}));
+const response = await fetch(url, options);
+const data = await response.json().catch(() => ({}));
 
-  if (!r.ok) {
-    throw Error(d.error || "حدث خطأ");
-  }
-
-  return d;
+if (!response.ok) {
+throw new Error(data.error || "حدث خطأ");
 }
 
-/* =========================
-   LOGIN / LOGOUT
-========================= */
+return data;
+}
+
+function escapeHtml(value) {
+return String(value ?? "")
+.replaceAll("&", "&")
+.replaceAll("<", "<")
+.replaceAll(">", ">")
+.replaceAll('"', """)
+.replaceAll("'", "'");
+}
+
+function roleName(role) {
+const roles = {
+admin: "مدير",
+teacher: "مدرس",
+parent: "ولي أمر",
+student: "طالب"
+};
+
+return roles[role] || role;
+}
+
+function formatDate(date) {
+if (!date) return "لم يدخل بعد";
+
+const d = new Date(date);
+
+if (Number.isNaN(d.getTime())) {
+return date;
+}
+
+return d.toLocaleString("ar-EG");
+}
 
 function logout() {
-  localStorage.removeItem("me");
-  me = null;
-  render();
+localStorage.removeItem("me");
+me = null;
+render();
 }
 
 function loginPage() {
-  app.innerHTML = `
-    <div class="login">
-      <h1>🏫 بوابة مدرسة التعليم البريطاني</h1>
+app.innerHTML = ` <div class="login"> <h1>🏫 بوابة مدرسة التعليم البريطاني</h1>
 
-      <input id="u" placeholder="اسم المستخدم">
+```
+  <input id="usernameInput"
+         placeholder="اسم المستخدم"
+         autocomplete="username">
 
-      <input
-        id="p"
-        type="password"
-        placeholder="كلمة المرور"
-      >
+  <input id="passwordInput"
+         type="password"
+         placeholder="كلمة المرور"
+         autocomplete="current-password">
 
-      <button onclick="login()">دخول</button>
+  <button onclick="login()">دخول</button>
 
-      <div class="notice">
-        للتجربة:
-        <br>
-        admin / 1234
-        <br>
-        teacher / 1234
-        <br>
-        parent / 1234
-      </div>
-    </div>
-  `;
+  <div class="notice">
+    <b>حسابات التجربة</b><br>
+    الإدارة: admin / 1234<br>
+    المدرس: teacher / 1234<br>
+    ولي الأمر: parent / 1234<br>
+    الطالب: student / 1234
+  </div>
+</div>
+```
+
+`;
 }
 
 async function login() {
-  try {
-    me = await api("/api/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: u.value.trim(),
-        password: p.value
-      })
-    });
+const username = document.getElementById("usernameInput").value.trim();
+const password = document.getElementById("passwordInput").value;
 
-    localStorage.setItem("me", JSON.stringify(me));
-
-    render();
-
-  } catch (e) {
-    alert(e.message);
-  }
+if (!username || !password) {
+alert("أدخل اسم المستخدم وكلمة المرور");
+return;
 }
 
-/* =========================
-   RENDER
-========================= */
+try {
+me = await api("/api/login", {
+method: "POST",
+body: JSON.stringify({
+username,
+password
+})
+});
+
+```
+localStorage.setItem("me", JSON.stringify(me));
+
+render();
+```
+
+} catch (error) {
+alert(error.message);
+}
+}
+
+async function sendActivity() {
+if (!me?.id) return;
+
+try {
+const result = await api("/api/activity", {
+method: "POST",
+body: JSON.stringify({
+user_id: me.id
+})
+});
+
+```
+me.last_seen = result.last_seen;
+localStorage.setItem("me", JSON.stringify(me));
+```
+
+} catch (error) {
+if (
+error.message.includes("موقوف") ||
+error.message.includes("الحساب")
+) {
+logout();
+}
+}
+}
 
 async function render() {
-
-  if (!me) {
-    loginPage();
-    return;
-  }
-
-  try {
-
-    if (me.role === "admin") {
-      await admin();
-      return;
-    }
-
-    if (me.role === "teacher") {
-      await teacher();
-      return;
-    }
-
-    await family();
-
-  } catch (e) {
-
-    console.error(e);
-
-    app.innerHTML = `
-      <div class="wrap">
-        <div class="notice">
-          حدث خطأ أثناء تحميل الصفحة:
-          <br><br>
-          ${e.message}
-        </div>
-      </div>
-    `;
-  }
+if (!me) {
+loginPage();
+return;
 }
 
-/* =========================
-   ADMIN
-========================= */
+await sendActivity();
 
-async function admin() {
+if (me.role === "admin") {
+return adminPage();
+}
 
-  const [students, users] = await Promise.all([
-    api("/api/students"),
-    api("/api/users")
-  ]);
+if (me.role === "teacher") {
+return teacherPage();
+}
 
-  const onlineUsers = users.filter(x => x.online).length;
+if (me.role === "parent") {
+return parentPage();
+}
 
-  app.innerHTML = `
-    <div class="wrap">
+if (me.role === "student") {
+return studentPage();
+}
 
-      <h1>لوحة الإدارة</h1>
+app.innerHTML = `     <div class="wrap">       <h1>حساب غير معروف</h1>       <button onclick="logout()">خروج</button>     </div>
+  `;
+}
 
-      <!-- STATISTICS -->
+/* =========================================================
+ADMIN
+========================================================= */
 
-      <div class="cards">
+async function adminPage() {
+try {
+const [students, users] = await Promise.all([
+api("/api/students"),
+api("/api/users")
+]);
 
-        <div class="card">
-          الطلاب
-          <div class="num">
-            ${students.length}
-          </div>
-        </div>
+```
+const present = students.filter(
+  x => x.status === "حاضر"
+).length;
 
-        <div class="card">
-          الحاضرون
-          <div class="num">
-            ${students.filter(x => x.status === "حاضر").length}
-          </div>
-        </div>
+const absent = students.filter(
+  x => x.status === "غائب"
+).length;
 
-        <div class="card">
-          الغائبون
-          <div class="num">
-            ${students.filter(x => x.status === "غائب").length}
-          </div>
-        </div>
+const online = users.filter(
+  x => x.online
+).length;
 
-        <div class="card">
-          المتصلون الآن
-          <div class="num">
-            ${onlineUsers}
-          </div>
-        </div>
+app.innerHTML = `
+  <div class="wrap">
 
+    <div class="page-title">
+      <div>
+        <h1>لوحة الإدارة</h1>
+        <p>مرحباً ${escapeHtml(me.name)}</p>
       </div>
 
-      <!-- USERS -->
+      <button onclick="logout()">خروج</button>
+    </div>
 
-      <h2>👥 إدارة المستخدمين</h2>
+    <div class="cards">
 
-      <div class="form">
-
-        <h3>إضافة مستخدم جديد</h3>
-
-        <div class="form row">
-
-          <input
-            id="newUsername"
-            placeholder="اسم المستخدم"
-          >
-
-          <input
-            id="newPassword"
-            placeholder="كلمة المرور"
-          >
-
-          <input
-            id="newName"
-            placeholder="الاسم"
-          >
-
-          <select id="newRole">
-            <option value="teacher">مدرس</option>
-            <option value="parent">ولي أمر</option>
-            <option value="student">طالب</option>
-            <option value="admin">مدير</option>
-          </select>
-
-          <button onclick="addUser()">
-            ➕ إضافة المستخدم
-          </button>
-
-        </div>
-
+      <div class="card">
+        الطلاب
+        <div class="num">${students.length}</div>
       </div>
 
       <div class="card">
+        الحاضرون
+        <div class="num">${present}</div>
+      </div>
+
+      <div class="card">
+        الغائبون
+        <div class="num">${absent}</div>
+      </div>
+
+      <div class="card">
+        المتصلون الآن
+        <div class="num">${online}</div>
+      </div>
+
+    </div>
+
+    <section class="panel">
+
+      <h2>👥 إدارة المستخدمين</h2>
+
+      <h3>إضافة مستخدم جديد</h3>
+
+      <div class="form row">
+
+        <input
+          id="newUserName"
+          placeholder="الاسم">
+
+        <input
+          id="newUsername"
+          placeholder="اسم المستخدم">
+
+        <input
+          id="newPassword"
+          placeholder="كلمة المرور"
+          type="password">
+
+        <select id="newRole">
+
+          <option value="teacher">مدرس</option>
+          <option value="parent">ولي أمر</option>
+          <option value="student">طالب</option>
+          <option value="admin">مدير</option>
+
+        </select>
+
+        <button onclick="addUser()">
+          ➕ إضافة المستخدم
+        </button>
+
+      </div>
+
+      <div style="overflow-x:auto">
 
         <table class="table">
 
@@ -228,98 +279,87 @@ async function admin() {
           </tr>
 
           ${
-            users.map(user => `
+            users.map(user => {
 
-              <tr>
+              const status = !user.active
+                ? `<b>🔴 موقوف</b>`
+                : user.online
+                  ? `<b>🟢 متصل الآن</b>`
+                  : `⚪ غير متصل`;
 
-                <td>
-                  ${user.name}
-                </td>
+              let action = "";
 
-                <td>
-                  ${user.username}
-                </td>
+              if (user.username === "admin") {
 
-                <td>
-                  ${roleName(user.role)}
-                </td>
+                action = `<b>المدير الرئيسي</b>`;
 
-                <td>
-                  ${
-                    user.active
-                      ? (
-                        user.online
-                          ? `<span style="color:green;font-weight:bold">
-                              🟢 متصل الآن
-                            </span>`
-                          : `<span style="color:#777">
-                              ⚪ غير متصل
-                            </span>`
-                      )
-                      : `<span style="color:red;font-weight:bold">
-                          🔴 موقوف
-                        </span>`
-                  }
-                </td>
+              } else {
 
-                <td>
-                  ${
-                    user.last_seen
-                      ? new Date(user.last_seen).toLocaleString("ar-EG")
-                      : "لم يدخل بعد"
-                  }
-                </td>
+                action = user.active
+                  ? `
+                    <button
+                      onclick="disableUser(${user.id})">
+                      ⛔ إيقاف
+                    </button>
+                  `
+                  : `
+                    <button
+                      onclick="enableUser(${user.id})">
+                      ✅ تفعيل
+                    </button>
+                  `;
 
-                <td>
+                action += `
+                  <button
+                    onclick="deleteUser(${user.id})">
+                    🗑️ حذف
+                  </button>
+                `;
+              }
 
-                  ${
-                    user.username !== "admin"
-                      ? `
-                        ${
-                          user.active
-                            ? `
-                              <button
-                                onclick="disableUser(${user.id})"
-                              >
-                                ⛔ إيقاف
-                              </button>
-                            `
-                            : `
-                              <button
-                                onclick="enableUser(${user.id})"
-                              >
-                                ✅ تفعيل
-                              </button>
-                            `
-                        }
+              return `
+                <tr>
 
-                        <button
-                          onclick="deleteUser(${user.id}, '${escapeHtml(user.name)}')"
-                        >
-                          🗑️ حذف
-                        </button>
-                      `
-                      : `
-                        <b>المدير الرئيسي</b>
-                      `
-                  }
+                  <td>
+                    ${escapeHtml(user.name)}
+                  </td>
 
-                </td>
+                  <td>
+                    ${escapeHtml(user.username)}
+                  </td>
 
-              </tr>
+                  <td>
+                    ${roleName(user.role)}
+                  </td>
 
-            `).join("")
+                  <td>
+                    ${status}
+                  </td>
+
+                  <td>
+                    ${formatDate(user.last_seen)}
+                  </td>
+
+                  <td>
+                    ${action}
+                  </td>
+
+                </tr>
+              `;
+            }).join("")
           }
 
         </table>
 
       </div>
 
-      <!-- STUDENTS -->
+    </section>
 
-      <h2>👨‍🎓 الطلاب</h2>
+    <section class="panel">
 
-      <div class="card">
+      <h2>👨‍🎓 إدارة الطلاب</h2>
+
+      <div style="overflow-x:auto">
 
         <table class="table">
 
@@ -328,389 +368,44 @@ async function admin() {
             <th>الفصل</th>
             <th>الحالة</th>
             <th>WhatsApp ولي الأمر</th>
+            <th>إجراء</th>
           </tr>
 
           ${
-            students.map(x => `
+            students.map(student => `
 
               <tr>
 
                 <td>
-                  ${x.name}
+                  ${escapeHtml(student.name)}
                 </td>
 
                 <td>
-                  ${x.class_name}
+                  ${escapeHtml(student.class_name)}
                 </td>
 
                 <td>
                   ${
-                    x.status === "حاضر"
+                    student.status === "حاضر"
                       ? "🟢 حاضر"
                       : "🔴 غائب"
                   }
                 </td>
 
                 <td>
-                  ${x.parent_phone}
-                </td>
-
-              </tr>
-
-            `).join("")
-          }
-
-        </table>
-
-      </div>
-
-      <!-- ADD STUDENT -->
-
-      <h2>➕ إضافة طالب</h2>
-
-      <div class="form">
-
-        <div class="form row">
-
-          <input
-            id="sn"
-            placeholder="اسم الطالب"
-          >
-
-          <input
-            id="sc"
-            placeholder="الفصل"
-          >
-
-          <input
-            id="sp"
-            placeholder="رقم WhatsApp ولي الأمر"
-          >
-
-          <button onclick="addStudent()">
-            إضافة الطالب
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-  `;
-
-  /* تحديث النشاط كل 20 ثانية */
-
-  startActivity();
-}
-
-/* =========================
-   ROLE NAME
-========================= */
-
-function roleName(role) {
-
-  const roles = {
-    admin: "مدير",
-    teacher: "مدرس",
-    parent: "ولي أمر",
-    student: "طالب"
-  };
-
-  return roles[role] || role;
-}
-
-/* =========================
-   ESCAPE HTML
-========================= */
-
-function escapeHtml(text) {
-
-  return String(text || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-/* =========================
-   ACTIVITY
-========================= */
-
-let activityTimer = null;
-
-function startActivity() {
-
-  if (activityTimer) {
-    clearInterval(activityTimer);
-  }
-
-  if (!me || !me.id) {
-    return;
-  }
-
-  activityTimer = setInterval(async () => {
-
-    try {
-
-      await api("/api/activity", {
-        method: "POST",
-        body: JSON.stringify({
-          user_id: me.id
-        })
-      });
-
-    } catch (e) {
-
-      console.log("Activity error:", e.message);
-
-      if (
-        e.message.includes("موقوف") ||
-        e.message.includes("الحساب")
-      ) {
-
-        logout();
-
-        alert("تم إيقاف هذا الحساب من الإدارة.");
-      }
-    }
-
-  }, 20000);
-}
-
-/* =========================
-   ADD USER
-========================= */
-
-async function addUser() {
-
-  try {
-
-    const username =
-      document.getElementById("newUsername").value.trim();
-
-    const password =
-      document.getElementById("newPassword").value.trim();
-
-    const name =
-      document.getElementById("newName").value.trim();
-
-    const role =
-      document.getElementById("newRole").value;
-
-    if (!username || !password || !name) {
-
-      alert("أكمل بيانات المستخدم");
-
-      return;
-    }
-
-    await api("/api/users", {
-
-      method: "POST",
-
-      body: JSON.stringify({
-        username,
-        password,
-        name,
-        role
-      })
-
-    });
-
-    alert("✅ تم إضافة المستخدم بنجاح");
-
-    await admin();
-
-  } catch (e) {
-
-    alert(e.message);
-  }
-}
-
-/* =========================
-   DISABLE USER
-========================= */
-
-async function disableUser(id) {
-
-  if (!confirm("هل تريد إيقاف هذا المستخدم؟")) {
-    return;
-  }
-
-  try {
-
-    await api(
-      "/api/users/" + id + "/disable",
-      {
-        method: "PATCH"
-      }
-    );
-
-    alert("⛔ تم إيقاف المستخدم");
-
-    await admin();
-
-  } catch (e) {
-
-    alert(e.message);
-  }
-}
-
-/* =========================
-   ENABLE USER
-========================= */
-
-async function enableUser(id) {
-
-  try {
-
-    await api(
-      "/api/users/" + id + "/enable",
-      {
-        method: "PATCH"
-      }
-    );
-
-    alert("✅ تم تفعيل المستخدم");
-
-    await admin();
-
-  } catch (e) {
-
-    alert(e.message);
-  }
-}
-
-/* =========================
-   DELETE USER
-========================= */
-
-async function deleteUser(id, name) {
-
-  if (
-    !confirm(
-      "هل أنت متأكد من حذف المستخدم:\n" + name + " ؟"
-    )
-  ) {
-    return;
-  }
-
-  try {
-
-    await api(
-      "/api/users/" + id,
-      {
-        method: "DELETE"
-      }
-    );
-
-    alert("🗑️ تم حذف المستخدم");
-
-    await admin();
-
-  } catch (e) {
-
-    alert(e.message);
-  }
-}
-
-/* =========================
-   ADD STUDENT
-========================= */
-
-async function addStudent() {
-
-  try {
-
-    const name =
-      document.getElementById("sn").value.trim();
-
-    const className =
-      document.getElementById("sc").value.trim();
-
-    const phone =
-      document.getElementById("sp").value.trim();
-
-    if (!name || !className || !phone) {
-
-      alert("أكمل بيانات الطالب");
-
-      return;
-    }
-
-    await api("/api/students", {
-
-      method: "POST",
-
-      body: JSON.stringify({
-        name,
-        class_name: className,
-        parent_phone: phone
-      })
-
-    });
-
-    alert("✅ تم إضافة الطالب");
-
-    await admin();
-
-  } catch (e) {
-
-    alert(e.message);
-  }
-}
-
-/* =========================
-   TEACHER
-========================= */
-
-async function teacher() {
-
-  const s = await api("/api/students");
-
-  app.innerHTML = `
-
-    <div class="wrap">
-
-      <h1>👨‍🏫 بوابة المدرس</h1>
-
-      <div class="card">
-
-        <h2>الحضور والغياب</h2>
-
-        <table class="table">
-
-          <tr>
-            <th>الطالب</th>
-            <th>الفصل</th>
-            <th>الحالة</th>
-            <th>الإجراء</th>
-          </tr>
-
-          ${
-            s.map(x => `
-
-              <tr>
-
-                <td>${x.name}</td>
-
-                <td>${x.class_name}</td>
-
-                <td>
-                  ${
-                    x.status === "حاضر"
-                      ? "🟢 حاضر"
-                      : "🔴 غائب"
-                  }
+                  ${escapeHtml(student.parent_phone)}
                 </td>
 
                 <td>
 
                   <button
-                    onclick="toggleStatus(${x.id})"
-                  >
-                    تغيير الحالة
+                    onclick="editStudent(${student.id})">
+                    ✏️ تعديل
+                  </button>
+
+                  <button
+                    onclick="deleteStudent(${student.id})">
+                    🗑️ حذف
                   </button>
 
                 </td>
@@ -724,316 +419,928 @@ async function teacher() {
 
       </div>
 
-      <div class="form">
+    </section>
 
-        <h2>📝 ملاحظة لولي الأمر</h2>
+    <section class="panel">
 
-        <select id="sid">
+      <h2>➕ إضافة طالب</h2>
 
-          ${
-            s.map(x => `
-              <option value="${x.id}">
-                ${x.name}
-              </option>
-            `).join("")
-          }
-
-        </select>
-
-        <textarea
-          id="nt"
-          placeholder="اكتب الملاحظة اليومية"
-        ></textarea>
-
-        <button onclick="note()">
-          حفظ الملاحظة
-        </button>
-
-        <div class="msg">
-          سيتم ربط الإرسال الفعلي عبر WhatsApp
-          بعد إضافة WhatsApp Business API.
-        </div>
-
-      </div>
-
-      <div class="form">
-
-        <h2>🎥 فيديو الحصة</h2>
+      <div class="form row">
 
         <input
-          id="vt"
-          placeholder="اسم المادة والحصة"
-        >
+          id="studentName"
+          placeholder="اسم الطالب">
 
         <input
-          id="vf"
-          type="file"
-          accept="video/*"
-        >
+          id="studentClass"
+          placeholder="الفصل">
 
-        <button onclick="video()">
-          حفظ بيانات الفيديو
+        <input
+          id="studentPhone"
+          placeholder="رقم WhatsApp ولي الأمر">
+
+        <button onclick="addStudent()">
+          إضافة الطالب
         </button>
 
       </div>
 
+    </section>
+
+  </div>
+`;
+```
+
+} catch (error) {
+
+```
+app.innerHTML = `
+  <div class="wrap">
+    <h2>حدث خطأ</h2>
+    <div class="notice">
+      ${escapeHtml(error.message)}
     </div>
-  `;
+    <button onclick="adminPage()">
+      إعادة المحاولة
+    </button>
+  </div>
+`;
+```
+
+}
 }
 
-/* =========================
-   TOGGLE STATUS
-========================= */
+/* =========================================================
+USERS
+========================================================= */
+
+async function addUser() {
+
+const name =
+document.getElementById("newUserName").value.trim();
+
+const username =
+document.getElementById("newUsername").value.trim();
+
+const password =
+document.getElementById("newPassword").value;
+
+const role =
+document.getElementById("newRole").value;
+
+if (!name || !username || !password || !role) {
+alert("أكمل جميع بيانات المستخدم");
+return;
+}
+
+try {
+
+```
+await api("/api/users", {
+  method: "POST",
+  body: JSON.stringify({
+    name,
+    username,
+    password,
+    role
+  })
+});
+
+alert("تم إضافة المستخدم بنجاح");
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(error.message);
+```
+
+}
+}
+
+async function disableUser(id) {
+
+if (!confirm("هل تريد إيقاف هذا المستخدم؟")) {
+return;
+}
+
+try {
+
+```
+await api(`/api/users/${id}/disable`, {
+  method: "PATCH"
+});
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(error.message);
+```
+
+}
+}
+
+async function enableUser(id) {
+
+try {
+
+```
+await api(`/api/users/${id}/enable`, {
+  method: "PATCH"
+});
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(error.message);
+```
+
+}
+}
+
+async function deleteUser(id) {
+
+if (!confirm("هل أنت متأكد من حذف المستخدم؟")) {
+return;
+}
+
+try {
+
+```
+await api(`/api/users/${id}`, {
+  method: "DELETE"
+});
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(error.message);
+```
+
+}
+}
+
+/* =========================================================
+STUDENTS
+========================================================= */
+
+async function addStudent() {
+
+const name =
+document.getElementById("studentName").value.trim();
+
+const className =
+document.getElementById("studentClass").value.trim();
+
+const phone =
+document.getElementById("studentPhone").value.trim();
+
+if (!name || !className || !phone) {
+alert("أكمل بيانات الطالب");
+return;
+}
+
+try {
+
+```
+await api("/api/students", {
+  method: "POST",
+  body: JSON.stringify({
+    name,
+    class_name: className,
+    parent_phone: phone
+  })
+});
+
+alert("تم إضافة الطالب بنجاح");
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(error.message);
+```
+
+}
+}
+
+async function deleteStudent(id) {
+
+if (!confirm(
+"هل أنت متأكد من حذف الطالب؟"
+)) {
+return;
+}
+
+try {
+
+```
+await api(`/api/students/${id}`, {
+  method: "DELETE"
+});
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(
+  "السيرفر الحالي لا يحتوي على أمر حذف الطالب. سنضيفه في الخطوة التالية."
+);
+```
+
+}
+}
+
+async function editStudent(id) {
+
+const students =
+await api("/api/students");
+
+const student =
+students.find(x => Number(x.id) === Number(id));
+
+if (!student) {
+alert("الطالب غير موجود");
+return;
+}
+
+const name = prompt(
+"اسم الطالب:",
+student.name
+);
+
+if (name === null) return;
+
+const className = prompt(
+"الفصل:",
+student.class_name
+);
+
+if (className === null) return;
+
+const phone = prompt(
+"رقم WhatsApp ولي الأمر:",
+student.parent_phone
+);
+
+if (phone === null) return;
+
+try {
+
+```
+await api(`/api/students/${id}`, {
+  method: "PATCH",
+  body: JSON.stringify({
+    name,
+    class_name: className,
+    parent_phone: phone
+  })
+});
+
+alert("تم تعديل بيانات الطالب");
+
+adminPage();
+```
+
+} catch (error) {
+
+```
+alert(
+  "السيرفر الحالي يحتاج إضافة API تعديل الطالب."
+);
+```
+
+}
+}
+
+/* =========================================================
+TEACHER
+========================================================= */
+
+async function teacherPage() {
+
+const students =
+await api("/api/students");
+
+app.innerHTML = `
+
+```
+<div class="wrap">
+
+  <div class="page-title">
+
+    <div>
+      <h1>👨‍🏫 بوابة المدرس</h1>
+      <p>
+        ${escapeHtml(me.name)}
+      </p>
+    </div>
+
+    <button onclick="logout()">
+      خروج
+    </button>
+
+  </div>
+
+  <section class="panel">
+
+    <h2>📋 الحضور والغياب</h2>
+
+    <div style="overflow-x:auto">
+
+      <table class="table">
+
+        <tr>
+          <th>الطالب</th>
+          <th>الفصل</th>
+          <th>الحالة</th>
+          <th>الإجراء</th>
+        </tr>
+
+        ${
+          students.map(student => `
+
+            <tr>
+
+              <td>
+                ${escapeHtml(student.name)}
+              </td>
+
+              <td>
+                ${escapeHtml(student.class_name)}
+              </td>
+
+              <td>
+                ${
+                  student.status === "حاضر"
+                    ? "🟢 حاضر"
+                    : "🔴 غائب"
+                }
+              </td>
+
+              <td>
+
+                <button
+                  onclick="toggleStatus(${student.id})">
+                  تغيير الحالة
+                </button>
+
+              </td>
+
+            </tr>
+
+          `).join("")
+        }
+
+      </table>
+
+    </div>
+
+  </section>
+
+  <section class="panel">
+
+    <h2>📝 ملاحظة لولي الأمر</h2>
+
+    <select id="noteStudent">
+
+      ${
+        students.map(student => `
+          <option value="${student.id}">
+            ${escapeHtml(student.name)}
+          </option>
+        `).join("")
+      }
+
+    </select>
+
+    <textarea
+      id="noteText"
+      placeholder="اكتب الملاحظة اليومية">
+    </textarea>
+
+    <button onclick="saveNote()">
+      💾 حفظ الملاحظة
+    </button>
+
+    <div class="notice">
+      الملاحظة تحفظ داخل النظام.
+      ربط الإرسال الفعلي عبر WhatsApp يحتاج
+      WhatsApp Business API.
+    </div>
+
+  </section>
+
+  <section class="panel">
+
+    <h2>🎥 الحصص والفيديوهات</h2>
+
+    <input
+      id="videoTitle"
+      placeholder="اسم المادة والحصة">
+
+    <input
+      id="videoFile"
+      type="file"
+      accept="video/*">
+
+    <button onclick="saveVideo()">
+      حفظ بيانات الحصة
+    </button>
+
+    <div class="notice">
+      حالياً يتم حفظ اسم الفيديو فقط.
+      رفع الفيديو فعلياً يحتاج تخزيناً سحابياً.
+    </div>
+
+  </section>
+
+</div>
+```
+
+`;
+}
 
 async function toggleStatus(id) {
 
-  try {
+try {
 
-    await api(
-      "/api/students/" + id + "/status",
-      {
-        method: "PATCH"
-      }
-    );
-
-    await teacher();
-
-  } catch (e) {
-
-    alert(e.message);
+```
+await api(
+  `/api/students/${id}/status`,
+  {
+    method: "PATCH"
   }
+);
+
+teacherPage();
+```
+
+} catch (error) {
+
+```
+alert(error.message);
+```
+
+}
 }
 
-/* =========================
-   NOTES
-========================= */
+async function saveNote() {
 
-async function note() {
+const studentId =
+document.getElementById("noteStudent").value;
 
-  try {
+const text =
+document.getElementById("noteText").value.trim();
 
-    const studentId =
-      Number(document.getElementById("sid").value);
-
-    const text =
-      document.getElementById("nt").value.trim();
-
-    if (!text) {
-
-      alert("اكتب الملاحظة");
-
-      return;
-    }
-
-    await api("/api/notes", {
-
-      method: "POST",
-
-      body: JSON.stringify({
-        student_id: studentId,
-        text
-      })
-
-    });
-
-    alert(
-      "✅ تم حفظ الملاحظة وتجهيزها للربط مع WhatsApp"
-    );
-
-    await teacher();
-
-  } catch (e) {
-
-    alert(e.message);
-  }
+if (!text) {
+alert("اكتب الملاحظة");
+return;
 }
 
-/* =========================
-   VIDEO
-========================= */
+try {
 
-async function video() {
+```
+await api("/api/notes", {
+  method: "POST",
+  body: JSON.stringify({
+    student_id: Number(studentId),
+    text
+  })
+});
 
-  try {
+alert("تم حفظ الملاحظة");
 
-    const title =
-      document.getElementById("vt").value.trim();
+teacherPage();
+```
 
-    const file =
-      document.getElementById("vf").files[0];
+} catch (error) {
 
-    if (!title) {
+```
+alert(error.message);
+```
 
-      alert("اكتب اسم الحصة");
-
-      return;
-    }
-
-    await api("/api/videos", {
-
-      method: "POST",
-
-      body: JSON.stringify({
-        title,
-        file_name: file ? file.name : ""
-      })
-
-    });
-
-    alert(
-      "✅ تم حفظ بيانات الحصة"
-    );
-
-  } catch (e) {
-
-    alert(e.message);
-  }
+}
 }
 
-/* =========================
-   FAMILY / PARENT
-========================= */
+async function saveVideo() {
 
-async function family() {
+const title =
+document.getElementById("videoTitle").value.trim();
 
-  const students =
-    await api("/api/students");
+const file =
+document.getElementById("videoFile").files[0];
 
-  if (!students.length) {
+if (!title) {
+alert("اكتب اسم الحصة");
+return;
+}
 
-    app.innerHTML = `
-      <div class="wrap">
-        <div class="card">
-          لا يوجد طالب مرتبط بهذا الحساب حالياً.
-        </div>
-      </div>
-    `;
+try {
 
-    return;
-  }
+```
+await api("/api/videos", {
+  method: "POST",
+  body: JSON.stringify({
+    title,
+    file_name: file ? file.name : ""
+  })
+});
 
-  const s = students[0];
+alert("تم حفظ بيانات الحصة");
 
-  const n =
-    await api("/api/notes/" + s.id);
+document.getElementById("videoTitle").value = "";
+document.getElementById("videoFile").value = "";
+```
 
-  const v =
-    await api("/api/videos");
+} catch (error) {
 
-  app.innerHTML = `
+```
+alert(error.message);
+```
 
-    <div class="wrap">
+}
+}
 
+/* =========================================================
+PARENT
+========================================================= */
+
+async function parentPage() {
+
+const students =
+await api("/api/students");
+
+if (!students.length) {
+
+```
+app.innerHTML = `
+  <div class="wrap">
+
+    <h1>👨‍👩‍👦 بوابة ولي الأمر</h1>
+
+    <div class="notice">
+      لا يوجد طالب مرتبط بهذا الحساب حالياً.
+    </div>
+
+    <button onclick="logout()">
+      خروج
+    </button>
+
+  </div>
+`;
+
+return;
+```
+
+}
+
+let student = students[0];
+
+const notes =
+await api(`/api/notes/${student.id}`);
+
+const videos =
+await api("/api/videos");
+
+app.innerHTML = `
+
+```
+<div class="wrap">
+
+  <div class="page-title">
+
+    <div>
       <h1>👨‍👩‍👦 بوابة ولي الأمر</h1>
+      <p>
+        ${escapeHtml(me.name)}
+      </p>
+    </div>
 
-      <div class="cards">
+    <button onclick="logout()">
+      خروج
+    </button>
 
-        <div class="card">
+  </div>
 
-          الطالب
+  <div class="cards">
 
-          <div class="num">
-            ${s.name}
-          </div>
+    <div class="card">
 
-          <p>
-            ${s.class_name}
-          </p>
+      الطالب
 
-        </div>
-
-        <div class="card">
-
-          الحضور اليوم
-
-          <div class="num">
-            ${s.status}
-          </div>
-
-        </div>
-
+      <div class="num">
+        ${escapeHtml(student.name)}
       </div>
 
-      <h2>📝 ملاحظات المدرسة</h2>
+      <p>
+        ${escapeHtml(student.class_name)}
+      </p>
 
-      ${
-        n.map(x => `
+    </div>
+
+    <div class="card">
+
+      حالة الطالب
+
+      <div class="num">
+        ${
+          student.status === "حاضر"
+            ? "🟢 حاضر"
+            : "🔴 غائب"
+        }
+      </div>
+
+    </div>
+
+  </div>
+
+  <section class="panel">
+
+    <h2>📝 ملاحظات المدرسة</h2>
+
+    ${
+      notes.length
+        ? notes.map(note => `
 
           <div class="notice">
 
             <b>
-              ${x.created_at}
+              ${escapeHtml(note.created_at)}
             </b>
 
-            <br>
+            <br><br>
 
-            ${x.text}
+            ${escapeHtml(note.text)}
+
+          </div>
+
+        `).join("")
+        : `
+          <div class="card">
+            لا توجد ملاحظات حالياً.
+          </div>
+        `
+    }
+
+  </section>
+
+  <section class="panel">
+
+    <h2>🎥 الحصص</h2>
+
+    ${
+      videos.length
+        ? videos.map(video => `
+
+          <div class="card">
+
+            🎥
+            ${escapeHtml(video.title)}
 
             <br>
 
             <small>
-              📱 جاهزة للإرسال عبر WhatsApp بعد الربط
+              ${escapeHtml(video.created_at)}
             </small>
 
           </div>
 
         `).join("")
-
-        ||
-
+        : `
+          <div class="card">
+            لا توجد حصص حالياً.
+          </div>
         `
+    }
+
+  </section>
+
+</div>
+```
+
+`;
+}
+
+/* =========================================================
+STUDENT
+========================================================= */
+
+async function studentPage() {
+
+const students =
+await api("/api/students");
+
+const student =
+students.find(
+x =>
+x.name === me.name
+) || students[0];
+
+if (!student) {
+
+```
+app.innerHTML = `
+  <div class="wrap">
+    <h1>بوابة الطالب</h1>
+
+    <div class="notice">
+      لم يتم العثور على بيانات الطالب.
+    </div>
+
+    <button onclick="logout()">
+      خروج
+    </button>
+  </div>
+`;
+
+return;
+```
+
+}
+
+const notes =
+await api(`/api/notes/${student.id}`);
+
+const videos =
+await api("/api/videos");
+
+app.innerHTML = `
+
+```
+<div class="wrap">
+
+  <div class="page-title">
+
+    <div>
+
+      <h1>🎓 بوابة الطالب</h1>
+
+      <p>
+        ${escapeHtml(me.name)}
+      </p>
+
+    </div>
+
+    <button onclick="logout()">
+      خروج
+    </button>
+
+  </div>
+
+  <div class="cards">
+
+    <div class="card">
+
+      الاسم
+
+      <div class="num">
+        ${escapeHtml(student.name)}
+      </div>
+
+    </div>
+
+    <div class="card">
+
+      الفصل
+
+      <div class="num">
+        ${escapeHtml(student.class_name)}
+      </div>
+
+    </div>
+
+    <div class="card">
+
+      الحضور
+
+      <div class="num">
+        ${
+          student.status === "حاضر"
+            ? "🟢 حاضر"
+            : "🔴 غائب"
+        }
+      </div>
+
+    </div>
+
+  </div>
+
+  <section class="panel">
+
+    <h2>📝 ملاحظات المدرسين</h2>
+
+    ${
+      notes.length
+        ? notes.map(note => `
+
+          <div class="notice">
+
+            <b>
+              ${escapeHtml(note.created_at)}
+            </b>
+
+            <br><br>
+
+            ${escapeHtml(note.text)}
+
+          </div>
+
+        `).join("")
+        : `
           <div class="card">
             لا توجد ملاحظات.
           </div>
         `
-      }
+    }
 
-      <h2>🎥 الحصص</h2>
+  </section>
 
-      ${
-        v.map(x => `
+  <section class="panel">
+
+    <h2>🎥 الحصص التعليمية</h2>
+
+    ${
+      videos.length
+        ? videos.map(video => `
 
           <div class="card">
 
-            🎥 ${x.title}
+            🎥
+            ${escapeHtml(video.title)}
 
             <br>
 
             <small>
-              ${x.created_at}
+              ${escapeHtml(video.created_at)}
             </small>
 
           </div>
 
         `).join("")
-
-        ||
-
-        `
+        : `
           <div class="card">
             لا توجد حصص.
           </div>
         `
-      }
+    }
 
-    </div>
-  `;
+  </section>
+
+</div>
+```
+
+`;
 }
 
-/* =========================
-   START
-========================= */
+/* =========================================================
+AUTO ACTIVITY
+========================================================= */
+
+setInterval(async () => {
+
+if (!me) return;
 
 try {
 
-  me = JSON.parse(
-    localStorage.getItem("me") || "null"
-  );
+```
+await sendActivity();
+```
 
-} catch (e) {
+} catch (error) {}
 
-  me = null;
-  localStorage.removeItem("me");
+}, 30000);
+
+/* =========================================================
+START
+========================================================= */
+
+try {
+
+me = JSON.parse(
+localStorage.getItem("me") || "null"
+);
+
+} catch (error) {
+
+me = null;
+localStorage.removeItem("me");
+
 }
 
 render();
