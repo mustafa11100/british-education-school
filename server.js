@@ -3,7 +3,6 @@ const path = require("path");
 const Database = require("better-sqlite3");
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
 const db = new Database(
@@ -13,32 +12,27 @@ const db = new Database(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, "public")));
+// =====================================================
+// STATIC FILES
+// =====================================================
 
-/* =====================================================
-   HELPERS
-===================================================== */
+app.use(
+  express.static(
+    path.join(__dirname, "public")
+  )
+);
+
+// =====================================================
+// HELPERS
+// =====================================================
 
 function nowISO() {
   return new Date().toISOString();
 }
 
-function esc(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function statusBadge(status) {
-  return `<span class="badge">${esc(status)}</span>`;
-}
-
-/* =====================================================
-   DATABASE TABLES
-===================================================== */
+// =====================================================
+// DATABASE
+// =====================================================
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
@@ -128,17 +122,17 @@ CREATE TABLE IF NOT EXISTS logs (
 );
 `);
 
-/* =====================================================
-   DEFAULT ADMIN
-===================================================== */
+// =====================================================
+// DEFAULT ADMIN
+// =====================================================
 
-const adminExists = db
+const admin = db
   .prepare(
     "SELECT id FROM users WHERE username = ?"
   )
   .get("admin");
 
-if (!adminExists) {
+if (!admin) {
   db.prepare(`
     INSERT INTO users
     (
@@ -164,11 +158,15 @@ if (!adminExists) {
   );
 }
 
-/* =====================================================
-   LOG FUNCTION
-===================================================== */
+// =====================================================
+// LOG
+// =====================================================
 
-function addLog(userId, action, details = "") {
+function addLog(
+  userId,
+  action,
+  details = ""
+) {
   db.prepare(`
     INSERT INTO logs
     (
@@ -186,9 +184,9 @@ function addLog(userId, action, details = "") {
   );
 }
 
-/* =====================================================
-   HEALTH
-===================================================== */
+// =====================================================
+// HEALTH
+// =====================================================
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -198,51 +196,63 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-/* =====================================================
-   LOGIN
-===================================================== */
+// =====================================================
+// LOGIN
+// =====================================================
 
 app.post("/api/login", (req, res) => {
 
-  const {
-    username,
-    password
-  } = req.body;
+  const username =
+    String(req.body.username || "").trim();
+
+  const password =
+    String(req.body.password || "");
 
   if (!username || !password) {
     return res.status(400).json({
-      error: "أدخل اسم المستخدم وكلمة المرور"
+      success: false,
+      error:
+        "أدخل اسم المستخدم وكلمة المرور"
     });
   }
 
-  const user = db.prepare(`
-    SELECT *
-    FROM users
-    WHERE username = ?
-  `).get(username);
+  const user = db
+    .prepare(`
+      SELECT *
+      FROM users
+      WHERE username = ?
+    `)
+    .get(username);
 
   if (!user) {
     return res.status(401).json({
-      error: "اسم المستخدم أو كلمة المرور غير صحيحة"
+      success: false,
+      error:
+        "اسم المستخدم أو كلمة المرور غير صحيحة"
     });
   }
 
   if (!user.active) {
     return res.status(403).json({
-      error: "هذا الحساب موقوف"
+      success: false,
+      error:
+        "هذا الحساب موقوف"
     });
   }
 
   if (user.password !== password) {
     return res.status(401).json({
-      error: "اسم المستخدم أو كلمة المرور غير صحيحة"
+      success: false,
+      error:
+        "اسم المستخدم أو كلمة المرور غير صحيحة"
     });
   }
 
   db.prepare(`
     UPDATE users
-    SET online = 1,
-        last_seen = ?
+    SET
+      online = 1,
+      last_seen = ?
     WHERE id = ?
   `).run(
     nowISO(),
@@ -261,27 +271,28 @@ app.post("/api/login", (req, res) => {
       id: user.id,
       username: user.username,
       name: user.name,
-      role: user.role
+      role: user.role,
+      active: user.active
     }
   });
 });
 
-/* =====================================================
-   LOGOUT
-===================================================== */
+// =====================================================
+// LOGOUT
+// =====================================================
 
 app.post("/api/logout", (req, res) => {
 
-  const {
-    userId
-  } = req.body;
+  const userId =
+    Number(req.body.userId || 0);
 
   if (userId) {
 
     db.prepare(`
       UPDATE users
-      SET online = 0,
-          last_seen = ?
+      SET
+        online = 0,
+        last_seen = ?
       WHERE id = ?
     `).run(
       nowISO(),
@@ -300,9 +311,9 @@ app.post("/api/logout", (req, res) => {
   });
 });
 
-/* =====================================================
-   USERS - GET
-===================================================== */
+// =====================================================
+// USERS
+// =====================================================
 
 app.get("/api/users", (req, res) => {
 
@@ -326,40 +337,47 @@ app.get("/api/users", (req, res) => {
   });
 });
 
-/* =====================================================
-   USERS - CREATE
-===================================================== */
-
 app.post("/api/users", (req, res) => {
 
-  const {
-    username,
-    password,
-    name,
-    role = "user"
-  } = req.body;
+  const username =
+    String(req.body.username || "").trim();
+
+  const password =
+    String(req.body.password || "");
+
+  const name =
+    String(req.body.name || "").trim();
+
+  const role =
+    req.body.role || "user";
 
   if (!username || !password || !name) {
     return res.status(400).json({
-      error: "أكمل جميع البيانات"
+      success: false,
+      error:
+        "أكمل جميع البيانات"
     });
   }
 
   if (password.length < 4) {
     return res.status(400).json({
-      error: "كلمة المرور يجب أن تكون 4 أحرف على الأقل"
+      success: false,
+      error:
+        "كلمة المرور يجب أن تكون 4 أحرف على الأقل"
     });
   }
 
-  const exists = db.prepare(`
-    SELECT id
-    FROM users
-    WHERE username = ?
-  `).get(username);
+  const exists = db
+    .prepare(
+      "SELECT id FROM users WHERE username = ?"
+    )
+    .get(username);
 
   if (exists) {
     return res.status(409).json({
-      error: "اسم المستخدم موجود بالفعل"
+      success: false,
+      error:
+        "اسم المستخدم موجود بالفعل"
     });
   }
 
@@ -397,83 +415,76 @@ app.post("/api/users", (req, res) => {
   });
 });
 
-/* =====================================================
-   USERS - UPDATE STATUS
-===================================================== */
+app.patch(
+  "/api/users/:id/status",
+  (req, res) => {
 
-app.patch("/api/users/:id/status", (req, res) => {
+    const id =
+      Number(req.params.id);
 
-  const id = Number(req.params.id);
+    const active =
+      req.body.active ? 1 : 0;
 
-  const {
-    active
-  } = req.body;
+    db.prepare(`
+      UPDATE users
+      SET active = ?
+      WHERE id = ?
+    `).run(
+      active,
+      id
+    );
 
-  db.prepare(`
-    UPDATE users
-    SET active = ?
-    WHERE id = ?
-  `).run(
-    active ? 1 : 0,
-    id
-  );
-
-  addLog(
-    null,
-    "تغيير حالة مستخدم",
-    `المستخدم رقم ${id} أصبح ${active ? "نشط" : "موقوف"}`
-  );
-
-  res.json({
-    success: true
-  });
-});
-
-/* =====================================================
-   USERS - DELETE
-===================================================== */
-
-app.delete("/api/users/:id", (req, res) => {
-
-  const id = Number(req.params.id);
-
-  const user = db.prepare(`
-    SELECT username
-    FROM users
-    WHERE id = ?
-  `).get(id);
-
-  if (!user) {
-    return res.status(404).json({
-      error: "المستخدم غير موجود"
+    res.json({
+      success: true
     });
   }
+);
 
-  if (user.username === "admin") {
-    return res.status(400).json({
-      error: "لا يمكن حذف المدير الرئيسي"
+app.delete(
+  "/api/users/:id",
+  (req, res) => {
+
+    const id =
+      Number(req.params.id);
+
+    const user = db
+      .prepare(`
+        SELECT username
+        FROM users
+        WHERE id = ?
+      `)
+      .get(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error:
+          "المستخدم غير موجود"
+      });
+    }
+
+    if (user.username === "admin") {
+      return res.status(400).json({
+        success: false,
+        error:
+          "لا يمكن حذف المدير الرئيسي"
+      });
+    }
+
+    db.prepare(`
+      DELETE FROM users
+      WHERE id = ?
+    `).run(id);
+
+    res.json({
+      success: true
     });
   }
+);
 
-  db.prepare(`
-    DELETE FROM users
-    WHERE id = ?
-  `).run(id);
-
-  addLog(
-    null,
-    "حذف مستخدم",
-    `تم حذف المستخدم ${user.username}`
-  );
-
-  res.json({
-    success: true
-  });
-});
-
-/* =====================================================
-   STUDENTS - GET
-===================================================== */
+// =====================================================
+// STUDENTS
+// =====================================================
 
 app.get("/api/students", (req, res) => {
 
@@ -489,22 +500,22 @@ app.get("/api/students", (req, res) => {
   });
 });
 
-/* =====================================================
-   STUDENTS - CREATE
-===================================================== */
-
 app.post("/api/students", (req, res) => {
 
-  const {
-    name,
-    class_name,
-    parent_phone,
-    status = "نشط"
-  } = req.body;
+  const name =
+    String(req.body.name || "").trim();
+
+  const className =
+    String(req.body.class_name || "");
+
+  const parentPhone =
+    String(req.body.parent_phone || "");
 
   if (!name) {
     return res.status(400).json({
-      error: "اسم الطالب مطلوب"
+      success: false,
+      error:
+        "اسم الطالب مطلوب"
     });
   }
 
@@ -520,16 +531,10 @@ app.post("/api/students", (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(
     name,
-    class_name || "",
-    parent_phone || "",
-    status,
+    className,
+    parentPhone,
+    "نشط",
     nowISO()
-  );
-
-  addLog(
-    null,
-    "إضافة طالب",
-    `تمت إضافة الطالب ${name}`
   );
 
   res.json({
@@ -538,37 +543,34 @@ app.post("/api/students", (req, res) => {
   });
 });
 
-/* =====================================================
-   STUDENTS - DELETE
-===================================================== */
+app.delete(
+  "/api/students/:id",
+  (req, res) => {
 
-app.delete("/api/students/:id", (req, res) => {
+    const id =
+      Number(req.params.id);
 
-  const id = Number(req.params.id);
+    db.prepare(
+      "DELETE FROM notes WHERE student_id = ?"
+    ).run(id);
 
-  db.prepare(`
-    DELETE FROM students
-    WHERE id = ?
-  `).run(id);
+    db.prepare(
+      "DELETE FROM attendance WHERE student_id = ?"
+    ).run(id);
 
-  db.prepare(`
-    DELETE FROM notes
-    WHERE student_id = ?
-  `).run(id);
+    db.prepare(
+      "DELETE FROM students WHERE id = ?"
+    ).run(id);
 
-  db.prepare(`
-    DELETE FROM attendance
-    WHERE student_id = ?
-  `).run(id);
+    res.json({
+      success: true
+    });
+  }
+);
 
-  res.json({
-    success: true
-  });
-});
-
-/* =====================================================
-   EMPLOYEES - GET
-===================================================== */
+// =====================================================
+// EMPLOYEES
+// =====================================================
 
 app.get("/api/employees", (req, res) => {
 
@@ -584,25 +586,16 @@ app.get("/api/employees", (req, res) => {
   });
 });
 
-/* =====================================================
-   EMPLOYEES - CREATE
-===================================================== */
-
 app.post("/api/employees", (req, res) => {
 
-  const {
-    employee_no,
-    name,
-    job,
-    department,
-    phone,
-    salary = 0,
-    status = "نشط"
-  } = req.body;
+  const name =
+    String(req.body.name || "").trim();
 
   if (!name) {
     return res.status(400).json({
-      error: "اسم الموظف مطلوب"
+      success: false,
+      error:
+        "اسم الموظف مطلوب"
     });
   }
 
@@ -620,20 +613,14 @@ app.post("/api/employees", (req, res) => {
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    employee_no || "",
+    req.body.employee_no || "",
     name,
-    job || "",
-    department || "",
-    phone || "",
-    Number(salary) || 0,
-    status,
+    req.body.job || "",
+    req.body.department || "",
+    req.body.phone || "",
+    Number(req.body.salary || 0),
+    req.body.status || "نشط",
     nowISO()
-  );
-
-  addLog(
-    null,
-    "إضافة موظف",
-    `تمت إضافة الموظف ${name}`
   );
 
   res.json({
@@ -642,133 +629,140 @@ app.post("/api/employees", (req, res) => {
   });
 });
 
-/* =====================================================
-   EMPLOYEES - DELETE
-===================================================== */
+app.delete(
+  "/api/employees/:id",
+  (req, res) => {
 
-app.delete("/api/employees/:id", (req, res) => {
+    const id =
+      Number(req.params.id);
 
-  const id = Number(req.params.id);
+    db.prepare(
+      "DELETE FROM payroll WHERE employee_id = ?"
+    ).run(id);
 
-  db.prepare(`
-    DELETE FROM employees
-    WHERE id = ?
-  `).run(id);
+    db.prepare(
+      "DELETE FROM employee_attendance WHERE employee_id = ?"
+    ).run(id);
 
-  db.prepare(`
-    DELETE FROM payroll
-    WHERE employee_id = ?
-  `).run(id);
+    db.prepare(
+      "DELETE FROM employees WHERE id = ?"
+    ).run(id);
 
-  db.prepare(`
-    DELETE FROM employee_attendance
-    WHERE employee_id = ?
-  `).run(id);
-
-  res.json({
-    success: true
-  });
-});
-
-/* =====================================================
-   STUDENT ATTENDANCE
-===================================================== */
-
-app.get("/api/attendance/students", (req, res) => {
-
-  const students = db.prepare(`
-    SELECT
-      s.id,
-      s.name,
-      s.class_name,
-      COALESCE(
-        (
-          SELECT a.status
-          FROM attendance a
-          WHERE a.student_id = s.id
-          ORDER BY a.id DESC
-          LIMIT 1
-        ),
-        'غير مسجل'
-      ) AS attendance_status
-    FROM students s
-    ORDER BY s.name
-  `).all();
-
-  res.json({
-    success: true,
-    students
-  });
-});
-
-/* =====================================================
-   STUDENT ATTENDANCE - SAVE
-===================================================== */
-
-app.post("/api/attendance/students", (req, res) => {
-
-  const {
-    student_id,
-    status
-  } = req.body;
-
-  if (!student_id || !status) {
-    return res.status(400).json({
-      error: "البيانات ناقصة"
+    res.json({
+      success: true
     });
   }
+);
 
-  db.prepare(`
-    INSERT INTO attendance
-    (
-      student_id,
+// =====================================================
+// STUDENT ATTENDANCE
+// =====================================================
+
+app.get(
+  "/api/attendance/students",
+  (req, res) => {
+
+    const students = db.prepare(`
+      SELECT
+        s.id,
+        s.name,
+        s.class_name,
+        COALESCE(
+          (
+            SELECT a.status
+            FROM attendance a
+            WHERE a.student_id = s.id
+            ORDER BY a.id DESC
+            LIMIT 1
+          ),
+          'غير مسجل'
+        ) AS attendance_status
+      FROM students s
+      ORDER BY s.name
+    `).all();
+
+    res.json({
+      success: true,
+      students
+    });
+  }
+);
+
+app.post(
+  "/api/attendance/students",
+  (req, res) => {
+
+    const studentId =
+      Number(req.body.student_id || 0);
+
+    const status =
+      String(req.body.status || "");
+
+    if (!studentId || !status) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "البيانات ناقصة"
+      });
+    }
+
+    db.prepare(`
+      INSERT INTO attendance
+      (
+        student_id,
+        status,
+        date,
+        created_at
+      )
+      VALUES (?, ?, ?, ?)
+    `).run(
+      studentId,
       status,
-      date,
-      created_at
-    )
-    VALUES (?, ?, ?, ?)
-  `).run(
-    student_id,
-    status,
-    new Date().toISOString().slice(0, 10),
-    nowISO()
-  );
+      new Date()
+        .toISOString()
+        .slice(0, 10),
+      nowISO()
+    );
 
-  res.json({
-    success: true
-  });
-});
+    res.json({
+      success: true
+    });
+  }
+);
 
-/* =====================================================
-   EMPLOYEE ATTENDANCE
-===================================================== */
+// =====================================================
+// EMPLOYEE ATTENDANCE
+// =====================================================
 
-app.get("/api/attendance/employees", (req, res) => {
+app.get(
+  "/api/attendance/employees",
+  (req, res) => {
 
-  const rows = db.prepare(`
-    SELECT
-      ea.id,
-      e.name,
-      ea.date,
-      ea.check_in,
-      ea.check_out,
-      ea.status,
-      ea.late_minutes
-    FROM employee_attendance ea
-    LEFT JOIN employees e
-      ON e.id = ea.employee_id
-    ORDER BY ea.id DESC
-  `).all();
+    const rows = db.prepare(`
+      SELECT
+        ea.id,
+        e.name,
+        ea.date,
+        ea.check_in,
+        ea.check_out,
+        ea.status,
+        ea.late_minutes
+      FROM employee_attendance ea
+      LEFT JOIN employees e
+        ON e.id = ea.employee_id
+      ORDER BY ea.id DESC
+    `).all();
 
-  res.json({
-    success: true,
-    attendance: rows
-  });
-});
+    res.json({
+      success: true,
+      attendance: rows
+    });
+  }
+);
 
-/* =====================================================
-   PAYROLL
-===================================================== */
+// =====================================================
+// PAYROLL
+// =====================================================
 
 app.get("/api/payroll", (req, res) => {
 
@@ -800,31 +794,36 @@ app.get("/api/payroll", (req, res) => {
   });
 });
 
-/* =====================================================
-   PAYROLL - SAVE
-===================================================== */
-
 app.post("/api/payroll", (req, res) => {
 
-  const {
-    employee_id,
-    basic = 0,
-    allowances = 0,
-    bonuses = 0,
-    deductions = 0
-  } = req.body;
+  const employeeId =
+    Number(req.body.employee_id || 0);
 
-  if (!employee_id) {
+  if (!employeeId) {
     return res.status(400).json({
-      error: "الموظف مطلوب"
+      success: false,
+      error:
+        "الموظف مطلوب"
     });
   }
 
-  const existing = db.prepare(`
-    SELECT id
-    FROM payroll
-    WHERE employee_id = ?
-  `).get(employee_id);
+  const basic =
+    Number(req.body.basic || 0);
+
+  const allowances =
+    Number(req.body.allowances || 0);
+
+  const bonuses =
+    Number(req.body.bonuses || 0);
+
+  const deductions =
+    Number(req.body.deductions || 0);
+
+  const existing = db
+    .prepare(
+      "SELECT id FROM payroll WHERE employee_id = ?"
+    )
+    .get(employeeId);
 
   if (existing) {
 
@@ -837,11 +836,11 @@ app.post("/api/payroll", (req, res) => {
         deductions = ?
       WHERE employee_id = ?
     `).run(
-      Number(basic),
-      Number(allowances),
-      Number(bonuses),
-      Number(deductions),
-      employee_id
+      basic,
+      allowances,
+      bonuses,
+      deductions,
+      employeeId
     );
 
   } else {
@@ -858,11 +857,11 @@ app.post("/api/payroll", (req, res) => {
       )
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      employee_id,
-      Number(basic),
-      Number(allowances),
-      Number(bonuses),
-      Number(deductions),
+      employeeId,
+      basic,
+      allowances,
+      bonuses,
+      deductions,
       nowISO()
     );
   }
@@ -872,9 +871,9 @@ app.post("/api/payroll", (req, res) => {
   });
 });
 
-/* =====================================================
-   NOTES - GET
-===================================================== */
+// =====================================================
+// NOTES
+// =====================================================
 
 app.get("/api/notes", (req, res) => {
 
@@ -897,20 +896,19 @@ app.get("/api/notes", (req, res) => {
   });
 });
 
-/* =====================================================
-   NOTES - CREATE
-===================================================== */
-
 app.post("/api/notes", (req, res) => {
 
-  const {
-    student_id,
-    note
-  } = req.body;
+  const studentId =
+    Number(req.body.student_id || 0);
 
-  if (!student_id || !note) {
+  const note =
+    String(req.body.note || "").trim();
+
+  if (!studentId || !note) {
     return res.status(400).json({
-      error: "اختر الطالب واكتب الملاحظة"
+      success: false,
+      error:
+        "اختر الطالب واكتب الملاحظة"
     });
   }
 
@@ -923,7 +921,7 @@ app.post("/api/notes", (req, res) => {
     )
     VALUES (?, ?, ?)
   `).run(
-    student_id,
+    studentId,
     note,
     nowISO()
   );
@@ -934,27 +932,25 @@ app.post("/api/notes", (req, res) => {
   });
 });
 
-/* =====================================================
-   NOTES - DELETE
-===================================================== */
+app.delete(
+  "/api/notes/:id",
+  (req, res) => {
 
-app.delete("/api/notes/:id", (req, res) => {
+    db.prepare(
+      "DELETE FROM notes WHERE id = ?"
+    ).run(
+      Number(req.params.id)
+    );
 
-  const id = Number(req.params.id);
+    res.json({
+      success: true
+    });
+  }
+);
 
-  db.prepare(`
-    DELETE FROM notes
-    WHERE id = ?
-  `).run(id);
-
-  res.json({
-    success: true
-  });
-});
-
-/* =====================================================
-   VIDEOS - GET
-===================================================== */
+// =====================================================
+// VIDEOS
+// =====================================================
 
 app.get("/api/videos", (req, res) => {
 
@@ -970,22 +966,16 @@ app.get("/api/videos", (req, res) => {
   });
 });
 
-/* =====================================================
-   VIDEOS - CREATE
-===================================================== */
-
 app.post("/api/videos", (req, res) => {
 
-  const {
-    title,
-    subject,
-    url,
-    description
-  } = req.body;
+  const title =
+    String(req.body.title || "").trim();
 
   if (!title) {
     return res.status(400).json({
-      error: "عنوان الحصة مطلوب"
+      success: false,
+      error:
+        "عنوان الحصة مطلوب"
     });
   }
 
@@ -1001,9 +991,9 @@ app.post("/api/videos", (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(
     title,
-    subject || "",
-    url || "",
-    description || "",
+    req.body.subject || "",
+    req.body.url || "",
+    req.body.description || "",
     nowISO()
   );
 
@@ -1013,27 +1003,25 @@ app.post("/api/videos", (req, res) => {
   });
 });
 
-/* =====================================================
-   VIDEOS - DELETE
-===================================================== */
+app.delete(
+  "/api/videos/:id",
+  (req, res) => {
 
-app.delete("/api/videos/:id", (req, res) => {
+    db.prepare(
+      "DELETE FROM videos WHERE id = ?"
+    ).run(
+      Number(req.params.id)
+    );
 
-  const id = Number(req.params.id);
+    res.json({
+      success: true
+    });
+  }
+);
 
-  db.prepare(`
-    DELETE FROM videos
-    WHERE id = ?
-  `).run(id);
-
-  res.json({
-    success: true
-  });
-});
-
-/* =====================================================
-   LOGS
-===================================================== */
+// =====================================================
+// LOGS
+// =====================================================
 
 app.get("/api/logs", (req, res) => {
 
@@ -1041,7 +1029,10 @@ app.get("/api/logs", (req, res) => {
     SELECT
       l.id,
       l.user_id,
-      COALESCE(u.username, 'النظام') AS username,
+      COALESCE(
+        u.username,
+        'النظام'
+      ) AS username,
       l.action,
       l.details,
       l.created_at
@@ -1058,102 +1049,123 @@ app.get("/api/logs", (req, res) => {
   });
 });
 
-/* =====================================================
-   DASHBOARD
-===================================================== */
+// =====================================================
+// DASHBOARD
+// =====================================================
 
 app.get("/api/dashboard", (req, res) => {
 
-  const users = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM users
-  `).get().count;
+  const users =
+    db.prepare(
+      "SELECT COUNT(*) AS count FROM users"
+    ).get().count;
 
-  const online = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM users
-    WHERE online = 1
+  const online =
+    db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM users
+      WHERE online = 1
       AND active = 1
-  `).get().count;
+    `).get().count;
 
-  const students = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM students
-  `).get().count;
+  const students =
+    db.prepare(
+      "SELECT COUNT(*) AS count FROM students"
+    ).get().count;
 
-  const employees = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM employees
-  `).get().count;
+  const employees =
+    db.prepare(
+      "SELECT COUNT(*) AS count FROM employees"
+    ).get().count;
 
-  const onlineUsers = db.prepare(`
-    SELECT
-      id,
-      username,
-      name,
-      role,
-      last_seen
-    FROM users
-    WHERE online = 1
+  const onlineUsers =
+    db.prepare(`
+      SELECT
+        id,
+        username,
+        name,
+        role,
+        last_seen
+      FROM users
+      WHERE online = 1
       AND active = 1
-    ORDER BY last_seen DESC
-  `).all();
+      ORDER BY last_seen DESC
+    `).all();
 
   res.json({
     success: true,
+
     stats: {
       users,
       online,
       students,
       employees
     },
+
     onlineUsers
   });
 });
 
-/* =====================================================
-   ROOT
-===================================================== */
+// =====================================================
+// ROOT
+// =====================================================
 
 app.get("/", (req, res) => {
 
   res.sendFile(
-    path.join(__dirname, "public", "index.html")
+    path.join(
+      __dirname,
+      "public",
+      "index.html"
+    )
   );
 });
 
-/* =====================================================
-   404 API
-===================================================== */
+// =====================================================
+// API 404
+// =====================================================
 
 app.use("/api", (req, res) => {
 
   res.status(404).json({
-    error: "API endpoint not found"
+    success: false,
+    error:
+      "API endpoint not found"
   });
 });
 
-/* =====================================================
-   ERROR HANDLER
-===================================================== */
+// =====================================================
+// ERROR HANDLER
+// =====================================================
 
-app.use((err, req, res, next) => {
+app.use(
+  (err, req, res, next) => {
 
-  console.error("SERVER ERROR:", err);
+    console.error(
+      "SERVER ERROR:",
+      err
+    );
 
-  res.status(500).json({
-    error: "حدث خطأ داخل السيرفر"
-  });
-});
+    res.status(500).json({
+      success: false,
+      error:
+        "حدث خطأ داخل السيرفر"
+    });
+  }
+);
 
-/* =====================================================
-   START SERVER
-===================================================== */
+// =====================================================
+// START
+// =====================================================
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
 
-  console.log(
-    `School Portal running on port ${PORT}`
-  );
+    console.log(
+      `School Portal running on port ${PORT}`
+    );
 
-});
+  }
+);
