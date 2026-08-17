@@ -59,9 +59,10 @@ render();
 }
 
 function loginPage() {
-app.innerHTML = ` <div class="login"> <h1>🏫 بوابة مدرسة التعليم البريطاني</h1>
+app.innerHTML = `
+<div class="login">
+<h1>🏫 بوابة مدرسة التعليم البريطاني</h1>
 
-```
   <input id="usernameInput"
          placeholder="اسم المستخدم"
          autocomplete="username">
@@ -81,7 +82,6 @@ app.innerHTML = ` <div class="login"> <h1>🏫 بوابة مدرسة التعل�
     الطالب: student / 1234
   </div>
 </div>
-```
 
 `;
 }
@@ -104,11 +104,9 @@ password
 })
 });
 
-```
 localStorage.setItem("me", JSON.stringify(me));
 
 render();
-```
 
 } catch (error) {
 alert(error.message);
@@ -126,10 +124,8 @@ user_id: me.id
 })
 });
 
-```
 me.last_seen = result.last_seen;
 localStorage.setItem("me", JSON.stringify(me));
-```
 
 } catch (error) {
 if (
@@ -165,8 +161,7 @@ if (me.role === "student") {
 return studentPage();
 }
 
-app.innerHTML = `     <div class="wrap">       <h1>حساب غير معروف</h1>       <button onclick="logout()">خروج</button>     </div>
-  `;
+app.innerHTML = <div class="wrap"> <h1>حساب غير معروف</h1> <button onclick="logout()">خروج</button> </div> ;
 }
 
 /* =========================================================
@@ -180,7 +175,6 @@ api("/api/students"),
 api("/api/users")
 ]);
 
-```
 const present = students.filter(
   x => x.status === "حاضر"
 ).length;
@@ -449,11 +443,9 @@ app.innerHTML = `
 
   </div>
 `;
-```
 
 } catch (error) {
 
-```
 app.innerHTML = `
   <div class="wrap">
     <h2>حدث خطأ</h2>
@@ -465,7 +457,6 @@ app.innerHTML = `
     </button>
   </div>
 `;
-```
 
 }
 }
@@ -495,7 +486,6 @@ return;
 
 try {
 
-```
 await api("/api/users", {
   method: "POST",
   body: JSON.stringify({
@@ -509,13 +499,10 @@ await api("/api/users", {
 alert("تم إضافة المستخدم بنجاح");
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -528,19 +515,15 @@ return;
 
 try {
 
-```
 await api(`/api/users/${id}/disable`, {
   method: "PATCH"
 });
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -549,19 +532,15 @@ async function enableUser(id) {
 
 try {
 
-```
 await api(`/api/users/${id}/enable`, {
   method: "PATCH"
 });
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -574,19 +553,15 @@ return;
 
 try {
 
-```
 await api(`/api/users/${id}`, {
   method: "DELETE"
 });
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -613,7 +588,6 @@ return;
 
 try {
 
-```
 await api("/api/students", {
   method: "POST",
   body: JSON.stringify({
@@ -626,13 +600,10 @@ await api("/api/students", {
 alert("تم إضافة الطالب بنجاح");
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -647,21 +618,17 @@ return;
 
 try {
 
-```
 await api(`/api/students/${id}`, {
   method: "DELETE"
 });
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(
   "السيرفر الحالي لا يحتوي على أمر حذف الطالب. سنضيفه في الخطوة التالية."
 );
-```
 
 }
 }
@@ -702,7 +669,6 @@ if (phone === null) return;
 
 try {
 
-```
 await api(`/api/students/${id}`, {
   method: "PATCH",
   body: JSON.stringify({
@@ -715,15 +681,12 @@ await api(`/api/students/${id}`, {
 alert("تم تعديل بيانات الطالب");
 
 adminPage();
-```
 
 } catch (error) {
 
-```
 alert(
   "السيرفر الحالي يحتاج إضافة API تعديل الطالب."
 );
-```
 
 }
 }
@@ -739,7 +702,6 @@ await api("/api/students");
 
 app.innerHTML = `
 
-```
 <div class="wrap">
 
   <div class="page-title">
@@ -871,7 +833,6 @@ app.innerHTML = `
   </section>
 
 </div>
-```
 
 `;
 }
@@ -880,7 +841,6 @@ async function toggleStatus(id) {
 
 try {
 
-```
 await api(
   `/api/students/${id}/status`,
   {
@@ -889,13 +849,10 @@ await api(
 );
 
 teacherPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -915,7 +872,6 @@ return;
 
 try {
 
-```
 await api("/api/notes", {
   method: "POST",
   body: JSON.stringify({
@@ -927,13 +883,10 @@ await api("/api/notes", {
 alert("تم حفظ الملاحظة");
 
 teacherPage();
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -953,7 +906,6 @@ return;
 
 try {
 
-```
 await api("/api/videos", {
   method: "POST",
   body: JSON.stringify({
@@ -966,13 +918,10 @@ alert("تم حفظ بيانات الحصة");
 
 document.getElementById("videoTitle").value = "";
 document.getElementById("videoFile").value = "";
-```
 
 } catch (error) {
 
-```
 alert(error.message);
-```
 
 }
 }
@@ -988,7 +937,6 @@ await api("/api/students");
 
 if (!students.length) {
 
-```
 app.innerHTML = `
   <div class="wrap">
 
@@ -1006,21 +954,19 @@ app.innerHTML = `
 `;
 
 return;
-```
 
 }
 
 let student = students[0];
 
 const notes =
-await api(`/api/notes/${student.id}`);
+await api(/api/notes/${student.id});
 
 const videos =
 await api("/api/videos");
 
 app.innerHTML = `
 
-```
 <div class="wrap">
 
   <div class="page-title">
@@ -1132,7 +1078,6 @@ app.innerHTML = `
   </section>
 
 </div>
-```
 
 `;
 }
@@ -1154,7 +1099,6 @@ x.name === me.name
 
 if (!student) {
 
-```
 app.innerHTML = `
   <div class="wrap">
     <h1>بوابة الطالب</h1>
@@ -1170,19 +1114,17 @@ app.innerHTML = `
 `;
 
 return;
-```
 
 }
 
 const notes =
-await api(`/api/notes/${student.id}`);
+await api(/api/notes/${student.id});
 
 const videos =
 await api("/api/videos");
 
 app.innerHTML = `
 
-```
 <div class="wrap">
 
   <div class="page-title">
@@ -1303,7 +1245,6 @@ app.innerHTML = `
   </section>
 
 </div>
-```
 
 `;
 }
@@ -1318,9 +1259,7 @@ if (!me) return;
 
 try {
 
-```
 await sendActivity();
-```
 
 } catch (error) {}
 
