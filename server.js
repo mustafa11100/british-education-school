@@ -1,7 +1,10 @@
 const express=require("express");
 const path=require("path");
 const Database=require("better-sqlite3");
-app.use(express.json()); app.use(express.static(__dirname));
+const app=express(), db=new Database("school.db");
+
+app.use(express.json());
+app.use(express.static(__dirname));
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,username TEXT UNIQUE,password TEXT,role TEXT,name TEXT);
