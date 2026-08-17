@@ -202,9 +202,7 @@ CREATE TABLE IF NOT EXISTS platform_settings (
 // الإعدادات الافتراضية
 // =====================================================
 
-if (
-  !db.prepare("SELECT * FROM payroll_settings WHERE id = 1").get()
-) {
+if (!db.prepare("SELECT * FROM payroll_settings WHERE id = 1").get()) {
   db.prepare(`
     INSERT INTO payroll_settings
     (id, absence_deduction, late_deduction, allowed_late_minutes)
@@ -212,9 +210,7 @@ if (
   `).run();
 }
 
-if (
-  !db.prepare("SELECT * FROM platform_settings WHERE id = 1").get()
-) {
+if (!db.prepare("SELECT * FROM platform_settings WHERE id = 1").get()) {
   db.prepare(`
     INSERT INTO platform_settings
     (id, institution_name, subtitle, logo, primary_color, secondary_color)
@@ -269,7 +265,10 @@ app.post("/api/login", (req, res) => {
       FROM users
       WHERE username = ?
       AND password = ?
-    `).get(username, password);
+    `).get(
+      String(username).trim(),
+      String(password)
+    );
 
     if (!user) {
       return res.status(401).json({
@@ -305,6 +304,122 @@ app.post("/api/login", (req, res) => {
     console.error(error);
     res.status(500).json({
       error: "حدث خطأ أثناء تسجيل الدخول"
+    });
+  }
+});
+
+// =====================================================
+// REGISTER - إنشاء حساب جديد
+// =====================================================
+
+app.post("/api/register", (req, res) => {
+  try {
+    const {
+      name,
+      username,
+      password,
+      confirmPassword
+    } = req.body || {};
+
+    if (!name || !username || !password || !confirmPassword) {
+      return res.status(400).json({
+        error: "أكمل جميع البيانات المطلوبة"
+      });
+    }
+
+    const cleanName = String(name).trim();
+    const cleanUsername = String(username).trim().toLowerCase();
+    const cleanPassword = String(password);
+    const cleanConfirmPassword = String(confirmPassword);
+
+    if (cleanName.length < 2) {
+      return res.status(400).json({
+        error: "الاسم يجب أن يكون حرفين على الأقل"
+      });
+    }
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({
+        error: "اسم المستخدم يجب أن يكون 3 أحرف على الأقل"
+      });
+    }
+
+    if (cleanPassword.length < 4) {
+      return res.status(400).json({
+        error: "كلمة المرور يجب أن تكون 4 أحرف على الأقل"
+      });
+    }
+
+    if (cleanPassword !== cleanConfirmPassword) {
+      return res.status(400).json({
+        error: "كلمتا المرور غير متطابقتين"
+      });
+    }
+
+    if (cleanUsername === "admin") {
+      return res.status(400).json({
+        error: "اسم المستخدم غير متاح"
+      });
+    }
+
+    const existingUser = db.prepare(`
+      SELECT id
+      FROM users
+      WHERE username = ?
+    `).get(cleanUsername);
+
+    if (existingUser) {
+      return res.status(400).json({
+        error: "اسم المستخدم موجود بالفعل"
+      });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO users
+      (
+        username,
+        password,
+        role,
+        name,
+        active,
+        last_seen
+      )
+      VALUES (?, ?, 'user', ?, 1, NULL)
+    `).run(
+      cleanUsername,
+      cleanPassword,
+      cleanName
+    );
+
+    logAction(
+      result.lastInsertRowid,
+      "REGISTER",
+      `إنشاء حساب جديد: ${cleanName}`
+    );
+
+    res.json({
+      success: true,
+      message: "تم إنشاء الحساب بنجاح",
+      user: {
+        id: result.lastInsertRowid,
+        username: cleanUsername,
+        role: "user",
+        name: cleanName,
+        active: 1
+      }
+    });
+
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
+
+    if (String(error.message).includes("UNIQUE")) {
+      return res.status(400).json({
+        error: "اسم المستخدم موجود بالفعل"
+      });
+    }
+
+    res.status(500).json({
+      error: "حدث خطأ أثناء إنشاء الحساب"
     });
   }
 });
@@ -434,10 +549,10 @@ app.post("/api/users", (req, res) => {
       (username, password, role, name, active)
       VALUES (?, ?, ?, ?, 1)
     `).run(
-      username,
-      password,
+      String(username).trim().toLowerCase(),
+      String(password),
       finalRole,
-      name
+      String(name).trim()
     );
 
     logAction(
@@ -1354,7 +1469,6 @@ app.get("/api/notes/:studentId", (req, res) => {
   }
 });
 
-// تسجيل أن المستخدم شاهد الملاحظة
 app.post("/api/notes/:id/view", (req, res) => {
   try {
     const {
@@ -1393,7 +1507,6 @@ app.post("/api/notes/:id/view", (req, res) => {
   }
 });
 
-// معرفة من شاهد الملاحظة
 app.get("/api/notes/:id/views", (req, res) => {
   try {
     const views = db.prepare(`
