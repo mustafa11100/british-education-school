@@ -1,2112 +1,3433 @@
-const express = require("express");
-const path = require("path");
-const Database = require("better-sqlite3");
+```javascript
+const app = document.getElementById("app");
 
-const app = express();
+let me = null;
+let currentSection = "dashboard";
+let activityTimer = null;
 
-// =====================================================
-// إعداد قاعدة البيانات
-// =====================================================
-
-const db = new Database("school.db");
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
-
-// =====================================================
-// إنشاء الجداول
-// =====================================================
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    role TEXT NOT NULL,
-    name TEXT NOT NULL,
-    active INTEGER DEFAULT 1,
-    last_seen TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS students (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    class_name TEXT,
-    parent_phone TEXT,
-    status TEXT DEFAULT 'حاضر'
-  );
-
-  CREATE TABLE IF NOT EXISTS notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id INTEGER NOT NULL,
-    text TEXT NOT NULL,
-    created_at TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS videos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    file_name TEXT,
-    created_at TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS student_attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    status TEXT NOT NULL,
-    created_at TEXT,
-    UNIQUE(student_id, date)
-  );
-
-  CREATE TABLE IF NOT EXISTS employees (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    employee_number TEXT UNIQUE,
-    name TEXT NOT NULL,
-    job_title TEXT,
-    department TEXT,
-    phone TEXT,
-    hire_date TEXT,
-    basic_salary REAL DEFAULT 0,
-    allowance REAL DEFAULT 0,
-    active INTEGER DEFAULT 1,
-    created_at TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS employee_attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    check_in TEXT,
-    check_out TEXT,
-    status TEXT NOT NULL,
-    late_minutes INTEGER DEFAULT 0,
-    created_at TEXT,
-    UNIQUE(employee_id, date)
-  );
-
-  CREATE TABLE IF NOT EXISTS deductions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL,
-    amount REAL NOT NULL,
-    reason TEXT NOT NULL,
-    date TEXT NOT NULL,
-    month TEXT NOT NULL,
-    automatic INTEGER DEFAULT 0,
-    created_by INTEGER,
-    created_at TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS bonuses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL,
-    amount REAL NOT NULL,
-    reason TEXT NOT NULL,
-    date TEXT NOT NULL,
-    month TEXT NOT NULL,
-    created_by INTEGER,
-    created_at TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS payroll_settings (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    absence_deduction REAL DEFAULT 300,
-    late_deduction REAL DEFAULT 50,
-    allowed_late_minutes INTEGER DEFAULT 15
-  );
-
-  CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    action TEXT NOT NULL,
-    details TEXT,
-    created_at TEXT
-  );
-`);
-
-// =====================================================
-// الإعدادات الافتراضية للرواتب
-// =====================================================
-
-const payrollSettings = db
-  .prepare("SELECT * FROM payroll_settings WHERE id = 1")
-  .get();
-
-if (!payrollSettings) {
-  db.prepare(`
-    INSERT INTO payroll_settings (
-      id,
-      absence_deduction,
-      late_deduction,
-      allowed_late_minutes
-    )
-    VALUES (?, ?, ?, ?)
-  `).run(1, 300, 50, 15);
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-// =====================================================
-// وظائف مساعدة
-// =====================================================
-
-function nowISO() {
-  return new Date().toISOString();
+function money(value) {
+  return Number(value || 0).toLocaleString("ar-EG");
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function roleName(role) {
+  return {
+    admin: "مدير",
+    teacher: "مدرس",
+    parent: "ولي أمر",
+    student: "طالب"
+  }[role] || role;
 }
 
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+function statusBadge(status) {
+  if (status === "حاضر") {
+    return '<span class="badge success">🟢 حاضر</span>';
+  }
+
+  if (status === "غائب") {
+    return '<span class="badge danger">🔴 غائب</span>';
+  }
+
+  if (status === "متأخر") {
+    return '<span class="badge warning">🟠 متأخر</span>';
+  }
+
+  return `<span class="badge">${esc(status)}</span>`;
 }
 
-function logAction(userId, action, details = "") {
-  db.prepare(`
-    INSERT INTO audit_logs (
-      user_id,
-      action,
-      details,
-      created_at
-    )
-    VALUES (?, ?, ?, ?)
-  `).run(
-    userId || null,
-    action,
-    details,
-    nowISO()
-  );
+function dateText(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return esc(value);
+  }
+
+  return date.toLocaleString("ar-EG");
 }
 
-// =====================================================
-// إنشاء الحسابات الافتراضية
-// =====================================================
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.body
+        ? { "Content-Type": "application/json" }
+        : {}),
+      ...(options.headers || {})
+    }
+  });
 
-const userCount = db
-  .prepare("SELECT COUNT(*) AS count FROM users")
-  .get().count;
+  const data = await response
+    .json()
+    .catch(() => ({}));
 
-if (userCount === 0) {
-  const insertUser = db.prepare(`
-    INSERT INTO users (
-      username,
-      password,
-      role,
-      name,
-      active,
-      last_seen
-    )
-    VALUES (?, ?, ?, ?, 1, NULL)
-  `);
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      `خطأ في الخادم (${response.status})`
+    );
+  }
 
-  insertUser.run(
-    "admin",
-    "1234",
-    "admin",
-    "مدير المدرسة"
-  );
-
-  insertUser.run(
-    "teacher",
-    "1234",
-    "teacher",
-    "الأستاذ أحمد"
-  );
-
-  insertUser.run(
-    "parent",
-    "1234",
-    "parent",
-    "ولي أمر محمد أحمد"
-  );
-
-  insertUser.run(
-    "student",
-    "1234",
-    "student",
-    "محمد أحمد"
-  );
+  return data;
 }
 
-// =====================================================
-// إنشاء طالب تجريبي
-// =====================================================
+/* =====================================================
+   LOGIN
+===================================================== */
 
-const studentCount = db
-  .prepare("SELECT COUNT(*) AS count FROM students")
-  .get().count;
+function loginPage() {
+  app.innerHTML = `
+    <div class="login">
+      <div class="card">
 
-if (studentCount === 0) {
-  db.prepare(`
-    INSERT INTO students (
-      name,
-      class_name,
-      parent_phone,
-      status
-    )
-    VALUES (?, ?, ?, ?)
-  `).run(
-    "محمد أحمد",
-    "الصف السادس",
-    "201000000000",
-    "حاضر"
-  );
+        <h1>🏫 مدرسة التعليم البريطاني</h1>
+
+        <p>
+          بوابة الإدارة والطلاب وأولياء الأمور
+        </p>
+
+        <input
+          id="loginUsername"
+          placeholder="اسم المستخدم"
+          autocomplete="username"
+        >
+
+        <input
+          id="loginPassword"
+          type="password"
+          placeholder="كلمة المرور"
+          autocomplete="current-password"
+        >
+
+        <button onclick="login()">
+          دخول
+        </button>
+
+        <div class="notice">
+          <b>حسابات التجربة</b><br>
+          الإدارة: admin / 1234<br>
+          المدرس: teacher / 1234<br>
+          ولي الأمر: parent / 1234<br>
+          الطالب: student / 1234
+        </div>
+
+      </div>
+    </div>
+  `;
 }
 
-// =====================================================
-// LOGIN
-// =====================================================
-
-app.post("/api/login", (req, res) => {
+async function login() {
   try {
-    const { username, password } = req.body || {};
+    const username =
+      document
+        .getElementById("loginUsername")
+        .value
+        .trim();
+
+    const password =
+      document
+        .getElementById("loginPassword")
+        .value;
 
     if (!username || !password) {
-      return res.status(400).json({
-        error: "أدخل اسم المستخدم وكلمة المرور"
-      });
+      alert(
+        "أدخل اسم المستخدم وكلمة المرور"
+      );
+      return;
     }
 
-    const user = db.prepare(`
-      SELECT
-        id,
+    me = await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify({
         username,
-        role,
-        name,
-        active,
-        last_seen
-      FROM users
-      WHERE username = ?
-      AND password = ?
-    `).get(username, password);
+        password
+      })
+    });
 
-    if (!user) {
-      return res.status(401).json({
-        error: "بيانات الدخول غير صحيحة"
-      });
-    }
-
-    if (!user.active) {
-      return res.status(403).json({
-        error: "هذا الحساب موقوف من الإدارة"
-      });
-    }
-
-    const now = nowISO();
-
-    db.prepare(`
-      UPDATE users
-      SET last_seen = ?
-      WHERE id = ?
-    `).run(now, user.id);
-
-    user.last_seen = now;
-
-    logAction(
-      user.id,
-      "LOGIN",
-      `تسجيل دخول ${user.username}`
+    localStorage.setItem(
+      "me",
+      JSON.stringify(me)
     );
 
-    res.json(user);
+    startActivity();
+
+    await render();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "حدث خطأ أثناء تسجيل الدخول"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// تحديث نشاط المستخدم
-// =====================================================
+/* =====================================================
+   LOGOUT
+===================================================== */
 
-app.post("/api/activity", (req, res) => {
-  try {
-    const { user_id } = req.body || {};
+function logout() {
+  stopActivity();
 
-    if (!user_id) {
-      return res.status(400).json({
-        error: "user_id مطلوب"
-      });
-    }
+  localStorage.removeItem("me");
 
-    const user = db.prepare(`
-      SELECT id, active
-      FROM users
-      WHERE id = ?
-    `).get(user_id);
+  me = null;
 
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
+  currentSection = "dashboard";
 
-    if (!user.active) {
-      return res.status(403).json({
-        error: "الحساب موقوف"
-      });
-    }
+  loginPage();
+}
 
-    const now = nowISO();
+/* =====================================================
+   ACTIVITY
+===================================================== */
 
-    db.prepare(`
-      UPDATE users
-      SET last_seen = ?
-      WHERE id = ?
-    `).run(now, user_id);
+function startActivity() {
+  stopActivity();
 
-    res.json({
-      success: true,
-      last_seen: now
-    });
+  activityTimer = setInterval(
+    async () => {
 
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "حدث خطأ"
-    });
-  }
-});
-
-// =====================================================
-// المستخدمون
-// =====================================================
-
-app.get("/api/users", (req, res) => {
-  try {
-    const users = db.prepare(`
-      SELECT
-        id,
-        username,
-        role,
-        name,
-        active,
-        last_seen
-      FROM users
-      ORDER BY id DESC
-    `).all();
-
-    const now = Date.now();
-
-    const result = users.map(user => {
-      let online = false;
-
-      if (user.last_seen) {
-        const lastSeen =
-          new Date(user.last_seen).getTime();
-
-        online =
-          user.active === 1 &&
-          now - lastSeen <= 60000;
+      if (!me || !me.id) {
+        return;
       }
 
-      return {
-        ...user,
-        online
-      };
-    });
+      try {
 
-    const onlineCount =
-      result.filter(user => user.online).length;
+        const result =
+          await api("/api/activity", {
+            method: "POST",
+            body: JSON.stringify({
+              user_id: me.id
+            })
+          });
 
-    const activeCount =
-      result.filter(user => user.active === 1).length;
+        me.last_seen =
+          result.last_seen;
 
-    res.json({
-      users: result,
-      total: result.length,
-      online_count: onlineCount,
-      active_count: activeCount
-    });
+        localStorage.setItem(
+          "me",
+          JSON.stringify(me)
+        );
+
+      } catch (error) {
+
+        if (
+          error.message.includes("موقوف") ||
+          error.message.includes("الحساب")
+        ) {
+          logout();
+        }
+      }
+
+    },
+    20000
+  );
+}
+
+function stopActivity() {
+  if (activityTimer) {
+    clearInterval(activityTimer);
+  }
+
+  activityTimer = null;
+}
+
+/* =====================================================
+   RENDER
+===================================================== */
+
+async function render() {
+
+  if (!me) {
+    loginPage();
+    return;
+  }
+
+  try {
+
+    if (me.role === "admin") {
+      await renderAdmin();
+      return;
+    }
+
+    if (me.role === "teacher") {
+      await renderTeacher();
+      return;
+    }
+
+    await renderFamily();
 
   } catch (error) {
+
     console.error(error);
 
-    res.status(500).json({
-      error: "تعذر جلب المستخدمين"
-    });
+    app.innerHTML = `
+      <div class="wrap">
+
+        <div class="notice">
+
+          <h2>
+            حدث خطأ في تحميل الصفحة
+          </h2>
+
+          <p>
+            ${esc(error.message)}
+          </p>
+
+        </div>
+
+        <button onclick="render()">
+          إعادة المحاولة
+        </button>
+
+        <button onclick="logout()">
+          خروج
+        </button>
+
+      </div>
+    `;
   }
-});
+}
 
-// =====================================================
-// إضافة مستخدم
-// =====================================================
+/* =====================================================
+   LAYOUT
+===================================================== */
 
-app.post("/api/users", (req, res) => {
-  try {
-    const {
-      username,
-      password,
-      role,
-      name
-    } = req.body || {};
+function layout(content) {
+  return `
 
-    if (!username || !password || !role || !name) {
-      return res.status(400).json({
-        error: "أكمل جميع بيانات المستخدم"
-      });
-    }
+    <header>
 
-    const allowedRoles = [
-      "admin",
-      "teacher",
-      "parent",
-      "student"
-    ];
+      <div>
+        <b>
+          🏫 مدرسة التعليم البريطاني
+        </b>
 
-    if (!allowedRoles.includes(role)) {
-      return res.status(400).json({
-        error: "الصلاحية غير صحيحة"
-      });
-    }
+        <small>
+          ${esc(me?.name || "")}
+        </small>
+      </div>
 
-    const result = db.prepare(`
-      INSERT INTO users (
-        username,
-        password,
-        role,
-        name,
-        active,
-        last_seen
-      )
-      VALUES (?, ?, ?, ?, 1, NULL)
-    `).run(
-      username,
-      password,
-      role,
-      name
-    );
+      <div class="header-actions">
 
-    logAction(
-      null,
-      "ADD_USER",
-      `إضافة المستخدم ${username}`
-    );
+        <button onclick="showPasswordModal()">
+          🔐 تغيير كلمة المرور
+        </button>
 
-    res.json({
-      success: true,
-      id: result.lastInsertRowid,
-      message: "تم إضافة المستخدم بنجاح"
-    });
+        <button onclick="logout()">
+          خروج
+        </button>
 
-  } catch (error) {
-    console.error(error);
+      </div>
 
-    if (String(error.message).includes("UNIQUE")) {
-      return res.status(400).json({
-        error: "اسم المستخدم موجود بالفعل"
-      });
-    }
+    </header>
 
-    res.status(500).json({
-      error: "تعذر إضافة المستخدم"
-    });
+    <main>
+
+      <div class="wrap">
+
+        ${content}
+
+      </div>
+
+    </main>
+  `;
+}
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
+
+function nav(items) {
+  return `
+
+    <div class="nav-grid">
+
+      ${items
+        .map(
+          item => `
+
+            <button
+              class="nav-btn ${
+                currentSection === item.id
+                  ? "active"
+                  : ""
+              }"
+              onclick="go('${item.id}')"
+            >
+              ${item.icon}
+              ${item.label}
+            </button>
+
+          `
+        )
+        .join("")}
+
+    </div>
+  `;
+}
+
+async function go(section) {
+
+  currentSection = section;
+
+  await render();
+}
+
+/* =====================================================
+   ADMIN
+===================================================== */
+
+async function renderAdmin() {
+
+  if (currentSection === "dashboard") {
+    return adminDashboard();
   }
-});
 
-// =====================================================
-// إيقاف مستخدم
-// =====================================================
-
-app.patch("/api/users/:id/disable", (req, res) => {
-  try {
-    const user = db.prepare(`
-      SELECT id, username
-      FROM users
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
-
-    if (user.username === "admin") {
-      return res.status(400).json({
-        error: "لا يمكن إيقاف المدير الرئيسي"
-      });
-    }
-
-    db.prepare(`
-      UPDATE users
-      SET active = 0
-      WHERE id = ?
-    `).run(user.id);
-
-    logAction(
-      null,
-      "DISABLE_USER",
-      `إيقاف المستخدم ${user.username}`
-    );
-
-    res.json({
-      success: true,
-      message: "تم إيقاف المستخدم"
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إيقاف المستخدم"
-    });
+  if (currentSection === "users") {
+    return adminUsers();
   }
-});
 
-// =====================================================
-// تفعيل مستخدم
-// =====================================================
-
-app.patch("/api/users/:id/enable", (req, res) => {
-  try {
-    const user = db.prepare(`
-      SELECT id, username
-      FROM users
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
-
-    db.prepare(`
-      UPDATE users
-      SET active = 1
-      WHERE id = ?
-    `).run(user.id);
-
-    logAction(
-      null,
-      "ENABLE_USER",
-      `تفعيل المستخدم ${user.username}`
-    );
-
-    res.json({
-      success: true,
-      message: "تم تفعيل المستخدم"
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تفعيل المستخدم"
-    });
+  if (currentSection === "students") {
+    return adminStudents();
   }
-});
 
-// =====================================================
-// تغيير كلمة المرور
-// =====================================================
+  if (currentSection === "employees") {
+    return adminEmployees();
+  }
 
-app.patch("/api/users/:id/password", (req, res) => {
+  if (currentSection === "payroll") {
+    return adminPayroll();
+  }
+
+  if (currentSection === "logs") {
+    return adminLogs();
+  }
+
+  if (currentSection === "settings") {
+    return adminSettings();
+  }
+
+  currentSection = "dashboard";
+
+  return adminDashboard();
+}
+
+/* =====================================================
+   ADMIN DASHBOARD
+===================================================== */
+
+async function adminDashboard() {
+
+  const summary =
+    await api("/api/admin/summary");
+
+  const users =
+    await api("/api/users");
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        لوحة الإدارة
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="cards">
+
+        <div class="card">
+          الطلاب
+          <div class="num">
+            ${summary.students}
+          </div>
+        </div>
+
+        <div class="card">
+          الحاضرون
+          <div class="num">
+            ${summary.present}
+          </div>
+        </div>
+
+        <div class="card">
+          الغائبون
+          <div class="num">
+            ${summary.absent}
+          </div>
+        </div>
+
+        <div class="card">
+          الموظفون
+          <div class="num">
+            ${summary.employees}
+          </div>
+        </div>
+
+        <div class="card">
+          المستخدمون النشطون
+          <div class="num">
+            ${summary.users}
+          </div>
+        </div>
+
+        <div class="card">
+          المتصلون الآن
+          <div class="num">
+            ${summary.online}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <h2>
+          حالة المستخدمين الآن
+        </h2>
+
+        <table class="table">
+
+          <tr>
+            <th>الاسم</th>
+            <th>الصلاحية</th>
+            <th>الحالة</th>
+            <th>آخر نشاط</th>
+          </tr>
+
+          ${users
+            .map(
+              user => `
+
+                <tr>
+
+                  <td>
+                    ${esc(user.name)}
+                  </td>
+
+                  <td>
+                    ${roleName(user.role)}
+                  </td>
+
+                  <td>
+                    ${
+                      !user.active
+                        ? "🔴 موقوف"
+                        : user.online
+                        ? "🟢 متصل الآن"
+                        : "⚪ غير متصل"
+                    }
+                  </td>
+
+                  <td>
+                    ${
+                      user.last_seen
+                        ? dateText(
+                            user.last_seen
+                          )
+                        : "لم يدخل بعد"
+                    }
+                  </td>
+
+                </tr>
+
+              `
+            )
+            .join("")}
+
+        </table>
+
+      </div>
+    `);
+}
+
+/* =====================================================
+   ADMIN NAV
+===================================================== */
+
+function adminNavOnly() {
+  return nav([
+    {
+      id: "dashboard",
+      icon: "📊",
+      label: "الرئيسية"
+    },
+    {
+      id: "users",
+      icon: "👥",
+      label: "المستخدمون"
+    },
+    {
+      id: "students",
+      icon: "👨‍🎓",
+      label: "الطلاب"
+    },
+    {
+      id: "employees",
+      icon: "👨‍💼",
+      label: "الموظفون"
+    },
+    {
+      id: "payroll",
+      icon: "💰",
+      label: "الرواتب"
+    },
+    {
+      id: "logs",
+      icon: "📋",
+      label: "السجل"
+    },
+    {
+      id: "settings",
+      icon: "⚙️",
+      label: "الإعدادات"
+    }
+  ]);
+}
+
+/* =====================================================
+   USERS
+===================================================== */
+
+async function adminUsers() {
+
+  const users =
+    await api("/api/users");
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        👥 إدارة المستخدمين
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="form">
+
+        <h2>
+          إضافة مستخدم جديد
+        </h2>
+
+        <div class="row">
+
+          <input
+            id="newName"
+            placeholder="الاسم الكامل"
+          >
+
+          <input
+            id="newUsername"
+            placeholder="اسم المستخدم"
+          >
+
+          <input
+            id="newPassword"
+            placeholder="كلمة المرور"
+          >
+
+          <select id="newRole">
+
+            <option value="teacher">
+              مدرس
+            </option>
+
+            <option value="parent">
+              ولي أمر
+            </option>
+
+            <option value="student">
+              طالب
+            </option>
+
+            <option value="admin">
+              مدير
+            </option>
+
+          </select>
+
+          <button onclick="addUser()">
+            ➕ إضافة
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <h2>
+          المستخدمون
+        </h2>
+
+        <table class="table">
+
+          <tr>
+            <th>الاسم</th>
+            <th>اسم المستخدم</th>
+            <th>الصلاحية</th>
+            <th>الحالة</th>
+            <th>آخر نشاط</th>
+            <th>إجراء</th>
+          </tr>
+
+          ${users
+            .map(
+              user => `
+
+                <tr>
+
+                  <td>
+                    ${esc(user.name)}
+                  </td>
+
+                  <td>
+                    ${esc(user.username)}
+                  </td>
+
+                  <td>
+                    ${roleName(user.role)}
+                  </td>
+
+                  <td>
+                    ${
+                      !user.active
+                        ? "🔴 موقوف"
+                        : user.online
+                        ? "🟢 متصل الآن"
+                        : "⚪ غير متصل"
+                    }
+                  </td>
+
+                  <td>
+                    ${
+                      user.last_seen
+                        ? dateText(
+                            user.last_seen
+                          )
+                        : "لم يدخل بعد"
+                    }
+                  </td>
+
+                  <td>
+
+                    ${
+                      user.username === "admin"
+                        ? "🔒 المدير الرئيسي"
+                        : `
+                          ${
+                            user.active
+                              ? `
+                                <button
+                                  onclick="disableUser(${user.id})"
+                                >
+                                  ⛔ إيقاف
+                                </button>
+                              `
+                              : `
+                                <button
+                                  onclick="enableUser(${user.id})"
+                                >
+                                  ✅ تفعيل
+                                </button>
+                              `
+                          }
+
+                          <button
+                            onclick="changeUserPassword(${user.id})"
+                          >
+                            🔐 باسورد
+                          </button>
+
+                          <button
+                            onclick="deleteUser(${user.id})"
+                          >
+                            🗑️ حذف
+                          </button>
+                        `
+                    }
+
+                  </td>
+
+                </tr>
+
+              `
+            )
+            .join("")}
+
+        </table>
+
+      </div>
+    `);
+}
+
+async function addUser() {
   try {
-    const {
-      current_password,
-      new_password
-    } = req.body || {};
 
-    if (!new_password) {
-      return res.status(400).json({
-        error: "أدخل كلمة المرور الجديدة"
-      });
-    }
+    const payload = {
+      name:
+        document
+          .getElementById("newName")
+          .value
+          .trim(),
 
-    if (String(new_password).length < 4) {
-      return res.status(400).json({
-        error: "كلمة المرور يجب أن تكون 4 أحرف أو أكثر"
-      });
-    }
+      username:
+        document
+          .getElementById("newUsername")
+          .value
+          .trim(),
 
-    const user = db.prepare(`
-      SELECT *
-      FROM users
-      WHERE id = ?
-    `).get(req.params.id);
+      password:
+        document
+          .getElementById("newPassword")
+          .value,
 
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
+      role:
+        document
+          .getElementById("newRole")
+          .value
+    };
 
     if (
-      current_password !== undefined &&
-      current_password !== user.password
+      !payload.name ||
+      !payload.username ||
+      !payload.password
     ) {
-      return res.status(400).json({
-        error: "كلمة المرور الحالية غير صحيحة"
-      });
+      alert("أكمل بيانات المستخدم");
+      return;
     }
 
-    db.prepare(`
-      UPDATE users
-      SET password = ?
-      WHERE id = ?
-    `).run(
-      new_password,
-      user.id
-    );
-
-    logAction(
-      user.id,
-      "CHANGE_PASSWORD",
-      `تغيير كلمة مرور ${user.username}`
-    );
-
-    res.json({
-      success: true,
-      message: "تم تغيير كلمة المرور بنجاح"
+    await api("/api/users", {
+      method: "POST",
+      body: JSON.stringify(payload)
     });
+
+    alert("تم إضافة المستخدم");
+
+    await adminUsers();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تغيير كلمة المرور"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// حذف مستخدم
-// =====================================================
+async function disableUser(id) {
 
-app.delete("/api/users/:id", (req, res) => {
-  try {
-    const user = db.prepare(`
-      SELECT id, username
-      FROM users
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "المستخدم غير موجود"
-      });
-    }
-
-    if (user.username === "admin") {
-      return res.status(400).json({
-        error: "لا يمكن حذف المدير الرئيسي"
-      });
-    }
-
-    db.prepare(`
-      DELETE FROM users
-      WHERE id = ?
-    `).run(user.id);
-
-    logAction(
-      null,
-      "DELETE_USER",
-      `حذف المستخدم ${user.username}`
-    );
-
-    res.json({
-      success: true,
-      message: "تم حذف المستخدم"
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف المستخدم"
-    });
+  if (
+    !confirm(
+      "هل تريد إيقاف هذا المستخدم؟"
+    )
+  ) {
+    return;
   }
-});
 
-// =====================================================
-// الطلاب
-// =====================================================
-
-app.get("/api/students", (req, res) => {
   try {
-    const students = db.prepare(`
-      SELECT *
-      FROM students
-      ORDER BY id DESC
-    `).all();
 
-    res.json(students);
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الطلاب"
-    });
-  }
-});
-
-// =====================================================
-// إضافة طالب
-// =====================================================
-
-app.post("/api/students", (req, res) => {
-  try {
-    const {
-      name,
-      class_name,
-      parent_phone
-    } = req.body || {};
-
-    if (!name || !class_name) {
-      return res.status(400).json({
-        error: "اسم الطالب والفصل مطلوبان"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO students (
-        name,
-        class_name,
-        parent_phone,
-        status
-      )
-      VALUES (?, ?, ?, 'حاضر')
-    `).run(
-      name,
-      class_name,
-      parent_phone || ""
-    );
-
-    logAction(
-      null,
-      "ADD_STUDENT",
-      `إضافة الطالب ${name}`
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إضافة الطالب"
-    });
-  }
-});
-
-// =====================================================
-// تغيير حالة الطالب
-// =====================================================
-
-app.patch("/api/students/:id/status", (req, res) => {
-  try {
-    const student = db.prepare(`
-      SELECT *
-      FROM students
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!student) {
-      return res.status(404).json({
-        error: "الطالب غير موجود"
-      });
-    }
-
-    const newStatus =
-      student.status === "حاضر"
-        ? "غائب"
-        : "حاضر";
-
-    const date = today();
-
-    db.prepare(`
-      UPDATE students
-      SET status = ?
-      WHERE id = ?
-    `).run(
-      newStatus,
-      student.id
-    );
-
-    db.prepare(`
-      INSERT INTO student_attendance (
-        student_id,
-        date,
-        status,
-        created_at
-      )
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(student_id, date)
-      DO UPDATE SET
-        status = excluded.status,
-        created_at = excluded.created_at
-    `).run(
-      student.id,
-      date,
-      newStatus,
-      nowISO()
-    );
-
-    logAction(
-      null,
-      "STUDENT_ATTENDANCE",
-      `${student.name}: ${newStatus}`
-    );
-
-    res.json({
-      success: true,
-      status: newStatus
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تحديث حضور الطالب"
-    });
-  }
-});
-
-// =====================================================
-// سجل حضور الطالب
-// =====================================================
-
-app.get("/api/students/:id/attendance", (req, res) => {
-  try {
-    const records = db.prepare(`
-      SELECT *
-      FROM student_attendance
-      WHERE student_id = ?
-      ORDER BY date DESC
-    `).all(req.params.id);
-
-    const present = records.filter(
-      item => item.status === "حاضر"
-    ).length;
-
-    const absent = records.filter(
-      item => item.status === "غائب"
-    ).length;
-
-    const total = records.length;
-
-    const percentage =
-      total > 0
-        ? Math.round((present / total) * 100)
-        : 0;
-
-    res.json({
-      records,
-      present,
-      absent,
-      total,
-      percentage
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب سجل الحضور"
-    });
-  }
-});
-
-// =====================================================
-// حضور طالب بتاريخ محدد
-// =====================================================
-
-app.patch("/api/students/:id/attendance", (req, res) => {
-  try {
-    const {
-      date,
-      status
-    } = req.body || {};
-
-    if (!date || !status) {
-      return res.status(400).json({
-        error: "التاريخ والحالة مطلوبان"
-      });
-    }
-
-    if (status !== "حاضر" && status !== "غائب") {
-      return res.status(400).json({
-        error: "حالة الحضور غير صحيحة"
-      });
-    }
-
-    const student = db.prepare(`
-      SELECT *
-      FROM students
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!student) {
-      return res.status(404).json({
-        error: "الطالب غير موجود"
-      });
-    }
-
-    db.prepare(`
-      INSERT INTO student_attendance (
-        student_id,
-        date,
-        status,
-        created_at
-      )
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(student_id, date)
-      DO UPDATE SET
-        status = excluded.status,
-        created_at = excluded.created_at
-    `).run(
-      student.id,
-      date,
-      status,
-      nowISO()
-    );
-
-    if (date === today()) {
-      db.prepare(`
-        UPDATE students
-        SET status = ?
-        WHERE id = ?
-      `).run(
-        status,
-        student.id
-      );
-    }
-
-    res.json({
-      success: true,
-      message: "تم تحديث سجل الحضور"
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تحديث سجل الحضور"
-    });
-  }
-});
-
-// =====================================================
-// الموظفون
-// =====================================================
-
-app.get("/api/employees", (req, res) => {
-  try {
-    const employees = db.prepare(`
-      SELECT
-        e.*,
-        u.username,
-        u.active AS account_active,
-        u.last_seen
-      FROM employees e
-      LEFT JOIN users u
-        ON u.id = e.user_id
-      ORDER BY e.id DESC
-    `).all();
-
-    res.json(employees);
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الموظفين"
-    });
-  }
-});
-
-// =====================================================
-// إضافة موظف
-// =====================================================
-
-app.post("/api/employees", (req, res) => {
-  try {
-    const {
-      employee_number,
-      name,
-      job_title,
-      department,
-      phone,
-      hire_date,
-      basic_salary,
-      allowance,
-      user_id
-    } = req.body || {};
-
-    if (!name) {
-      return res.status(400).json({
-        error: "اسم الموظف مطلوب"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO employees (
-        user_id,
-        employee_number,
-        name,
-        job_title,
-        department,
-        phone,
-        hire_date,
-        basic_salary,
-        allowance,
-        active,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-    `).run(
-      user_id || null,
-      employee_number || null,
-      name,
-      job_title || "",
-      department || "",
-      phone || "",
-      hire_date || "",
-      Number(basic_salary || 0),
-      Number(allowance || 0),
-      nowISO()
-    );
-
-    logAction(
-      null,
-      "ADD_EMPLOYEE",
-      `إضافة الموظف ${name}`
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(400).json({
-      error: "تعذر إضافة الموظف. تأكد أن رقم الموظف غير مكرر."
-    });
-  }
-});
-
-// =====================================================
-// حضور الموظف
-// =====================================================
-
-app.post("/api/employees/:id/attendance", (req, res) => {
-  try {
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
-      });
-    }
-
-    const {
-      date,
-      check_in,
-      check_out,
-      status
-    } = req.body || {};
-
-    const attendanceDate = date || today();
-
-    let finalStatus = status || "حاضر";
-    let lateMinutes = 0;
-
-    const settings = db.prepare(`
-      SELECT *
-      FROM payroll_settings
-      WHERE id = 1
-    `).get();
-
-    if (check_in) {
-      const parts = check_in.split(":").map(Number);
-
-      const hour = parts[0] || 0;
-      const minute = parts[1] || 0;
-
-      const arrival = hour * 60 + minute;
-      const workStart = 8 * 60;
-
-      lateMinutes = Math.max(
-        0,
-        arrival - workStart
-      );
-
-      if (
-        lateMinutes >
-        settings.allowed_late_minutes
-      ) {
-        finalStatus = "متأخر";
+    await api(
+      `/api/users/${id}/disable`,
+      {
+        method: "PATCH"
       }
-    }
-
-    db.prepare(`
-      INSERT INTO employee_attendance (
-        employee_id,
-        date,
-        check_in,
-        check_out,
-        status,
-        late_minutes,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(employee_id, date)
-      DO UPDATE SET
-        check_in = excluded.check_in,
-        check_out = excluded.check_out,
-        status = excluded.status,
-        late_minutes = excluded.late_minutes
-    `).run(
-      employee.id,
-      attendanceDate,
-      check_in || null,
-      check_out || null,
-      finalStatus,
-      lateMinutes,
-      nowISO()
     );
 
-    res.json({
-      success: true,
-      status: finalStatus,
-      late_minutes: lateMinutes
-    });
+    await adminUsers();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تسجيل حضور الموظف"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// سجل حضور الموظف
-// =====================================================
+async function enableUser(id) {
 
-app.get("/api/employees/:id/attendance", (req, res) => {
   try {
-    const records = db.prepare(`
-      SELECT *
-      FROM employee_attendance
-      WHERE employee_id = ?
-      ORDER BY date DESC
-    `).all(req.params.id);
 
-    const present = records.filter(
-      x =>
-        x.status === "حاضر" ||
-        x.status === "متأخر"
-    ).length;
+    await api(
+      `/api/users/${id}/enable`,
+      {
+        method: "PATCH"
+      }
+    );
 
-    const absent = records.filter(
-      x => x.status === "غائب"
-    ).length;
-
-    const late = records.filter(
-      x => x.status === "متأخر"
-    ).length;
-
-    res.json({
-      records,
-      present,
-      absent,
-      late,
-      total: records.length
-    });
+    await adminUsers();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب حضور الموظف"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// الخصومات
-// =====================================================
+async function deleteUser(id) {
 
-app.get("/api/employees/:id/deductions", (req, res) => {
+  if (
+    !confirm(
+      "سيتم حذف المستخدم نهائيًا. متابعة؟"
+    )
+  ) {
+    return;
+  }
+
   try {
-    const deductions = db.prepare(`
-      SELECT *
-      FROM deductions
-      WHERE employee_id = ?
-      ORDER BY date DESC, id DESC
-    `).all(req.params.id);
 
-    res.json(deductions);
+    await api(
+      `/api/users/${id}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    await adminUsers();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الخصومات"
-    });
+    alert(error.message);
   }
-});
+}
 
-app.post("/api/employees/:id/deductions", (req, res) => {
+async function changeUserPassword(id) {
+
+  const newPassword =
+    prompt(
+      "اكتب كلمة المرور الجديدة:"
+    );
+
+  if (!newPassword) {
+    return;
+  }
+
   try {
-    const {
-      amount,
-      reason,
-      month,
-      automatic
-    } = req.body || {};
 
-    if (!amount || Number(amount) <= 0) {
-      return res.status(400).json({
-        error: "أدخل قيمة الخصم"
-      });
+    await api(
+      `/api/users/${id}/password`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          new_password:
+            newPassword
+        })
+      }
+    );
+
+    alert(
+      "تم تغيير كلمة المرور"
+    );
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+/* =====================================================
+   STUDENTS
+===================================================== */
+
+async function adminStudents() {
+
+  const students =
+    await api("/api/students");
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        👨‍🎓 إدارة الطلاب
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="form">
+
+        <h2>
+          إضافة طالب
+        </h2>
+
+        <div class="row">
+
+          <input
+            id="studentName"
+            placeholder="اسم الطالب"
+          >
+
+          <input
+            id="studentClass"
+            placeholder="الفصل"
+          >
+
+          <input
+            id="studentPhone"
+            placeholder="رقم ولي الأمر"
+          >
+
+          <button onclick="addStudent()">
+            ➕ إضافة الطالب
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <h2>
+          الطلاب
+        </h2>
+
+        <table class="table">
+
+          <tr>
+            <th>الاسم</th>
+            <th>الفصل</th>
+            <th>الحالة</th>
+            <th>ولي الأمر</th>
+            <th>السجل</th>
+            <th>إجراء</th>
+          </tr>
+
+          ${students
+            .map(
+              student => `
+
+                <tr>
+
+                  <td>
+                    ${esc(student.name)}
+                  </td>
+
+                  <td>
+                    ${esc(student.class_name)}
+                  </td>
+
+                  <td>
+                    ${statusBadge(
+                      student.status
+                    )}
+                  </td>
+
+                  <td>
+                    ${esc(
+                      student.parent_phone
+                    )}
+                  </td>
+
+                  <td>
+
+                    <button
+                      onclick="showStudentAttendance(${student.id})"
+                    >
+                      📅 عرض
+                    </button>
+
+                  </td>
+
+                  <td>
+
+                    <button
+                      onclick="deleteStudent(${student.id})"
+                    >
+                      🗑️ حذف
+                    </button>
+
+                  </td>
+
+                </tr>
+
+              `
+            )
+            .join("")}
+
+        </table>
+
+      </div>
+
+      <div id="studentDetails"></div>
+    `);
+}
+
+async function addStudent() {
+
+  try {
+
+    const payload = {
+      name:
+        document
+          .getElementById("studentName")
+          .value
+          .trim(),
+
+      class_name:
+        document
+          .getElementById("studentClass")
+          .value
+          .trim(),
+
+      parent_phone:
+        document
+          .getElementById("studentPhone")
+          .value
+          .trim()
+    };
+
+    if (
+      !payload.name ||
+      !payload.class_name
+    ) {
+      alert(
+        "أدخل اسم الطالب والفصل"
+      );
+      return;
     }
 
-    if (!reason) {
-      return res.status(400).json({
-        error: "سبب الخصم مطلوب"
-      });
+    await api("/api/students", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    await adminStudents();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function deleteStudent(id) {
+
+  if (
+    !confirm(
+      "حذف الطالب وسجل حضوره وملاحظاته؟"
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    await api(
+      `/api/students/${id}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    await adminStudents();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function showStudentAttendance(id) {
+
+  try {
+
+    const data =
+      await api(
+        `/api/students/${id}/attendance`
+      );
+
+    const box =
+      document.getElementById(
+        "studentDetails"
+      );
+
+    if (!box) {
+      return;
     }
 
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
+    box.innerHTML = `
+
+      <div class="card">
+
+        <h2>
+          📅 سجل الحضور
+        </h2>
+
+        <p>
+          الحاضر:
+          <b>${data.present}</b>
+
+          |
+
+          الغائب:
+          <b>${data.absent}</b>
+
+          |
+
+          نسبة الحضور:
+          <b>${data.percentage}%</b>
+        </p>
+
+        <table class="table">
+
+          <tr>
+            <th>التاريخ</th>
+            <th>الحالة</th>
+          </tr>
+
+          ${
+            data.records
+              .map(
+                record => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(record.date)}
+                    </td>
+
+                    <td>
+                      ${statusBadge(
+                        record.status
+                      )}
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="2">
+                  لا يوجد سجل بعد
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+    `;
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+/* =====================================================
+   EMPLOYEES
+===================================================== */
+
+async function adminEmployees() {
+
+  const employees =
+    await api("/api/employees");
+
+  const users =
+    await api("/api/users");
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        👨‍💼 إدارة الموظفين
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="form">
+
+        <h2>
+          إضافة موظف
+        </h2>
+
+        <div class="row">
+
+          <input
+            id="empNumber"
+            placeholder="رقم الموظف"
+          >
+
+          <input
+            id="empName"
+            placeholder="اسم الموظف"
+          >
+
+          <input
+            id="empJob"
+            placeholder="المسمى الوظيفي"
+          >
+
+          <input
+            id="empDept"
+            placeholder="القسم"
+          >
+
+          <input
+            id="empPhone"
+            placeholder="الهاتف"
+          >
+
+          <input
+            id="empHireDate"
+            type="date"
+          >
+
+          <input
+            id="empSalary"
+            type="number"
+            placeholder="الراتب الأساسي"
+          >
+
+          <input
+            id="empAllowance"
+            type="number"
+            placeholder="البدلات"
+          >
+
+          <select id="empUser">
+
+            <option value="">
+              بدون حساب
+            </option>
+
+            ${users
+              .filter(
+                user =>
+                  !employees.some(
+                    emp =>
+                      Number(
+                        emp.user_id
+                      ) ===
+                      Number(user.id)
+                  )
+              )
+              .map(
+                user => `
+
+                  <option
+                    value="${user.id}"
+                  >
+                    ${esc(user.name)}
+                    —
+                    ${esc(user.username)}
+                  </option>
+
+                `
+              )
+              .join("")}
+
+          </select>
+
+          <button
+            onclick="addEmployee()"
+          >
+            ➕ إضافة الموظف
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <h2>
+          الموظفون
+        </h2>
+
+        <table class="table">
+
+          <tr>
+
+            <th>
+              الاسم
+            </th>
+
+            <th>
+              الوظيفة
+            </th>
+
+            <th>
+              القسم
+            </th>
+
+            <th>
+              الراتب
+            </th>
+
+            <th>
+              الحساب
+            </th>
+
+            <th>
+              إجراء
+            </th>
+
+          </tr>
+
+          ${
+            employees
+              .map(
+                employee => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        employee.name
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        employee.job_title
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        employee.department
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        Number(
+                          employee.basic_salary
+                        ) +
+                        Number(
+                          employee.allowance
+                        )
+                      )}
+                    </td>
+
+                    <td>
+                      ${
+                        employee.username
+                          ? esc(
+                              employee.username
+                            )
+                          : "بدون حساب"
+                      }
+                    </td>
+
+                    <td>
+
+                      <button
+                        onclick="employeeDetails(${employee.id})"
+                      >
+                        📋 التفاصيل
+                      </button>
+
+                      <button
+                        onclick="employeeAttendance(${employee.id})"
+                      >
+                        📅 الحضور
+                      </button>
+
+                      <button
+                        onclick="employeeMoney(${employee.id})"
+                      >
+                        💰 المالي
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="6">
+                  لا يوجد موظفون
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+
+      <div id="employeeDetails"></div>
+    `);
+}
+
+async function addEmployee() {
+
+  try {
+
+    const payload = {
+      employee_number:
+        document
+          .getElementById("empNumber")
+          .value
+          .trim(),
+
+      name:
+        document
+          .getElementById("empName")
+          .value
+          .trim(),
+
+      job_title:
+        document
+          .getElementById("empJob")
+          .value
+          .trim(),
+
+      department:
+        document
+          .getElementById("empDept")
+          .value
+          .trim(),
+
+      phone:
+        document
+          .getElementById("empPhone")
+          .value
+          .trim(),
+
+      hire_date:
+        document
+          .getElementById("empHireDate")
+          .value,
+
+      basic_salary:
+        Number(
+          document
+            .getElementById("empSalary")
+            .value || 0
+        ),
+
+      allowance:
+        Number(
+          document
+            .getElementById("empAllowance")
+            .value || 0
+        ),
+
+      user_id:
+        document
+          .getElementById("empUser")
+          .value || null
+    };
+
+    if (!payload.name) {
+      alert(
+        "أدخل اسم الموظف"
+      );
+      return;
+    }
+
+    await api("/api/employees", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    await adminEmployees();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function employeeDetails(id) {
+
+  try {
+
+    const employees =
+      await api("/api/employees");
+
+    const employee =
+      employees.find(
+        item =>
+          Number(item.id) ===
+          Number(id)
+      );
 
     if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
-      });
+      return;
     }
 
-    const result = db.prepare(`
-      INSERT INTO deductions (
-        employee_id,
-        amount,
-        reason,
-        date,
-        month,
-        automatic,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      employee.id,
-      Number(amount),
-      reason,
-      today(),
-      month || currentMonth(),
-      automatic ? 1 : 0,
-      nowISO()
-    );
+    const target =
+      document.getElementById(
+        "employeeDetails"
+      );
 
-    logAction(
-      null,
-      "ADD_DEDUCTION",
-      `${employee.name} - خصم ${amount} - ${reason}`
-    );
+    if (!target) {
+      return;
+    }
 
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
+    target.innerHTML = `
+
+      <div class="card">
+
+        <h2>
+          📋 ${esc(employee.name)}
+        </h2>
+
+        <p>
+          رقم الموظف:
+          ${esc(
+            employee.employee_number
+          )}
+        </p>
+
+        <p>
+          الوظيفة:
+          ${esc(
+            employee.job_title
+          )}
+        </p>
+
+        <p>
+          القسم:
+          ${esc(
+            employee.department
+          )}
+        </p>
+
+        <p>
+          الهاتف:
+          ${esc(
+            employee.phone
+          )}
+        </p>
+
+        <p>
+          تاريخ التعيين:
+          ${esc(
+            employee.hire_date
+          )}
+        </p>
+
+        <p>
+          الراتب الأساسي:
+          <b>
+            ${money(
+              employee.basic_salary
+            )}
+          </b>
+        </p>
+
+        <p>
+          البدلات:
+          <b>
+            ${money(
+              employee.allowance
+            )}
+          </b>
+        </p>
+
+      </div>
+    `;
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إضافة الخصم"
-    });
+    alert(error.message);
   }
-});
+}
 
-app.delete("/api/deductions/:id", (req, res) => {
+async function employeeAttendance(id) {
+
   try {
-    const deduction = db.prepare(`
-      SELECT *
-      FROM deductions
-      WHERE id = ?
-    `).get(req.params.id);
 
-    if (!deduction) {
-      return res.status(404).json({
-        error: "الخصم غير موجود"
-      });
+    const data =
+      await api(
+        `/api/employees/${id}/attendance`
+      );
+
+    const box =
+      document.getElementById(
+        "employeeDetails"
+      );
+
+    if (!box) {
+      return;
     }
 
-    db.prepare(`
-      DELETE FROM deductions
-      WHERE id = ?
-    `).run(req.params.id);
+    box.innerHTML = `
 
-    logAction(
-      null,
-      "DELETE_DEDUCTION",
-      `حذف خصم ${deduction.amount} - ${deduction.reason}`
-    );
+      <div class="card">
 
-    res.json({
-      success: true,
-      message: "تم حذف الخصم"
-    });
+        <h2>
+          📅 حضور الموظف
+        </h2>
+
+        <p>
+          الحضور:
+          ${data.present}
+
+          |
+
+          الغياب:
+          ${data.absent}
+
+          |
+
+          التأخير:
+          ${data.late}
+        </p>
+
+        <table class="table">
+
+          <tr>
+
+            <th>
+              التاريخ
+            </th>
+
+            <th>
+              الدخول
+            </th>
+
+            <th>
+              الخروج
+            </th>
+
+            <th>
+              الحالة
+            </th>
+
+            <th>
+              التأخير
+            </th>
+
+          </tr>
+
+          ${
+            data.records
+              .map(
+                record => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        record.date
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        record.checkIn ||
+                        "-"
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        record.checkOut ||
+                        "-"
+                      )}
+                    </td>
+
+                    <td>
+                      ${statusBadge(
+                        record.status
+                      )}
+                    </td>
+
+                    <td>
+                      ${
+                        record.lateMinutes ||
+                        0
+                      }
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="5">
+                  لا يوجد سجل
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+    `;
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف الخصم"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// المكافآت
-// =====================================================
+/* =====================================================
+   EMPLOYEE FINANCE
+===================================================== */
 
-app.get("/api/employees/:id/bonuses", (req, res) => {
+function currentMonthValue() {
+
+  const now =
+    new Date();
+
+  return `${now.getFullYear()}-${String(
+    now.getMonth() + 1
+  ).padStart(2, "0")}`;
+}
+
+async function employeeMoney(id) {
+
   try {
-    const bonuses = db.prepare(`
-      SELECT *
-      FROM bonuses
-      WHERE employee_id = ?
-      ORDER BY date DESC, id DESC
-    `).all(req.params.id);
 
-    res.json(bonuses);
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب المكافآت"
-    });
-  }
-});
-
-app.post("/api/employees/:id/bonuses", (req, res) => {
-  try {
-    const {
-      amount,
-      reason,
-      month
-    } = req.body || {};
-
-    if (!amount || Number(amount) <= 0) {
-      return res.status(400).json({
-        error: "أدخل قيمة المكافأة"
-      });
-    }
-
-    if (!reason) {
-      return res.status(400).json({
-        error: "سبب المكافأة مطلوب"
-      });
-    }
-
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO bonuses (
-        employee_id,
-        amount,
-        reason,
-        date,
-        month,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      employee.id,
-      Number(amount),
-      reason,
-      today(),
-      month || currentMonth(),
-      nowISO()
-    );
-
-    logAction(
-      null,
-      "ADD_BONUS",
-      `${employee.name} - مكافأة ${amount} - ${reason}`
-    );
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر إضافة المكافأة"
-    });
-  }
-});
-
-app.delete("/api/bonuses/:id", (req, res) => {
-  try {
-    const bonus = db.prepare(`
-      SELECT *
-      FROM bonuses
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!bonus) {
-      return res.status(404).json({
-        error: "المكافأة غير موجودة"
-      });
-    }
-
-    db.prepare(`
-      DELETE FROM bonuses
-      WHERE id = ?
-    `).run(req.params.id);
-
-    logAction(
-      null,
-      "DELETE_BONUS",
-      `حذف مكافأة ${bonus.amount} - ${bonus.reason}`
-    );
-
-    res.json({
-      success: true,
-      message: "تم حذف المكافأة"
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف المكافأة"
-    });
-  }
-});
-
-// =====================================================
-// كشف الراتب
-// =====================================================
-
-app.get("/api/employees/:id/payroll", (req, res) => {
-  try {
     const month =
-      req.query.month || currentMonth();
+      currentMonthValue();
 
-    const employee = db.prepare(`
-      SELECT *
-      FROM employees
-      WHERE id = ?
-    `).get(req.params.id);
-
-    if (!employee) {
-      return res.status(404).json({
-        error: "الموظف غير موجود"
-      });
-    }
-
-    const bonusResult = db.prepare(`
-      SELECT COALESCE(SUM(amount), 0) AS total
-      FROM bonuses
-      WHERE employee_id = ?
-      AND month = ?
-    `).get(
-      employee.id,
-      month
-    );
-
-    const deductionResult = db.prepare(`
-      SELECT COALESCE(SUM(amount), 0) AS total
-      FROM deductions
-      WHERE employee_id = ?
-      AND month = ?
-    `).get(
-      employee.id,
-      month
-    );
-
-    const basicSalary =
-      Number(employee.basic_salary || 0);
-
-    const allowance =
-      Number(employee.allowance || 0);
-
-    const bonuses =
-      Number(bonusResult.total || 0);
+    const payroll =
+      await api(
+        `/api/employees/${id}/payroll?month=${encodeURIComponent(
+          month
+        )}`
+      );
 
     const deductions =
-      Number(deductionResult.total || 0);
-
-    const gross =
-      basicSalary +
-      allowance +
-      bonuses;
-
-    const net =
-      gross -
-      deductions;
-
-    res.json({
-      month,
-      employee,
-      basic_salary: basicSalary,
-      allowance,
-      bonuses,
-      deductions,
-      gross,
-      net
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حساب الراتب"
-    });
-  }
-});
-
-// =====================================================
-// إعدادات الرواتب
-// =====================================================
-
-app.get("/api/payroll-settings", (req, res) => {
-  try {
-    const settings = db.prepare(`
-      SELECT *
-      FROM payroll_settings
-      WHERE id = 1
-    `).get();
-
-    res.json(settings);
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب إعدادات الرواتب"
-    });
-  }
-});
-
-app.patch("/api/payroll-settings", (req, res) => {
-  try {
-    const {
-      absence_deduction,
-      late_deduction,
-      allowed_late_minutes
-    } = req.body || {};
-
-    db.prepare(`
-      UPDATE payroll_settings
-      SET
-        absence_deduction = ?,
-        late_deduction = ?,
-        allowed_late_minutes = ?
-      WHERE id = 1
-    `).run(
-      Number(absence_deduction || 0),
-      Number(late_deduction || 0),
-      Number(allowed_late_minutes || 0)
-    );
-
-    logAction(
-      null,
-      "UPDATE_PAYROLL_SETTINGS",
-      "تحديث إعدادات الرواتب"
-    );
-
-    res.json({
-      success: true,
-      message: "تم تحديث إعدادات الرواتب"
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر تحديث إعدادات الرواتب"
-    });
-  }
-});
-
-// =====================================================
-// خصم الغياب تلقائياً
-// =====================================================
-
-app.post(
-  "/api/employees/:id/attendance-deduction",
-  (req, res) => {
-    try {
-      const {
-        date,
-        month
-      } = req.body || {};
-
-      const employee = db.prepare(`
-        SELECT *
-        FROM employees
-        WHERE id = ?
-      `).get(req.params.id);
-
-      if (!employee) {
-        return res.status(404).json({
-          error: "الموظف غير موجود"
-        });
-      }
-
-      const attendanceDate =
-        date || today();
-
-      const attendance = db.prepare(`
-        SELECT *
-        FROM employee_attendance
-        WHERE employee_id = ?
-        AND date = ?
-      `).get(
-        employee.id,
-        attendanceDate
+      await api(
+        `/api/employees/${id}/deductions`
       );
 
-      if (
-        !attendance ||
-        attendance.status !== "غائب"
-      ) {
-        return res.status(400).json({
-          error: "لا يوجد غياب مسجل لهذا اليوم"
-        });
-      }
+    const bonuses =
+      await api(
+        `/api/employees/${id}/bonuses`
+      );
 
-      const settings = db.prepare(`
-        SELECT *
-        FROM payroll_settings
-        WHERE id = 1
-      `).get();
+    const box =
+      document.getElementById(
+        "employeeDetails"
+      );
 
-      const deductionAmount =
-        Number(settings.absence_deduction || 0);
+    if (!box) {
+      return;
+    }
 
-      if (deductionAmount <= 0) {
-        return res.status(400).json({
-          error: "قيمة خصم الغياب غير محددة"
-        });
-      }
+    box.innerHTML = `
 
-      const result = db.prepare(`
-        INSERT INTO deductions (
-          employee_id,
-          amount,
-          reason,
-          date,
-          month,
-          automatic,
-          created_at
+      <div class="card">
+
+        <h2>
+          💰 التفاصيل المالية
+          —
+          ${esc(
+            payroll.employee.name
+          )}
+        </h2>
+
+        <div class="cards">
+
+          <div class="card">
+            الأساسي
+            <div class="num">
+              ${money(
+                payroll.basic_salary
+              )}
+            </div>
+          </div>
+
+          <div class="card">
+            البدلات
+            <div class="num">
+              ${money(
+                payroll.allowance
+              )}
+            </div>
+          </div>
+
+          <div class="card">
+            المكافآت
+            <div class="num">
+              ${money(
+                payroll.bonuses
+              )}
+            </div>
+          </div>
+
+          <div class="card">
+            الخصومات
+            <div class="num">
+              ${money(
+                payroll.deductions
+              )}
+            </div>
+          </div>
+
+          <div class="card">
+            الصافي
+            <div class="num">
+              ${money(
+                payroll.net
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        <div class="form">
+
+          <h3>
+            إضافة خصم
+          </h3>
+
+          <input
+            id="dedAmount"
+            type="number"
+            placeholder="المبلغ"
+          >
+
+          <input
+            id="dedReason"
+            placeholder="سبب الخصم"
+          >
+
+          <button
+            onclick="addDeduction(${id})"
+          >
+            إضافة الخصم
+          </button>
+
+        </div>
+
+        <div class="form">
+
+          <h3>
+            إضافة مكافأة
+          </h3>
+
+          <input
+            id="bonusAmount"
+            type="number"
+            placeholder="المبلغ"
+          >
+
+          <input
+            id="bonusReason"
+            placeholder="سبب المكافأة"
+          >
+
+          <button
+            onclick="addBonus(${id})"
+          >
+            إضافة المكافأة
+          </button>
+
+        </div>
+
+        <h3>
+          الخصومات
+        </h3>
+
+        <table class="table">
+
+          <tr>
+            <th>التاريخ</th>
+            <th>المبلغ</th>
+            <th>السبب</th>
+            <th>النوع</th>
+            <th></th>
+          </tr>
+
+          ${
+            deductions
+              .map(
+                item => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        item.date
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        item.amount
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        item.reason
+                      )}
+                    </td>
+
+                    <td>
+                      ${
+                        item.automatic
+                          ? "تلقائي"
+                          : "يدوي"
+                      }
+                    </td>
+
+                    <td>
+
+                      <button
+                        onclick="deleteDeduction(${item.id}, ${id})"
+                      >
+                        🗑️
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="5">
+                  لا توجد خصومات
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+        <h3>
+          المكافآت
+        </h3>
+
+        <table class="table">
+
+          <tr>
+            <th>التاريخ</th>
+            <th>المبلغ</th>
+            <th>السبب</th>
+            <th></th>
+          </tr>
+
+          ${
+            bonuses
+              .map(
+                item => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        item.date
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        item.amount
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        item.reason
+                      )}
+                    </td>
+
+                    <td>
+
+                      <button
+                        onclick="deleteBonus(${item.id}, ${id})"
+                      >
+                        🗑️
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="4">
+                  لا توجد مكافآت
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+    `;
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function addDeduction(id) {
+
+  try {
+
+    const amount =
+      Number(
+        document.getElementById(
+          "dedAmount"
+        ).value || 0
+      );
+
+    const reason =
+      document
+        .getElementById(
+          "dedReason"
         )
-        VALUES (?, ?, ?, ?, ?, 1, ?)
-      `).run(
-        employee.id,
-        deductionAmount,
-        `خصم غياب بتاريخ ${attendanceDate}`,
-        attendanceDate,
-        month || attendanceDate.slice(0, 7),
-        nowISO()
+        .value
+        .trim();
+
+    if (!amount || !reason) {
+      alert(
+        "أدخل مبلغ وسبب الخصم"
       );
-
-      logAction(
-        null,
-        "AUTO_ABSENCE_DEDUCTION",
-        `${employee.name} - ${deductionAmount}`
-      );
-
-      res.json({
-        success: true,
-        id: result.lastInsertRowid,
-        amount: deductionAmount,
-        message: "تم تسجيل خصم الغياب"
-      });
-
-    } catch (error) {
-      console.error(error);
-
-      res.status(500).json({
-        error: "تعذر تسجيل خصم الغياب"
-      });
+      return;
     }
-  }
-);
 
-// =====================================================
-// خصم التأخير تلقائياً
-// =====================================================
-
-app.post(
-  "/api/employees/:id/late-deduction",
-  (req, res) => {
-    try {
-      const {
-        date,
-        month
-      } = req.body || {};
-
-      const employee = db.prepare(`
-        SELECT *
-        FROM employees
-        WHERE id = ?
-      `).get(req.params.id);
-
-      if (!employee) {
-        return res.status(404).json({
-          error: "الموظف غير موجود"
-        });
-      }
-
-      const attendanceDate =
-        date || today();
-
-      const attendance = db.prepare(`
-        SELECT *
-        FROM employee_attendance
-        WHERE employee_id = ?
-        AND date = ?
-      `).get(
-        employee.id,
-        attendanceDate
-      );
-
-      if (
-        !attendance ||
-        attendance.status !== "متأخر"
-      ) {
-        return res.status(400).json({
-          error: "لا يوجد تأخير مسجل لهذا اليوم"
-        });
-      }
-
-      const settings = db.prepare(`
-        SELECT *
-        FROM payroll_settings
-        WHERE id = 1
-      `).get();
-
-      const deductionAmount =
-        Number(settings.late_deduction || 0);
-
-      if (deductionAmount <= 0) {
-        return res.status(400).json({
-          error: "قيمة خصم التأخير غير محددة"
-        });
-      }
-
-      const result = db.prepare(`
-        INSERT INTO deductions (
-          employee_id,
+    await api(
+      `/api/employees/${id}/deductions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
           amount,
-          reason,
-          date,
-          month,
-          automatic,
-          created_at
+          reason
+        })
+      }
+    );
+
+    await employeeMoney(id);
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function deleteDeduction(
+  deductionId,
+  employeeId
+) {
+
+  if (
+    !confirm(
+      "حذف الخصم؟"
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    await api(
+      `/api/deductions/${deductionId}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    await employeeMoney(
+      employeeId
+    );
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function addBonus(id) {
+
+  try {
+
+    const amount =
+      Number(
+        document.getElementById(
+          "bonusAmount"
+        ).value || 0
+      );
+
+    const reason =
+      document
+        .getElementById(
+          "bonusReason"
         )
-        VALUES (?, ?, ?, ?, ?, 1, ?)
-      `).run(
-        employee.id,
-        deductionAmount,
-        `خصم تأخير ${attendance.late_minutes} دقيقة بتاريخ ${attendanceDate}`,
-        attendanceDate,
-        month || attendanceDate.slice(0, 7),
-        nowISO()
+        .value
+        .trim();
+
+    if (!amount || !reason) {
+      alert(
+        "أدخل مبلغ وسبب المكافأة"
       );
-
-      logAction(
-        null,
-        "AUTO_LATE_DEDUCTION",
-        `${employee.name} - ${deductionAmount}`
-      );
-
-      res.json({
-        success: true,
-        id: result.lastInsertRowid,
-        amount: deductionAmount,
-        message: "تم تسجيل خصم التأخير"
-      });
-
-    } catch (error) {
-      console.error(error);
-
-      res.status(500).json({
-        error: "تعذر تسجيل خصم التأخير"
-      });
-    }
-  }
-);
-
-// =====================================================
-// سجل عمليات الإدارة
-// =====================================================
-
-app.get("/api/audit-logs", (req, res) => {
-  try {
-    const logs = db.prepare(`
-      SELECT
-        a.*,
-        u.name AS user_name,
-        u.username
-      FROM audit_logs a
-      LEFT JOIN users u
-        ON u.id = a.user_id
-      ORDER BY a.id DESC
-      LIMIT 500
-    `).all();
-
-    res.json(logs);
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب سجل العمليات"
-    });
-  }
-});
-
-// =====================================================
-// ملاحظات الطلاب
-// =====================================================
-
-app.post("/api/notes", (req, res) => {
-  try {
-    const {
-      student_id,
-      text
-    } = req.body || {};
-
-    if (!student_id || !text) {
-      return res.status(400).json({
-        error: "أدخل الملاحظة"
-      });
+      return;
     }
 
-    const student = db.prepare(`
-      SELECT *
-      FROM students
-      WHERE id = ?
-    `).get(student_id);
-
-    if (!student) {
-      return res.status(404).json({
-        error: "الطالب غير موجود"
-      });
-    }
-
-    const result = db.prepare(`
-      INSERT INTO notes (
-        student_id,
-        text,
-        created_at
-      )
-      VALUES (?, ?, ?)
-    `).run(
-      student_id,
-      text,
-      nowISO()
+    await api(
+      `/api/employees/${id}/bonuses`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          amount,
+          reason
+        })
+      }
     );
 
-    logAction(
-      null,
-      "ADD_NOTE",
-      `إضافة ملاحظة للطالب ${student.name}`
+    await employeeMoney(id);
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function deleteBonus(
+  bonusId,
+  employeeId
+) {
+
+  if (
+    !confirm(
+      "حذف المكافأة؟"
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    await api(
+      `/api/bonuses/${bonusId}`,
+      {
+        method: "DELETE"
+      }
     );
 
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
+    await employeeMoney(
+      employeeId
+    );
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حفظ الملاحظة"
-    });
+    alert(error.message);
   }
-});
+}
 
-app.get("/api/notes/:studentId", (req, res) => {
+/* =====================================================
+   PAYROLL
+===================================================== */
+
+async function adminPayroll() {
+
+  const month =
+    currentMonthValue();
+
+  const data =
+    await api(
+      `/api/payroll?month=${encodeURIComponent(
+        month
+      )}`
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        💰 الرواتب
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="card">
+
+        <h2>
+          كشف شهر ${esc(month)}
+        </h2>
+
+        <table class="table">
+
+          <tr>
+
+            <th>الموظف</th>
+            <th>الأساسي</th>
+            <th>البدلات</th>
+            <th>المكافآت</th>
+            <th>الخصومات</th>
+            <th>الإجمالي</th>
+            <th>الصافي</th>
+
+          </tr>
+
+          ${
+            data.employees
+              .map(
+                employee => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        employee.name
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        employee.basic_salary
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        employee.allowance
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        employee.bonuses
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        employee.deductions
+                      )}
+                    </td>
+
+                    <td>
+                      ${money(
+                        employee.gross
+                      )}
+                    </td>
+
+                    <td>
+                      <b>
+                        ${money(
+                          employee.net
+                        )}
+                      </b>
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="7">
+                  لا يوجد موظفون
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+    `);
+}
+
+/* =====================================================
+   LOGS
+===================================================== */
+
+async function adminLogs() {
+
+  const logs =
+    await api(
+      "/api/audit-logs"
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        📋 سجل العمليات
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="card">
+
+        <table class="table">
+
+          <tr>
+            <th>التاريخ</th>
+            <th>المستخدم</th>
+            <th>العملية</th>
+            <th>التفاصيل</th>
+          </tr>
+
+          ${
+            logs
+              .map(
+                log => `
+
+                  <tr>
+
+                    <td>
+                      ${dateText(
+                        log.createdAt ||
+                        log.created_at
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        log.user_name ||
+                        log.userName ||
+                        "النظام"
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        log.action
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        log.details
+                      )}
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="4">
+                  لا يوجد سجل
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+    `);
+}
+
+/* =====================================================
+   SETTINGS
+===================================================== */
+
+async function adminSettings() {
+
+  const settings =
+    await api(
+      "/api/payroll-settings"
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        ⚙️ إعدادات الرواتب
+      </h1>
+
+      ${adminNavOnly()}
+
+      <div class="form">
+
+        <label>
+          خصم الغياب
+        </label>
+
+        <input
+          id="absenceDeduction"
+          type="number"
+          value="${
+            Number(
+              settings.absence_deduction ||
+              0
+            )
+          }"
+        >
+
+        <label>
+          خصم التأخير
+        </label>
+
+        <input
+          id="lateDeduction"
+          type="number"
+          value="${
+            Number(
+              settings.late_deduction ||
+              0
+            )
+          }"
+        >
+
+        <label>
+          الدقائق المسموحة
+        </label>
+
+        <input
+          id="allowedLate"
+          type="number"
+          value="${
+            Number(
+              settings.allowed_late_minutes ||
+              0
+            )
+          }"
+        >
+
+        <label>
+          بداية الدوام
+        </label>
+
+        <input
+          id="workStart"
+          type="time"
+          value="${
+            esc(
+              settings.work_start ||
+              "08:00"
+            )
+          }"
+        >
+
+        <button onclick="saveSettings()">
+          💾 حفظ الإعدادات
+        </button>
+
+      </div>
+    `);
+}
+
+async function saveSettings() {
+
   try {
-    const notes = db.prepare(`
-      SELECT *
-      FROM notes
-      WHERE student_id = ?
-      ORDER BY id DESC
-    `).all(req.params.studentId);
 
-    res.json(notes);
+    await api(
+      "/api/payroll-settings",
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          absence_deduction:
+            Number(
+              document
+                .getElementById(
+                  "absenceDeduction"
+                )
+                .value || 0
+            ),
+
+          late_deduction:
+            Number(
+              document
+                .getElementById(
+                  "lateDeduction"
+                )
+                .value || 0
+            ),
+
+          allowed_late_minutes:
+            Number(
+              document
+                .getElementById(
+                  "allowedLate"
+                )
+                .value || 0
+            ),
+
+          work_start:
+            document
+              .getElementById(
+                "workStart"
+              )
+              .value ||
+            "08:00"
+        })
+      }
+    );
+
+    alert(
+      "تم حفظ الإعدادات"
+    );
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الملاحظات"
-    });
+    alert(error.message);
   }
-});
+}
 
-app.delete("/api/notes/:id", (req, res) => {
+/* =====================================================
+   TEACHER
+===================================================== */
+
+async function renderTeacher() {
+
+  if (
+    currentSection !==
+      "dashboard" &&
+    currentSection !==
+      "attendance" &&
+    currentSection !==
+      "notes" &&
+    currentSection !==
+      "videos"
+  ) {
+    currentSection =
+      "dashboard";
+  }
+
+  if (
+    currentSection ===
+    "attendance"
+  ) {
+    return teacherAttendance();
+  }
+
+  if (
+    currentSection ===
+    "notes"
+  ) {
+    return teacherNotes();
+  }
+
+  if (
+    currentSection ===
+    "videos"
+  ) {
+    return teacherVideos();
+  }
+
+  return teacherDashboard();
+}
+
+function teacherNav() {
+  return nav([
+    {
+      id: "dashboard",
+      icon: "🏠",
+      label: "الرئيسية"
+    },
+    {
+      id: "attendance",
+      icon: "📅",
+      label: "الحضور"
+    },
+    {
+      id: "notes",
+      icon: "📝",
+      label: "الملاحظات"
+    },
+    {
+      id: "videos",
+      icon: "🎥",
+      label: "الحصص"
+    }
+  ]);
+}
+
+async function teacherDashboard() {
+
+  const students =
+    await api(
+      "/api/students"
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        👨‍🏫 بوابة المدرس
+      </h1>
+
+      ${teacherNav()}
+
+      <div class="cards">
+
+        <div class="card">
+          الطلاب
+          <div class="num">
+            ${students.length}
+          </div>
+        </div>
+
+        <div class="card">
+          الحاضرون
+          <div class="num">
+            ${
+              students.filter(
+                student =>
+                  student.status ===
+                  "حاضر"
+              ).length
+            }
+          </div>
+        </div>
+
+        <div class="card">
+          الغائبون
+          <div class="num">
+            ${
+              students.filter(
+                student =>
+                  student.status ===
+                  "غائب"
+              ).length
+            }
+          </div>
+        </div>
+
+      </div>
+    `);
+}
+
+async function teacherAttendance() {
+
+  const students =
+    await api(
+      "/api/students"
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        📅 الحضور والغياب
+      </h1>
+
+      ${teacherNav()}
+
+      <div class="card">
+
+        <table class="table">
+
+          <tr>
+
+            <th>
+              الطالب
+            </th>
+
+            <th>
+              الفصل
+            </th>
+
+            <th>
+              الحالة
+            </th>
+
+            <th>
+              إجراء
+            </th>
+
+          </tr>
+
+          ${
+            students
+              .map(
+                student => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        student.name
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        student.class_name
+                      )}
+                    </td>
+
+                    <td>
+                      ${statusBadge(
+                        student.status
+                      )}
+                    </td>
+
+                    <td>
+
+                      <button
+                        onclick="toggleStudent(${student.id})"
+                      >
+                        تغيير
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("")
+          }
+
+        </table>
+
+      </div>
+    `);
+}
+
+async function toggleStudent(id) {
+
   try {
-    const note = db.prepare(`
-      SELECT *
-      FROM notes
-      WHERE id = ?
-    `).get(req.params.id);
 
-    if (!note) {
-      return res.status(404).json({
-        error: "الملاحظة غير موجودة"
-      });
+    await api(
+      `/api/students/${id}/status`,
+      {
+        method: "PATCH"
+      }
+    );
+
+    await teacherAttendance();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+/* =====================================================
+   NOTES
+===================================================== */
+
+async function teacherNotes() {
+
+  const students =
+    await api(
+      "/api/students"
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        📝 ملاحظات الطلاب
+      </h1>
+
+      ${teacherNav()}
+
+      <div class="form">
+
+        <select id="noteStudent">
+
+          ${
+            students
+              .map(
+                student => `
+
+                  <option
+                    value="${student.id}"
+                  >
+                    ${esc(
+                      student.name
+                    )}
+                  </option>
+
+                `
+              )
+              .join("")
+          }
+
+        </select>
+
+        <textarea
+          id="noteText"
+          placeholder="اكتب الملاحظة"
+        ></textarea>
+
+        <button
+          onclick="saveNote()"
+        >
+          💾 حفظ الملاحظة
+        </button>
+
+      </div>
+
+      <div class="card">
+
+        <p>
+          الملاحظة تُحفظ في النظام حاليًا.
+          ربط WhatsApp الفعلي يحتاج
+          WhatsApp Business API.
+        </p>
+
+      </div>
+    `);
+}
+
+async function saveNote() {
+
+  try {
+
+    const studentId =
+      Number(
+        document
+          .getElementById(
+            "noteStudent"
+          )
+          .value
+      );
+
+    const text =
+      document
+        .getElementById(
+          "noteText"
+        )
+        .value
+        .trim();
+
+    if (!text) {
+      alert(
+        "اكتب الملاحظة"
+      );
+      return;
     }
 
-    db.prepare(`
-      DELETE FROM notes
-      WHERE id = ?
-    `).run(req.params.id);
+    await api(
+      "/api/notes",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          student_id:
+            studentId,
+          text
+        })
+      }
+    );
 
-    res.json({
-      success: true,
-      message: "تم حذف الملاحظة"
-    });
+    alert(
+      "تم حفظ الملاحظة"
+    );
+
+    await teacherNotes();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حذف الملاحظة"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// الفيديوهات
-// =====================================================
+/* =====================================================
+   VIDEOS
+===================================================== */
 
-app.post("/api/videos", (req, res) => {
+async function teacherVideos() {
+
+  const videos =
+    await api(
+      "/api/videos"
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        🎥 الحصص
+      </h1>
+
+      ${teacherNav()}
+
+      <div class="form">
+
+        <input
+          id="videoTitle"
+          placeholder="اسم الحصة أو المادة"
+        >
+
+        <input
+          id="videoFile"
+          type="file"
+          accept="video/*"
+        >
+
+        <button
+          onclick="saveVideo()"
+        >
+          💾 حفظ الحصة
+        </button>
+
+        <p>
+          حفظ اسم الملف فقط في هذه المرحلة.
+        </p>
+
+      </div>
+
+      <div class="card">
+
+        <table class="table">
+
+          <tr>
+            <th>الحصة</th>
+            <th>الملف</th>
+            <th>التاريخ</th>
+          </tr>
+
+          ${
+            videos
+              .map(
+                video => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        video.title
+                      )}
+                    </td>
+
+                    <td>
+                      ${esc(
+                        video.fileName ||
+                        video.file_name ||
+                        "-"
+                      )}
+                    </td>
+
+                    <td>
+                      ${dateText(
+                        video.createdAt ||
+                        video.created_at
+                      )}
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="3">
+                  لا توجد حصص
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+    `);
+}
+
+async function saveVideo() {
+
   try {
-    const {
-      title,
-      file_name
-    } = req.body || {};
+
+    const title =
+      document
+        .getElementById(
+          "videoTitle"
+        )
+        .value
+        .trim();
+
+    const file =
+      document
+        .getElementById(
+          "videoFile"
+        )
+        .files[0];
 
     if (!title) {
-      return res.status(400).json({
-        error: "اكتب اسم الحصة"
-      });
+      alert(
+        "اكتب اسم الحصة"
+      );
+      return;
     }
 
-    const result = db.prepare(`
-      INSERT INTO videos (
-        title,
-        file_name,
-        created_at
-      )
-      VALUES (?, ?, ?)
-    `).run(
-      title,
-      file_name || "",
-      nowISO()
+    await api(
+      "/api/videos",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          file_name:
+            file
+              ? file.name
+              : ""
+        })
+      }
     );
 
-    res.json({
-      success: true,
-      id: result.lastInsertRowid
-    });
+    alert(
+      "تم حفظ بيانات الحصة"
+    );
+
+    await teacherVideos();
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر حفظ الحصة"
-    });
+    alert(error.message);
   }
-});
+}
 
-app.get("/api/videos", (req, res) => {
+/* =====================================================
+   FAMILY
+===================================================== */
+
+async function renderFamily() {
+
+  const students =
+    await api(
+      "/api/students"
+    );
+
+  const student =
+    students[0];
+
+  if (!student) {
+
+    app.innerHTML =
+      layout(`
+
+        <h1>
+          👨‍👩‍👦 بوابة الطالب / ولي الأمر
+        </h1>
+
+        <div class="notice">
+          لا يوجد طالب مرتبط بهذا الحساب حاليًا.
+        </div>
+
+      `);
+
+    return;
+  }
+
+  const notes =
+    await api(
+      `/api/notes/${student.id}`
+    );
+
+  const videos =
+    await api(
+      "/api/videos"
+    );
+
+  const attendance =
+    await api(
+      `/api/students/${student.id}/attendance`
+    );
+
+  app.innerHTML =
+    layout(`
+
+      <h1>
+        👨‍👩‍👦 بوابة الأسرة
+      </h1>
+
+      <div class="cards">
+
+        <div class="card">
+          الطالب
+
+          <div class="num">
+            ${esc(
+              student.name
+            )}
+          </div>
+
+          <p>
+            ${esc(
+              student.class_name
+            )}
+          </p>
+
+        </div>
+
+        <div class="card">
+          حالة اليوم
+
+          <div class="num">
+            ${esc(
+              student.status
+            )}
+          </div>
+        </div>
+
+        <div class="card">
+          نسبة الحضور
+
+          <div class="num">
+            ${attendance.percentage}%
+          </div>
+        </div>
+
+      </div>
+
+      <h2>
+        📝 الملاحظات
+      </h2>
+
+      ${
+        notes
+          .map(
+            note => `
+
+              <div class="notice">
+
+                <b>
+                  ${dateText(
+                    note.createdAt ||
+                    note.created_at
+                  )}
+                </b>
+
+                <br>
+
+                ${esc(
+                  note.text
+                )}
+
+              </div>
+
+            `
+          )
+          .join("") ||
+        `
+          <div class="card">
+            لا توجد ملاحظات.
+          </div>
+        `
+      }
+
+      <h2>
+        📅 سجل الحضور
+      </h2>
+
+      <div class="card">
+
+        <table class="table">
+
+          <tr>
+            <th>التاريخ</th>
+            <th>الحالة</th>
+          </tr>
+
+          ${
+            attendance.records
+              .map(
+                record => `
+
+                  <tr>
+
+                    <td>
+                      ${esc(
+                        record.date
+                      )}
+                    </td>
+
+                    <td>
+                      ${statusBadge(
+                        record.status
+                      )}
+                    </td>
+
+                  </tr>
+
+                `
+              )
+              .join("") ||
+            `
+              <tr>
+                <td colspan="2">
+                  لا يوجد سجل بعد
+                </td>
+              </tr>
+            `
+          }
+
+        </table>
+
+      </div>
+
+      <h2>
+        🎥 الحصص
+      </h2>
+
+      ${
+        videos
+          .map(
+            video => `
+
+              <div class="card">
+
+                🎥
+                ${esc(
+                  video.title
+                )}
+
+                <br>
+
+                <small>
+                  ${dateText(
+                    video.createdAt ||
+                    video.created_at
+                  )}
+                </small>
+
+              </div>
+
+            `
+          )
+          .join("") ||
+        `
+          <div class="card">
+            لا توجد حصص.
+          </div>
+        `
+      }
+
+    `);
+}
+
+/* =====================================================
+   CHANGE PASSWORD
+===================================================== */
+
+function showPasswordModal() {
+
+  const existing =
+    document.getElementById(
+      "passwordModal"
+    );
+
+  if (existing) {
+    existing.remove();
+  }
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+
+      <div
+        id="passwordModal"
+        class="modal-overlay"
+      >
+
+        <div class="modal-card">
+
+          <h2>
+            🔐 تغيير كلمة المرور
+          </h2>
+
+          <input
+            id="currentPassword"
+            type="password"
+            placeholder="كلمة المرور الحالية"
+          >
+
+          <input
+            id="newPassword"
+            type="password"
+            placeholder="كلمة المرور الجديدة"
+          >
+
+          <div class="row">
+
+            <button
+              onclick="changeMyPassword()"
+            >
+              حفظ
+            </button>
+
+            <button
+              onclick="document.getElementById('passwordModal').remove()"
+            >
+              إلغاء
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `
+  );
+}
+
+async function changeMyPassword() {
+
   try {
-    const videos = db.prepare(`
-      SELECT *
-      FROM videos
-      ORDER BY id DESC
-    `).all();
 
-    res.json(videos);
+    const currentPassword =
+      document
+        .getElementById(
+          "currentPassword"
+        )
+        .value;
+
+    const newPassword =
+      document
+        .getElementById(
+          "newPassword"
+        )
+        .value;
+
+    if (
+      !currentPassword ||
+      !newPassword
+    ) {
+      alert(
+        "أدخل كلمات المرور"
+      );
+      return;
+    }
+
+    await api(
+      `/api/users/${me.id}/password`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          current_password:
+            currentPassword,
+
+          new_password:
+            newPassword
+        })
+      }
+    );
+
+    alert(
+      "تم تغيير كلمة المرور"
+    );
+
+    const modal =
+      document.getElementById(
+        "passwordModal"
+      );
+
+    if (modal) {
+      modal.remove();
+    }
 
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "تعذر جلب الحصص"
-    });
+    alert(error.message);
   }
-});
+}
 
-// =====================================================
-// Health Check
-// =====================================================
+/* =====================================================
+   START
+===================================================== */
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "School portal is running",
-    time: nowISO()
-  });
-});
+try {
 
-// =====================================================
-// الصفحة الرئيسية
-// =====================================================
-
-app.get("/", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "index.html")
+  me = JSON.parse(
+    localStorage.getItem(
+      "me"
+    ) || "null"
   );
-});
 
-// =====================================================
-// تشغيل السيرفر
-// =====================================================
+} catch {
 
-const PORT = process.env.PORT || 3000;
+  me = null;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(
-    `School portal running on port ${PORT}`
+  localStorage.removeItem(
+    "me"
   );
-});
+}
+
+if (me) {
+  startActivity();
+}
+
+render();
+```
+
