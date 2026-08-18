@@ -2,9 +2,9 @@
   "name": "british-education-school",
   "version": "2.1.0",
   "description": "نظام إدارة المدرسة المتكامل",
-  "main": "bootstrap.js",
+  "main": "start.js",
   "scripts": {
-    "start": "node bootstrap.js"
+    "start": "node start.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
