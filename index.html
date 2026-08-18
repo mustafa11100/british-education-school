@@ -1,27 +1,562 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<title>نظام إدارة المدرسة</title>
 
-    <meta
-        name="theme-color"
-        content="#173b70"
-    >
+<style>
+*{
+    box-sizing:border-box;
+}
 
-    <title>
-        منصة إدارة المدارس
-    </title>
+html,body{
+    margin:0;
+    padding:0;
+    font-family:Tahoma,Arial,sans-serif;
+    background:#f4f7fb;
+    color:#172033;
+}
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
+button,
+input,
+select,
+textarea{
+    font-family:inherit;
+}
+
+button{
+    cursor:pointer;
+}
+
+.hidden{
+    display:none!important;
+}
+
+/* =========================
+   LOGIN
+========================= */
+
+#loginPage{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:
+        linear-gradient(135deg,#173b70,#2463a5);
+}
+
+.login-box{
+    width:100%;
+    max-width:420px;
+    background:white;
+    border-radius:20px;
+    padding:35px;
+    box-shadow:0 20px 60px rgba(0,0,0,.2);
+}
+
+.logo{
+    width:75px;
+    height:75px;
+    border-radius:18px;
+    background:#173b70;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 auto 20px;
+    font-size:32px;
+    font-weight:bold;
+}
+
+.login-box h1{
+    text-align:center;
+    margin:0 0 8px;
+}
+
+.login-box p{
+    text-align:center;
+    color:#718096;
+    margin-bottom:25px;
+}
+
+.form-group{
+    margin-bottom:15px;
+}
+
+.form-group label{
+    display:block;
+    margin-bottom:7px;
+    font-weight:bold;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea{
+    width:100%;
+    border:1px solid #d9e1ec;
+    border-radius:10px;
+    padding:12px;
+    outline:none;
+    background:white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus{
+    border-color:#2463a5;
+}
+
+.btn{
+    border:0;
+    border-radius:10px;
+    padding:11px 18px;
+    font-weight:bold;
+}
+
+.btn-primary{
+    background:#173b70;
+    color:white;
+}
+
+.btn-success{
+    background:#198754;
+    color:white;
+}
+
+.btn-danger{
+    background:#dc3545;
+    color:white;
+}
+
+.btn-warning{
+    background:#f0ad00;
+    color:white;
+}
+
+.btn-secondary{
+    background:#e8edf5;
+    color:#172033;
+}
+
+.btn-block{
+    width:100%;
+}
+
+/* =========================
+   APP
+========================= */
+
+#appPage{
+    min-height:100vh;
+}
+
+.topbar{
+    height:68px;
+    background:#173b70;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 20px;
+    position:sticky;
+    top:0;
+    z-index:1000;
+}
+
+.topbar-title{
+    font-size:20px;
+    font-weight:bold;
+}
+
+.user-area{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.user-avatar{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    background:#fff;
+    color:#173b70;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+}
+
+.layout{
+    display:flex;
+    min-height:calc(100vh - 68px);
+}
+
+.sidebar{
+    width:245px;
+    background:#fff;
+    border-left:1px solid #e5eaf1;
+    padding:15px;
+    flex-shrink:0;
+}
+
+.sidebar button{
+    width:100%;
+    border:0;
+    background:transparent;
+    text-align:right;
+    padding:12px 14px;
+    border-radius:10px;
+    margin-bottom:5px;
+    color:#364152;
+    font-size:14px;
+}
+
+.sidebar button:hover,
+.sidebar button.active{
+    background:#eaf2fb;
+    color:#173b70;
+    font-weight:bold;
+}
+
+.content{
+    flex:1;
+    padding:25px;
+    overflow:hidden;
+}
+
+.page-title{
+    margin-bottom:20px;
+}
+
+.page-title h2{
+    margin:0 0 5px;
+}
+
+.page-title p{
+    margin:0;
+    color:#718096;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.stat-card{
+    background:white;
+    border-radius:15px;
+    padding:20px;
+    border:1px solid #e5eaf1;
+}
+
+.stat-card .label{
+    color:#718096;
+    font-size:14px;
+}
+
+.stat-card .number{
+    font-size:30px;
+    font-weight:bold;
+    margin-top:10px;
+}
+
+/* =========================
+   PANELS
+========================= */
+
+.panel{
+    background:white;
+    border:1px solid #e5eaf1;
+    border-radius:15px;
+    padding:20px;
+    margin-bottom:20px;
+}
+
+.panel-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:18px;
+}
+
+.panel-header h3{
+    margin:0;
+}
+
+/* =========================
+   TABLE
+========================= */
+
+.table-wrapper{
+    overflow:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:700px;
+}
+
+th,
+td{
+    padding:12px;
+    border-bottom:1px solid #edf0f5;
+    text-align:right;
+    white-space:nowrap;
+}
+
+th{
+    background:#f8fafc;
+    font-size:13px;
+}
+
+td{
+    font-size:14px;
+}
+
+.badge{
+    display:inline-block;
+    padding:5px 9px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.badge-success{
+    background:#dff5e7;
+    color:#147a3d;
+}
+
+.badge-danger{
+    background:#fde2e5;
+    color:#a51d2d;
+}
+
+.badge-warning{
+    background:#fff0c7;
+    color:#956900;
+}
+
+.badge-info{
+    background:#dceeff;
+    color:#145a92;
+}
+
+/* =========================
+   TOOLBAR
+========================= */
+
+.toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:15px;
+}
+
+.toolbar input,
+.toolbar select{
+    padding:10px;
+    border:1px solid #d9e1ec;
+    border-radius:9px;
+}
+
+/* =========================
+   MODAL
+========================= */
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:2000;
+}
+
+.modal-box{
+    background:white;
+    width:100%;
+    max-width:650px;
+    max-height:90vh;
+    overflow:auto;
+    border-radius:18px;
+    padding:25px;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.modal-header h3{
+    margin:0;
+}
+
+.close-btn{
+    border:0;
+    background:#f0f2f5;
+    width:35px;
+    height:35px;
+    border-radius:50%;
+    font-size:20px;
+}
+
+/* =========================
+   GRID FORM
+========================= */
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+.form-grid .full{
+    grid-column:1/-1;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+.mobile-menu{
+    display:none;
+    border:0;
+    background:white;
+    color:#173b70;
+    font-size:22px;
+    width:40px;
+    height:40px;
+    border-radius:8px;
+}
+
+@media(max-width:1000px){
+    .stats-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:750px){
+
+    .mobile-menu{
+        display:block;
+    }
+
+    .topbar-title{
+        font-size:16px;
+    }
+
+    .sidebar{
+        position:fixed;
+        right:-260px;
+        top:68px;
+        bottom:0;
+        z-index:1500;
+        transition:.25s;
+        box-shadow:-10px 0 30px rgba(0,0,0,.12);
+    }
+
+    .sidebar.open{
+        right:0;
+    }
+
+    .layout{
+        display:block;
+    }
+
+    .content{
+        padding:15px;
+    }
+
+    .stats-grid{
+        grid-template-columns:1fr 1fr;
+    }
+
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .form-grid .full{
+        grid-column:auto;
+    }
+
+    .user-area span{
+        display:none;
+    }
+}
+
+@media(max-width:480px){
+    .stats-grid{
+        grid-template-columns:1fr;
+    }
+
+    .login-box{
+        padding:25px 20px;
+    }
+}
+
+/* =========================
+   LOADING
+========================= */
+
+.loading{
+    text-align:center;
+    padding:30px;
+    color:#718096;
+}
+
+.empty{
+    text-align:center;
+    padding:30px;
+    color:#718096;
+}
+
+/* =========================
+   TOAST
+========================= */
+
+#toast{
+    position:fixed;
+    bottom:20px;
+    left:20px;
+    z-index:5000;
+    background:#172033;
+    color:white;
+    padding:13px 18px;
+    border-radius:10px;
+    opacity:0;
+    transform:translateY(20px);
+    pointer-events:none;
+    transition:.25s;
+}
+
+#toast.show{
+    opacity:1;
+    transform:translateY(0);
+}
+
+#toast.success{
+    background:#198754;
+}
+
+#toast.error{
+    background:#dc3545;
+}
+</style>
 </head>
 
 <body>
@@ -30,74 +565,49 @@
      LOGIN
 ===================================================== -->
 
-<div
-    id="login-screen"
-    class="login-screen"
->
+<div id="loginPage">
 
-    <div class="login-card">
+    <div class="login-box">
 
-        <div class="login-logo">
-            🏫
-        </div>
+        <div class="logo">🏫</div>
 
-        <h1>
-            منصة إدارة المدارس
-        </h1>
+        <h1>نظام إدارة المدرسة</h1>
 
-        <p class="login-subtitle">
-            تسجيل الدخول إلى النظام
-        </p>
+        <p>تسجيل الدخول إلى لوحة التحكم</p>
 
-        <form id="login-form">
+        <form id="loginForm">
 
             <div class="form-group">
-
-                <label>
-                    اسم المستخدم
-                </label>
-
+                <label>اسم المستخدم</label>
                 <input
+                    id="loginUsername"
                     type="text"
-                    name="username"
                     placeholder="أدخل اسم المستخدم"
-                    autocomplete="username"
                     required
                 >
-
             </div>
 
             <div class="form-group">
-
-                <label>
-                    كلمة المرور
-                </label>
-
+                <label>كلمة المرور</label>
                 <input
+                    id="loginPassword"
                     type="password"
-                    name="password"
                     placeholder="أدخل كلمة المرور"
-                    autocomplete="current-password"
                     required
                 >
-
             </div>
 
             <button
+                class="btn btn-primary btn-block"
                 type="submit"
-                class="btn btn-primary login-button"
             >
                 تسجيل الدخول
             </button>
 
         </form>
 
-        <div class="login-info">
-
-            <div>
-                🔐 النظام آمن ومخصص للمستخدمين المصرح لهم
-            </div>
-
+        <div style="margin-top:20px;text-align:center;color:#718096;font-size:12px">
+            النظام المدرسي الذكي
         </div>
 
     </div>
@@ -106,1477 +616,4861 @@
 
 
 <!-- =====================================================
-     APPLICATION
+     APP
 ===================================================== -->
 
-<div
-    id="app"
-    class="app"
-    style="display:none;"
->
+<div id="appPage" class="hidden">
 
+    <header class="topbar">
 
-    <!-- =================================================
-         SIDEBAR
-    ================================================== -->
+        <button
+            class="mobile-menu"
+            onclick="toggleSidebar()"
+        >
+            ☰
+        </button>
 
-    <aside class="sidebar">
+        <div class="topbar-title">
+            🏫 نظام إدارة المدرسة
+        </div>
 
-        <div class="sidebar-header">
-
-            <div class="sidebar-logo">
-                🏫
-            </div>
+        <div class="user-area">
 
             <div>
-
-                <strong>
-                    مدرسة
-                </strong>
-
-                <span>
-                    نظام الإدارة
-                </span>
-
+                <span id="topUserName"></span>
             </div>
+
+            <div
+                class="user-avatar"
+                id="topUserAvatar"
+            >
+                U
+            </div>
+
+            <button
+                class="btn btn-danger"
+                onclick="logout()"
+            >
+                خروج
+            </button>
 
         </div>
 
-
-        <!-- USER -->
-
-        <div class="sidebar-user">
-
-            <div class="user-avatar">
-                👤
-            </div>
-
-            <div class="user-details">
-
-                <strong id="user-name">
-                    المستخدم
-                </strong>
-
-                <span id="user-role">
-                    مستخدم
-                </span>
-
-            </div>
-
-        </div>
+    </header>
 
 
-        <!-- NAVIGATION -->
+    <div class="layout">
 
-        <nav class="sidebar-nav">
+        <!-- SIDEBAR -->
 
-            <a
-                href="#"
+        <aside
+            class="sidebar"
+            id="sidebar"
+        >
+
+            <button
                 data-page="dashboard"
-                class="nav-item active"
+                onclick="showPage('dashboard')"
             >
-                <span>📊</span>
-                <span>لوحة التحكم</span>
-            </a>
+                📊 لوحة التحكم
+            </button>
 
-
-            <!-- OWNER -->
-
-            <a
-                href="#"
+            <button
                 data-page="schools"
-                data-role="owner"
-                class="nav-item"
+                id="navSchools"
+                onclick="showPage('schools')"
             >
-                <span>🏫</span>
-                <span>المدارس</span>
-            </a>
+                🏫 المدارس
+            </button>
+
+            <button
+                data-page="users"
+                onclick="showPage('users')"
+            >
+                👥 المستخدمون
+            </button>
+
+            <button
+                data-page="students"
+                onclick="showPage('students')"
+            >
+                🎓 الطلاب
+            </button>
+
+            <button
+                data-page="attendance"
+                onclick="showPage('attendance')"
+            >
+                📝 الحضور
+            </button>
+
+            <button
+                data-page="employees"
+                onclick="showPage('employees')"
+            >
+                👨‍💼 الموظفون
+            </button>
+
+            <button
+                data-page="payroll"
+                onclick="showPage('payroll')"
+            >
+                💰 الرواتب
+            </button>
+
+            <button
+                data-page="notes"
+                onclick="showPage('notes')"
+            >
+                📋 الملاحظات
+            </button>
+
+            <button
+                data-page="videos"
+                onclick="showPage('videos')"
+            >
+                🎥 الحصص والفيديوهات
+            </button>
+
+            <button
+                data-page="announcements"
+                onclick="showPage('announcements')"
+            >
+                📢 التعاميم
+            </button>
+
+            <button
+                data-page="requests"
+                onclick="showPage('requests')"
+            >
+                📩 الطلبات
+            </button>
+
+            <button
+                data-page="messages"
+                onclick="showPage('messages')"
+            >
+                💬 الرسائل
+            </button>
+
+            <button
+                data-page="reports"
+                onclick="showPage('reports')"
+            >
+                📈 التقارير
+            </button>
+
+            <button
+                data-page="audit"
+                onclick="showPage('audit')"
+            >
+                🧾 سجل العمليات
+            </button>
+
+        </aside>
+
+
+        <!-- CONTENT -->
+
+        <main class="content">
+
+            <!-- DASHBOARD -->
+
+            <section
+                id="page-dashboard"
+                class="page"
+            >
+
+                <div class="page-title">
+                    <h2>لوحة التحكم</h2>
+                    <p>نظرة عامة على النظام</p>
+                </div>
+
+                <div
+                    id="dashboardStats"
+                    class="stats-grid"
+                >
+                    <div class="loading">
+                        جاري التحميل...
+                    </div>
+                </div>
+
+                <div class="panel">
+
+                    <div class="panel-header">
+                        <h3>معلومات المستخدم</h3>
+                    </div>
+
+                    <div id="dashboardUser">
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- SCHOOLS -->
+
+            <section
+                id="page-schools"
+                class="page hidden"
+            >
+
+                <div class="page-title">
+
+                    <h2>إدارة المدارس</h2>
+
+                    <p>
+                        إدارة المدارس والاشتراكات
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openSchoolModal()"
+                    >
+                        + إضافة مدرسة
+                    </button>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadSchools()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div
+                        id="schoolsTable"
+                        class="loading"
+                    >
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
 
 
             <!-- USERS -->
 
-            <a
-                href="#"
-                data-page="users"
-                data-role="owner,school_admin"
-                class="nav-item"
+            <section
+                id="page-users"
+                class="page hidden"
             >
-                <span>👥</span>
-                <span>المستخدمون</span>
-            </a>
+
+                <div class="page-title">
+
+                    <h2>المستخدمون</h2>
+
+                    <p>
+                        إدارة حسابات المستخدمين والصلاحيات
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openUserModal()"
+                    >
+                        + إضافة مستخدم
+                    </button>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadUsers()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div
+                        id="usersTable"
+                        class="loading"
+                    >
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
 
 
             <!-- STUDENTS -->
 
-            <a
-                href="#"
-                data-page="students"
-                data-role="owner,school_admin,teacher,parent,student"
-                class="nav-item"
+            <section
+                id="page-students"
+                class="page hidden"
             >
-                <span>🎓</span>
-                <span>الطلاب</span>
-            </a>
 
+                <div class="page-title">
 
-            <!-- EMPLOYEES -->
+                    <h2>الطلاب</h2>
 
-            <a
-                href="#"
-                data-page="employees"
-                data-role="owner,school_admin,hr,accountant"
-                class="nav-item"
-            >
-                <span>👨‍🏫</span>
-                <span>الموظفون</span>
-            </a>
+                    <p>
+                        إدارة بيانات الطلاب
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <input
+                        id="studentSearch"
+                        placeholder="بحث عن طالب..."
+                        oninput="filterStudents()"
+                    >
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadStudents()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div
+                        id="studentsTable"
+                        class="loading"
+                    >
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
 
 
             <!-- ATTENDANCE -->
 
-            <a
-                href="#"
-                data-page="attendance"
-                data-role="owner,school_admin,teacher,hr,employee,parent,student"
-                class="nav-item"
+            <section
+                id="page-attendance"
+                class="page hidden"
             >
-                <span>📋</span>
-                <span>الحضور</span>
-            </a>
+
+                <div class="page-title">
+
+                    <h2>الحضور والغياب</h2>
+
+                    <p>
+                        متابعة حضور الطلاب
+                    </p>
+
+                </div>
+
+                <div class="panel">
+
+                    <div class="toolbar">
+
+                        <input
+                            type="date"
+                            id="attendanceDate"
+                        >
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="loadAttendance()"
+                        >
+                            عرض الحضور
+                        </button>
+
+                    </div>
+
+                    <div id="attendanceTable">
+                        اختر التاريخ
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- EMPLOYEES -->
+
+            <section
+                id="page-employees"
+                class="page hidden"
+            >
+
+                <div class="page-title">
+
+                    <h2>الموظفون</h2>
+
+                    <p>
+                        إدارة الموظفين والبيانات الوظيفية
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openEmployeeModal()"
+                    >
+                        + إضافة موظف
+                    </button>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadEmployees()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div
+                        id="employeesTable"
+                        class="loading"
+                    >
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- PAYROLL -->
+
+            <section
+                id="page-payroll"
+                class="page hidden"
+            >
+
+                <div class="page-title">
+
+                    <h2>الرواتب</h2>
+
+                    <p>
+                        الرواتب والمكافآت والخصومات
+                    </p>
+
+                </div>
+
+                <div class="panel">
+
+                    <div class="toolbar">
+
+                        <input
+                            type="month"
+                            id="payrollMonth"
+                        >
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="loadPayroll()"
+                        >
+                            عرض الرواتب
+                        </button>
+
+                        <button
+                            class="btn btn-secondary"
+                            onclick="openPayrollSettings()"
+                        >
+                            إعدادات الرواتب
+                        </button>
+
+                    </div>
+
+                    <div id="payrollTable">
+                        اختر الشهر
+                    </div>
+
+                </div>
+
+            </section>
 
 
             <!-- NOTES -->
 
-            <a
-                href="#"
-                data-page="notes"
-                data-role="owner,school_admin,teacher,parent,student"
-                class="nav-item"
+            <section
+                id="page-notes"
+                class="page hidden"
             >
-                <span>📝</span>
-                <span>الملاحظات</span>
-            </a>
+
+                <div class="page-title">
+
+                    <h2>ملاحظات الطلاب</h2>
+
+                    <p>
+                        متابعة الملاحظات والسجلات
+                    </p>
+
+                </div>
+
+                <div class="panel">
+
+                    <div class="toolbar">
+
+                        <select id="noteStudentSelect">
+                            <option value="">
+                                اختر الطالب
+                            </option>
+                        </select>
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="openNoteModal()"
+                        >
+                            + إضافة ملاحظة
+                        </button>
+
+                    </div>
+
+                    <div id="notesTable">
+                        اختر طالباً
+                    </div>
+
+                </div>
+
+            </section>
 
 
-            <!-- LESSONS -->
+            <!-- VIDEOS -->
 
-            <a
-                href="#"
-                data-page="lessons"
-                data-role="owner,school_admin,teacher,parent,student"
-                class="nav-item"
+            <section
+                id="page-videos"
+                class="page hidden"
             >
-                <span>🎥</span>
-                <span>الحصص</span>
-            </a>
 
+                <div class="page-title">
 
-            <!-- REQUESTS -->
+                    <h2>الحصص والفيديوهات</h2>
 
-            <a
-                href="#"
-                data-page="requests"
-                data-role="owner,school_admin,hr,employee,teacher"
-                class="nav-item"
-            >
-                <span>📨</span>
-                <span>الطلبات</span>
-            </a>
+                    <p>
+                        إدارة المحتوى التعليمي
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openVideoModal()"
+                    >
+                        + إضافة حصة
+                    </button>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadVideos()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div id="videosTable">
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
 
 
             <!-- ANNOUNCEMENTS -->
 
-            <a
-                href="#"
-                data-page="announcements"
-                data-role="owner,school_admin,teacher,employee,parent,student"
-                class="nav-item"
+            <section
+                id="page-announcements"
+                class="page hidden"
             >
-                <span>📢</span>
-                <span>التعاميم</span>
-            </a>
+
+                <div class="page-title">
+
+                    <h2>التعاميم</h2>
+
+                    <p>
+                        نشر الإعلانات والتعاميم
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openAnnouncementModal()"
+                    >
+                        + نشر تعميم
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div id="announcementsTable">
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- REQUESTS -->
+
+            <section
+                id="page-requests"
+                class="page hidden"
+            >
+
+                <div class="page-title">
+
+                    <h2>الطلبات الإدارية</h2>
+
+                    <p>
+                        الطلبات والموافقات
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openRequestModal()"
+                    >
+                        + طلب جديد
+                    </button>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadRequests()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div id="requestsTable">
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- MESSAGES -->
+
+            <section
+                id="page-messages"
+                class="page hidden"
+            >
+
+                <div class="page-title">
+
+                    <h2>الرسائل</h2>
+
+                    <p>
+                        المراسلات الداخلية
+                    </p>
+
+                </div>
+
+                <div class="toolbar">
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="openMessageModal()"
+                    >
+                        + رسالة جديدة
+                    </button>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="loadMessages()"
+                    >
+                        تحديث
+                    </button>
+
+                </div>
+
+                <div class="panel">
+
+                    <div id="messagesTable">
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- REPORTS -->
+
+            <section
+                id="page-reports"
+                class="page hidden"
+            >
+
+                <div class="page-title">
+
+                    <h2>التقارير</h2>
+
+                    <p>
+                        الإحصائيات والتقارير
+                    </p>
+
+                </div>
+
+                <div class="panel">
+
+                    <div class="toolbar">
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="loadAttendanceReport()"
+                        >
+                            تقرير الحضور
+                        </button>
+
+                    </div>
+
+                    <div id="reportsResult">
+                        اختر التقرير
+                    </div>
+
+                </div>
+
+            </section>
 
 
             <!-- AUDIT -->
 
-            <a
-                href="#"
-                data-page="audit"
-                data-role="owner,school_admin"
-                class="nav-item"
+            <section
+                id="page-audit"
+                class="page hidden"
             >
-                <span>📜</span>
-                <span>سجل العمليات</span>
-            </a>
 
-        </nav>
+                <div class="page-title">
+
+                    <h2>سجل العمليات</h2>
+
+                    <p>
+                        جميع العمليات المسجلة في النظام
+                    </p>
+
+                </div>
+
+                <div class="panel">
+
+                    <div
+                        id="auditTable"
+                        class="loading"
+                    >
+                        جاري التحميل...
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+</div>
 
 
-        <!-- SIDEBAR FOOTER -->
+<!-- =====================================================
+     MODAL
+===================================================== -->
 
-        <div class="sidebar-footer">
+<div
+    id="modal"
+    class="modal hidden"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h3 id="modalTitle">
+                إضافة
+            </h3>
 
             <button
-                type="button"
-                onclick="changeMyPassword()"
-                class="sidebar-button"
+                class="close-btn"
+                onclick="closeModal()"
             >
-                🔐 تغيير كلمة المرور
-            </button>
-
-            <button
-                type="button"
-                onclick="logout()"
-                class="sidebar-button logout-button"
-            >
-                🚪 تسجيل الخروج
+                ×
             </button>
 
         </div>
 
-    </aside>
+        <div id="modalBody"></div>
+
+    </div>
+
+</div>
 
 
-    <!-- =================================================
-         MAIN
-    ================================================== -->
-
-    <main class="main-content">
+<div id="toast"></div>
 
 
-        <!-- TOP BAR -->
+<script>
 
-        <header class="topbar">
+/* =====================================================
+   STATE
+===================================================== */
 
-            <div>
+let currentUser = null;
+let currentSchool = null;
+let studentsCache = [];
+let employeesCache = [];
+let usersCache = [];
+let schoolsCache = [];
 
-                <h2 id="page-title">
-                    لوحة التحكم
-                </h2>
 
-                <p id="school-name">
-                    منصة إدارة المدارس
-                </p>
+/* =====================================================
+   HELPERS
+===================================================== */
+
+function api(url, options = {}){
+
+    options.headers = {
+        "Content-Type":"application/json",
+        ...(options.headers || {})
+    };
+
+    if(currentUser){
+        options.headers["x-user-id"] = currentUser.id;
+    }
+
+    return fetch(url, options)
+        .then(async response => {
+
+            const data =
+                await response.json()
+                    .catch(() => ({}));
+
+            if(!response.ok){
+                throw new Error(
+                    data.error ||
+                    "حدث خطأ"
+                );
+            }
+
+            return data;
+
+        });
+
+}
+
+
+function toast(message,type="success"){
+
+    const el =
+        document.getElementById("toast");
+
+    el.textContent = message;
+
+    el.className =
+        "show " + type;
+
+    setTimeout(() => {
+        el.className = "";
+    },3000);
+}
+
+
+function escapeHtml(value){
+
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+function openModal(title,html){
+
+    document.getElementById("modalTitle")
+        .textContent = title;
+
+    document.getElementById("modalBody")
+        .innerHTML = html;
+
+    document.getElementById("modal")
+        .classList.remove("hidden");
+
+}
+
+
+function closeModal(){
+
+    document.getElementById("modal")
+        .classList.add("hidden");
+
+}
+
+
+function toggleSidebar(){
+
+    document.getElementById("sidebar")
+        .classList.toggle("open");
+
+}
+
+
+/* =====================================================
+   LOGIN
+===================================================== */
+
+document
+.getElementById("loginForm")
+.addEventListener("submit",async e=>{
+
+    e.preventDefault();
+
+    const username =
+        document.getElementById("loginUsername")
+            .value.trim();
+
+    const password =
+        document.getElementById("loginPassword")
+            .value;
+
+    try{
+
+        const data =
+            await fetch("/api/login",{
+                method:"POST",
+                headers:{
+                    "Content-Type":
+                        "application/json"
+                },
+                body:JSON.stringify({
+                    username,
+                    password
+                })
+            })
+            .then(async r=>{
+
+                const d =
+                    await r.json();
+
+                if(!r.ok){
+                    throw new Error(
+                        d.error ||
+                        "فشل تسجيل الدخول"
+                    );
+                }
+
+                return d;
+
+            });
+
+        currentUser = data.user;
+        currentSchool = data.school;
+
+        localStorage.setItem(
+            "school_user",
+            JSON.stringify(currentUser)
+        );
+
+        showApp();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+});
+
+
+function showApp(){
+
+    document
+        .getElementById("loginPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("appPage")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("topUserName")
+        .textContent =
+            currentUser.name;
+
+    document
+        .getElementById("topUserAvatar")
+        .textContent =
+            (currentUser.name || "U")
+                .charAt(0);
+
+    applyPermissions();
+
+    showPage("dashboard");
+
+    startActivity();
+
+}
+
+
+function logout(){
+
+    localStorage.removeItem(
+        "school_user"
+    );
+
+    currentUser = null;
+
+    location.reload();
+
+}
+
+
+function restoreSession(){
+
+    const saved =
+        localStorage.getItem(
+            "school_user"
+        );
+
+    if(!saved) return;
+
+    try{
+
+        currentUser =
+            JSON.parse(saved);
+
+        api("/api/me")
+            .then(data=>{
+
+                currentUser =
+                    data.user;
+
+                currentSchool =
+                    data.school;
+
+                showApp();
+
+            })
+            .catch(()=>{
+
+                localStorage.removeItem(
+                    "school_user"
+                );
+
+            });
+
+    }catch(e){
+
+        localStorage.removeItem(
+            "school_user"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   PERMISSIONS
+===================================================== */
+
+function hasPermission(permission){
+
+    if(!currentUser) return false;
+
+    if(currentUser.role === "owner"){
+        return true;
+    }
+
+    const permissions = {
+        admin:[
+            "dashboard","users","students",
+            "attendance","employees","payroll",
+            "notes","videos","announcements",
+            "requests","messages","reports"
+        ],
+        hr:[
+            "dashboard","employees","attendance",
+            "requests","messages"
+        ],
+        accountant:[
+            "dashboard","employees","payroll",
+            "requests","messages"
+        ],
+        teacher:[
+            "dashboard","students","attendance",
+            "notes","videos","announcements",
+            "messages"
+        ],
+        worker:[
+            "dashboard","requests",
+            "messages","announcements"
+        ],
+        reviewer:[
+            "dashboard","students","employees",
+            "attendance","payroll","reports"
+        ],
+        parent:[
+            "dashboard","students","attendance",
+            "notes","videos","announcements",
+            "messages"
+        ],
+        student:[
+            "dashboard","attendance","notes",
+            "videos","announcements","messages"
+        ]
+    };
+
+    return (
+        permissions[currentUser.role] || []
+    ).includes(permission);
+
+}
+
+
+function applyPermissions(){
+
+    const map = {
+        schools:"owner",
+        users:"users",
+        students:"students",
+        attendance:"attendance",
+        employees:"employees",
+        payroll:"payroll",
+        notes:"notes",
+        videos:"videos",
+        announcements:"announcements",
+        requests:"requests",
+        messages:"messages",
+        reports:"reports",
+        audit:"dashboard"
+    };
+
+    Object.entries(map)
+        .forEach(([page,permission])=>{
+
+            const btn =
+                document.querySelector(
+                    `[data-page="${page}"]`
+                );
+
+            if(!btn) return;
+
+            if(!hasPermission(permission)){
+                btn.classList.add("hidden");
+            }
+
+        });
+
+}
+
+
+/* =====================================================
+   PAGE NAVIGATION
+===================================================== */
+
+function showPage(page){
+
+    document
+        .querySelectorAll(".page")
+        .forEach(p=>{
+            p.classList.add("hidden");
+        });
+
+    const target =
+        document.getElementById(
+            "page-" + page
+        );
+
+    if(!target) return;
+
+    target.classList.remove("hidden");
+
+    document
+        .querySelectorAll(".sidebar button")
+        .forEach(b=>{
+            b.classList.remove("active");
+        });
+
+    const nav =
+        document.querySelector(
+            `[data-page="${page}"]`
+        );
+
+    if(nav){
+        nav.classList.add("active");
+    }
+
+    document
+        .getElementById("sidebar")
+        .classList.remove("open");
+
+    if(page === "dashboard")
+        loadDashboard();
+
+    if(page === "schools")
+        loadSchools();
+
+    if(page === "users")
+        loadUsers();
+
+    if(page === "students")
+        loadStudents();
+
+    if(page === "employees")
+        loadEmployees();
+
+    if(page === "videos")
+        loadVideos();
+
+    if(page === "announcements")
+        loadAnnouncements();
+
+    if(page === "requests")
+        loadRequests();
+
+    if(page === "messages")
+        loadMessages();
+
+    if(page === "audit")
+        loadAudit();
+
+    if(page === "notes")
+        loadNoteStudents();
+
+}
+
+
+/* =====================================================
+   ACTIVITY
+===================================================== */
+
+function startActivity(){
+
+    setInterval(()=>{
+
+        if(!currentUser) return;
+
+        api("/api/activity",{
+            method:"POST",
+            body:JSON.stringify({
+                user_id:currentUser.id
+            })
+        }).catch(()=>{});
+
+    },30000);
+
+}
+
+
+/* =====================================================
+   DASHBOARD
+===================================================== */
+
+async function loadDashboard(){
+
+    const box =
+        document.getElementById(
+            "dashboardStats"
+        );
+
+    try{
+
+        const data =
+            await api("/api/dashboard");
+
+        if(data.role === "owner"){
+
+            box.innerHTML = `
+
+                <div class="stat-card">
+                    <div class="label">
+                        المدارس
+                    </div>
+                    <div class="number">
+                        ${data.schools || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        المدارس النشطة
+                    </div>
+                    <div class="number">
+                        ${data.active_schools || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        المستخدمون
+                    </div>
+                    <div class="number">
+                        ${data.users || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        المتصلون الآن
+                    </div>
+                    <div class="number">
+                        ${data.online_users || 0}
+                    </div>
+                </div>
+
+            `;
+
+        }else{
+
+            box.innerHTML = `
+
+                <div class="stat-card">
+                    <div class="label">
+                        الطلاب
+                    </div>
+                    <div class="number">
+                        ${data.students || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        الموظفون
+                    </div>
+                    <div class="number">
+                        ${data.employees || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        المستخدمون
+                    </div>
+                    <div class="number">
+                        ${data.users || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        المتصلون الآن
+                    </div>
+                    <div class="number">
+                        ${data.online_users || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        الحاضرون اليوم
+                    </div>
+                    <div class="number">
+                        ${data.attendance?.present || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        الغائبون اليوم
+                    </div>
+                    <div class="number">
+                        ${data.attendance?.absent || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        المتأخرون
+                    </div>
+                    <div class="number">
+                        ${data.attendance?.late || 0}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="label">
+                        الطلبات المعلقة
+                    </div>
+                    <div class="number">
+                        ${data.pending_requests || 0}
+                    </div>
+                </div>
+
+            `;
+
+        }
+
+        document.getElementById(
+            "dashboardUser"
+        ).innerHTML = `
+
+            <strong>
+                ${escapeHtml(currentUser.name)}
+            </strong>
+
+            <br>
+
+            اسم المستخدم:
+            ${escapeHtml(currentUser.username)}
+
+            <br>
+
+            الصلاحية:
+            ${escapeHtml(currentUser.role)}
+
+            ${
+                currentSchool
+                ?
+                `<br>المدرسة:
+                 ${escapeHtml(currentSchool.name)}`
+                :
+                ""
+            }
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+/* =====================================================
+   SCHOOLS
+===================================================== */
+
+async function loadSchools(){
+
+    const box =
+        document.getElementById(
+            "schoolsTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/schools");
+
+        schoolsCache =
+            data.schools || [];
+
+        if(!schoolsCache.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد مدارس
+                 </div>`;
+
+            return;
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>المدرسة</th>
+                    <th>الكود</th>
+                    <th>المستخدمون</th>
+                    <th>الطلاب</th>
+                    <th>الحالة</th>
+                    <th>الاشتراك</th>
+                    <th>إجراء</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            ${schoolsCache.map(s=>`
+
+                <tr>
+
+                    <td>
+                        ${escapeHtml(s.name)}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(s.code)}
+                    </td>
+
+                    <td>
+                        ${s.users_count || 0}
+                    </td>
+
+                    <td>
+                        ${s.students_count || 0}
+                    </td>
+
+                    <td>
+                        <span class="badge ${
+                            s.status === "active"
+                            ? "badge-success"
+                            : "badge-danger"
+                        }">
+                            ${
+                                s.status === "active"
+                                ? "نشطة"
+                                : "موقوفة"
+                            }
+                        </span>
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            s.subscription_status
+                        )}
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="btn btn-secondary"
+                            onclick="editSchool(${s.id})"
+                        >
+                            تعديل
+                        </button>
+
+                        <button
+                            class="btn ${
+                                s.status === "active"
+                                ? "btn-danger"
+                                : "btn-success"
+                            }"
+                            onclick="toggleSchool(${s.id},'${s.status}')"
+                        >
+                            ${
+                                s.status === "active"
+                                ? "إيقاف"
+                                : "تفعيل"
+                            }
+                        </button>
+
+                    </td>
+
+                </tr>
+
+            `).join("")}
+
+            </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function openSchoolModal(){
+
+    openModal(
+        "إضافة مدرسة",
+        `
+
+        <form
+            onsubmit="saveSchool(event)"
+        >
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>اسم المدرسة</label>
+                    <input
+                        id="schoolName"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>كود المدرسة</label>
+                    <input id="schoolCode">
+                </div>
+
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input
+                        id="schoolEmail"
+                        type="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>الهاتف</label>
+                    <input id="schoolPhone">
+                </div>
+
+                <div class="form-group full">
+                    <label>العنوان</label>
+                    <input id="schoolAddress">
+                </div>
+
+                <div class="form-group">
+                    <label>بداية الاشتراك</label>
+                    <input
+                        id="schoolStart"
+                        type="date"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>نهاية الاشتراك</label>
+                    <input
+                        id="schoolEnd"
+                        type="date"
+                    >
+                </div>
 
             </div>
 
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                حفظ المدرسة
+            </button>
 
-            <div class="topbar-actions">
+        </form>
 
-                <div class="connection-status">
+        `
+    );
 
-                    <span class="status-dot"></span>
+}
 
-                    متصل
+
+async function saveSchool(e){
+
+    e.preventDefault();
+
+    try{
+
+        await api("/api/schools",{
+            method:"POST",
+            body:JSON.stringify({
+
+                name:
+                    document.getElementById(
+                        "schoolName"
+                    ).value,
+
+                code:
+                    document.getElementById(
+                        "schoolCode"
+                    ).value,
+
+                email:
+                    document.getElementById(
+                        "schoolEmail"
+                    ).value,
+
+                phone:
+                    document.getElementById(
+                        "schoolPhone"
+                    ).value,
+
+                address:
+                    document.getElementById(
+                        "schoolAddress"
+                    ).value,
+
+                subscription_start:
+                    document.getElementById(
+                        "schoolStart"
+                    ).value,
+
+                subscription_end:
+                    document.getElementById(
+                        "schoolEnd"
+                    ).value
+
+            })
+        });
+
+        closeModal();
+
+        toast("تم إنشاء المدرسة");
+
+        loadSchools();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+function editSchool(id){
+
+    const s =
+        schoolsCache.find(
+            x=>Number(x.id)===Number(id)
+        );
+
+    if(!s) return;
+
+    openModal(
+        "تعديل المدرسة",
+        `
+
+        <form
+            onsubmit="updateSchool(event,${id})"
+        >
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>اسم المدرسة</label>
+                    <input
+                        id="editSchoolName"
+                        value="${escapeHtml(s.name)}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>الكود</label>
+                    <input
+                        id="editSchoolCode"
+                        value="${escapeHtml(s.code)}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>البريد</label>
+                    <input
+                        id="editSchoolEmail"
+                        value="${escapeHtml(s.email)}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>الهاتف</label>
+                    <input
+                        id="editSchoolPhone"
+                        value="${escapeHtml(s.phone)}"
+                    >
+                </div>
+
+                <div class="form-group full">
+                    <label>العنوان</label>
+                    <input
+                        id="editSchoolAddress"
+                        value="${escapeHtml(s.address)}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>حالة الاشتراك</label>
+
+                    <select id="editSchoolSubscription">
+
+                        <option value="active">
+                            active
+                        </option>
+
+                        <option value="expired">
+                            expired
+                        </option>
+
+                    </select>
 
                 </div>
 
-                <div class="topbar-date">
+            </div>
 
-                    📅
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                حفظ التعديل
+            </button>
 
-                    <span id="current-date">
-                        اليوم
+        </form>
+
+        `
+    );
+
+    document.getElementById(
+        "editSchoolSubscription"
+    ).value =
+        s.subscription_status || "active";
+
+}
+
+
+async function updateSchool(e,id){
+
+    e.preventDefault();
+
+    try{
+
+        await api(
+            `/api/schools/${id}`,
+            {
+                method:"PATCH",
+                body:JSON.stringify({
+
+                    name:
+                        document.getElementById(
+                            "editSchoolName"
+                        ).value,
+
+                    code:
+                        document.getElementById(
+                            "editSchoolCode"
+                        ).value,
+
+                    email:
+                        document.getElementById(
+                            "editSchoolEmail"
+                        ).value,
+
+                    phone:
+                        document.getElementById(
+                            "editSchoolPhone"
+                        ).value,
+
+                    address:
+                        document.getElementById(
+                            "editSchoolAddress"
+                        ).value,
+
+                    subscription_status:
+                        document.getElementById(
+                            "editSchoolSubscription"
+                        ).value
+
+                })
+            }
+        );
+
+        closeModal();
+
+        toast("تم تعديل المدرسة");
+
+        loadSchools();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+async function toggleSchool(id,status){
+
+    try{
+
+        await api(
+            `/api/schools/${id}/status`,
+            {
+                method:"PATCH",
+                body:JSON.stringify({
+                    status:
+                        status === "active"
+                        ? "inactive"
+                        : "active"
+                })
+            }
+        );
+
+        toast("تم تغيير حالة المدرسة");
+
+        loadSchools();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   USERS
+===================================================== */
+
+async function loadUsers(){
+
+    const box =
+        document.getElementById(
+            "usersTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/users");
+
+        usersCache =
+            data.users || [];
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>الاسم</th>
+                <th>اسم المستخدم</th>
+                <th>الصلاحية</th>
+                <th>المدرسة</th>
+                <th>الحالة</th>
+                <th>النشاط</th>
+                <th>إجراء</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${usersCache.map(u=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(u.name)}
+                </td>
+
+                <td>
+                    ${escapeHtml(u.username)}
+                </td>
+
+                <td>
+                    ${escapeHtml(u.role)}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        u.school_name || "-"
+                    )}
+                </td>
+
+                <td>
+
+                    <span class="badge ${
+                        u.active
+                        ? "badge-success"
+                        : "badge-danger"
+                    }">
+
+                        ${
+                            u.active
+                            ? "نشط"
+                            : "موقوف"
+                        }
+
                     </span>
 
-                </div>
+                </td>
 
-            </div>
+                <td>
 
-        </header>
+                    <span class="badge ${
+                        u.online
+                        ? "badge-success"
+                        : "badge-warning"
+                    }">
+
+                        ${
+                            u.online
+                            ? "متصل الآن"
+                            : "غير متصل"
+                        }
+
+                    </span>
+
+                </td>
+
+                <td>
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="editUser(${u.id})"
+                    >
+                        تعديل
+                    </button>
+
+                    <button
+                        class="btn ${
+                            u.active
+                            ? "btn-danger"
+                            : "btn-success"
+                        }"
+                        onclick="toggleUser(${u.id},${u.active})"
+                    >
+                        ${
+                            u.active
+                            ? "إيقاف"
+                            : "تفعيل"
+                        }
+                    </button>
+
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
 
 
-        <!-- =================================================
-             DASHBOARD
-        ================================================== -->
+function openUserModal(){
 
-        <section
-            data-section="dashboard"
-            class="page-section"
+    let schoolOptions = "";
+
+    schoolsCache.forEach(s=>{
+
+        schoolOptions += `
+            <option value="${s.id}">
+                ${escapeHtml(s.name)}
+            </option>
+        `;
+
+    });
+
+    openModal(
+        "إضافة مستخدم",
+        `
+
+        <form
+            onsubmit="saveUser(event)"
         >
 
-            <div class="page-header">
+            <div class="form-grid">
 
-                <div>
+                <div class="form-group">
+                    <label>الاسم</label>
+                    <input id="userName" required>
+                </div>
 
-                    <h1>
-                        لوحة التحكم
-                    </h1>
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input id="userUsername" required>
+                </div>
 
-                    <p>
-                        نظرة عامة على النظام
-                    </p>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input
+                        id="userPassword"
+                        required
+                    >
+                </div>
 
+                <div class="form-group">
+                    <label>الصلاحية</label>
+
+                    <select id="userRole">
+
+                        <option value="admin">
+                            مدير
+                        </option>
+
+                        <option value="hr">
+                            الموارد البشرية
+                        </option>
+
+                        <option value="accountant">
+                            محاسب
+                        </option>
+
+                        <option value="teacher">
+                            معلم
+                        </option>
+
+                        <option value="worker">
+                            موظف
+                        </option>
+
+                        <option value="reviewer">
+                            مراجع
+                        </option>
+
+                        <option value="parent">
+                            ولي أمر
+                        </option>
+
+                        <option value="student">
+                            طالب
+                        </option>
+
+                    </select>
+
+                </div>
+
+                ${
+                    currentUser.role === "owner"
+                    ?
+                    `
+                    <div class="form-group">
+                        <label>المدرسة</label>
+
+                        <select id="userSchool">
+
+                            ${schoolOptions}
+
+                        </select>
+
+                    </div>
+                    `
+                    :
+                    ""
+                }
+
+                <div class="form-group">
+                    <label>البريد</label>
+                    <input id="userEmail">
+                </div>
+
+                <div class="form-group">
+                    <label>المسمى الوظيفي</label>
+                    <input id="userJob">
+                </div>
+
+                <div class="form-group">
+                    <label>الهاتف</label>
+                    <input id="userPhone">
                 </div>
 
             </div>
 
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                إضافة المستخدم
+            </button>
 
-            <div class="stats-grid">
+        </form>
 
+        `
+    );
 
-                <div class="stat-card">
+}
 
-                    <div class="stat-icon">
-                        👥
-                    </div>
 
-                    <div>
+async function saveUser(e){
 
-                        <span>
-                            المستخدمون
-                        </span>
+    e.preventDefault();
 
-                        <strong id="total-users">
-                            0
-                        </strong>
+    try{
 
-                    </div>
+        await api("/api/users",{
+            method:"POST",
+            body:JSON.stringify({
 
-                </div>
+                name:
+                    document.getElementById(
+                        "userName"
+                    ).value,
 
+                username:
+                    document.getElementById(
+                        "userUsername"
+                    ).value,
 
-                <div class="stat-card">
+                password:
+                    document.getElementById(
+                        "userPassword"
+                    ).value,
 
-                    <div class="stat-icon">
-                        🎓
-                    </div>
+                role:
+                    document.getElementById(
+                        "userRole"
+                    ).value,
 
-                    <div>
+                school_id:
+                    document.getElementById(
+                        "userSchool"
+                    )?.value || null,
 
-                        <span>
-                            الطلاب
-                        </span>
+                email:
+                    document.getElementById(
+                        "userEmail"
+                    ).value,
 
-                        <strong id="total-students">
-                            0
-                        </strong>
+                job_title:
+                    document.getElementById(
+                        "userJob"
+                    ).value,
 
-                    </div>
+                phone:
+                    document.getElementById(
+                        "userPhone"
+                    ).value
 
-                </div>
+            })
+        });
 
+        closeModal();
 
-                <div class="stat-card">
+        toast("تم إضافة المستخدم");
 
-                    <div class="stat-icon">
-                        👨‍🏫
-                    </div>
+        loadUsers();
 
-                    <div>
+    }catch(error){
 
-                        <span>
-                            الموظفون
-                        </span>
+        toast(
+            error.message,
+            "error"
+        );
 
-                        <strong id="total-employees">
-                            0
-                        </strong>
+    }
 
-                    </div>
+}
 
-                </div>
 
+function editUser(id){
 
-                <div class="stat-card">
+    const u =
+        usersCache.find(
+            x=>Number(x.id)===Number(id)
+        );
 
-                    <div class="stat-icon">
-                        🟢
-                    </div>
+    if(!u) return;
 
-                    <div>
+    openModal(
+        "تعديل المستخدم",
+        `
 
-                        <span>
-                            متصل الآن
-                        </span>
-
-                        <strong id="online-users">
-                            0
-                        </strong>
-
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        ✅
-                    </div>
-
-                    <div>
-
-                        <span>
-                            الحاضرون
-                        </span>
-
-                        <strong id="present-today">
-                            0
-                        </strong>
-
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        ❌
-                    </div>
-
-                    <div>
-
-                        <span>
-                            الغائبون
-                        </span>
-
-                        <strong id="absent-today">
-                            0
-                        </strong>
-
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        ⏰
-                    </div>
-
-                    <div>
-
-                        <span>
-                            المتأخرون
-                        </span>
-
-                        <strong id="late-today">
-                            0
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="dashboard-grid">
-
-                <div class="panel">
-
-                    <div class="panel-header">
-
-                        <h3>
-                            آخر العمليات
-                        </h3>
-
-                    </div>
-
-                    <div id="recent-activities">
-
-                        <div class="empty-state">
-                            لا توجد عمليات حديثة
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="panel">
-
-                    <div class="panel-header">
-
-                        <h3>
-                            معلومات الحساب
-                        </h3>
-
-                    </div>
-
-                    <div class="account-info">
-
-                        <div>
-                            <span>
-                                الاسم
-                            </span>
-
-                            <strong id="user-name">
-                                -
-                            </strong>
-                        </div>
-
-                        <div>
-                            <span>
-                                الصلاحية
-                            </span>
-
-                            <strong id="user-role">
-                                -
-                            </strong>
-                        </div>
-
-                        <div>
-                            <span>
-                                المدرسة
-                            </span>
-
-                            <strong id="school-name">
-                                -
-                            </strong>
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             SCHOOLS
-        ================================================== -->
-
-        <section
-            data-section="schools"
-            class="page-section"
-            style="display:none;"
+        <form
+            onsubmit="updateUser(event,${id})"
         >
 
-            <div class="page-header">
+            <div class="form-grid">
 
-                <div>
+                <div class="form-group">
+                    <label>الاسم</label>
+                    <input
+                        id="editUserName"
+                        value="${escapeHtml(u.name)}"
+                    >
+                </div>
 
-                    <h1>
-                        🏫 المدارس
-                    </h1>
+                <div class="form-group">
+                    <label>البريد</label>
+                    <input
+                        id="editUserEmail"
+                        value="${escapeHtml(u.email)}"
+                    >
+                </div>
 
-                    <p>
-                        إدارة المدارس التابعة للنظام
-                    </p>
+                <div class="form-group">
+                    <label>المسمى الوظيفي</label>
+                    <input
+                        id="editUserJob"
+                        value="${escapeHtml(u.job_title)}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>الهاتف</label>
+                    <input
+                        id="editUserPhone"
+                        value="${escapeHtml(u.phone)}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>الصلاحية</label>
+
+                    <select id="editUserRole">
+
+                        ${[
+                            "admin",
+                            "hr",
+                            "accountant",
+                            "teacher",
+                            "worker",
+                            "reviewer",
+                            "parent",
+                            "student"
+                        ].map(role=>`
+
+                            <option value="${role}">
+                                ${role}
+                            </option>
+
+                        `).join("")}
+
+                    </select>
 
                 </div>
 
-                <button class="btn btn-primary">
-                    + إضافة مدرسة
-                </button>
+                <div class="form-group">
+                    <label>
+                        كلمة مرور جديدة
+                    </label>
 
-            </div>
-
-
-            <div class="panel">
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    #
-                                </th>
-
-                                <th>
-                                    المدرسة
-                                </th>
-
-                                <th>
-                                    الكود
-                                </th>
-
-                                <th>
-                                    البريد
-                                </th>
-
-                                <th>
-                                    الهاتف
-                                </th>
-
-                                <th>
-                                    الحالة
-                                </th>
-
-                                <th>
-                                    الاشتراك
-                                </th>
-
-                                <th>
-                                    نهاية الاشتراك
-                                </th>
-
-                                <th>
-                                    الإجراء
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody
-                            id="schools-table-body"
-                        >
-
-                            <tr>
-
-                                <td colspan="9">
-                                    جاري التحميل...
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
+                    <input
+                        id="editUserPassword"
+                        placeholder="اتركها فارغة بدون تغيير"
+                    >
 
                 </div>
 
             </div>
 
-        </section>
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                حفظ
+            </button>
+
+        </form>
+
+        `
+    );
+
+    document.getElementById(
+        "editUserRole"
+    ).value = u.role;
+
+}
 
 
-        <!-- =================================================
-             USERS
-        ================================================== -->
+async function updateUser(e,id){
 
-        <section
-            data-section="users"
-            class="page-section"
-            style="display:none;"
+    e.preventDefault();
+
+    const password =
+        document.getElementById(
+            "editUserPassword"
+        ).value;
+
+    try{
+
+        const body = {
+
+            name:
+                document.getElementById(
+                    "editUserName"
+                ).value,
+
+            email:
+                document.getElementById(
+                    "editUserEmail"
+                ).value,
+
+            job_title:
+                document.getElementById(
+                    "editUserJob"
+                ).value,
+
+            phone:
+                document.getElementById(
+                    "editUserPhone"
+                ).value,
+
+            role:
+                document.getElementById(
+                    "editUserRole"
+                ).value
+
+        };
+
+        if(password){
+            body.password = password;
+        }
+
+        await api(
+            `/api/users/${id}`,
+            {
+                method:"PATCH",
+                body:JSON.stringify(body)
+            }
+        );
+
+        closeModal();
+
+        toast("تم تعديل المستخدم");
+
+        loadUsers();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+async function toggleUser(id,active){
+
+    try{
+
+        await api(
+            `/api/users/${id}/status`,
+            {
+                method:"PATCH",
+                body:JSON.stringify({
+                    active:active ? 0 : 1
+                })
+            }
+        );
+
+        toast("تم تغيير حالة المستخدم");
+
+        loadUsers();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   STUDENTS
+===================================================== */
+
+async function loadStudents(){
+
+    const box =
+        document.getElementById(
+            "studentsTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/students");
+
+        studentsCache =
+            data.students ||
+            (Array.isArray(data) ? data : []);
+
+        renderStudents(studentsCache);
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function renderStudents(list){
+
+    const box =
+        document.getElementById(
+            "studentsTable"
+        );
+
+    if(!list.length){
+
+        box.innerHTML =
+            `<div class="empty">
+                لا يوجد طلاب
+             </div>`;
+
+        return;
+    }
+
+    box.innerHTML = `
+
+    <div class="table-wrapper">
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>الرقم</th>
+                <th>الاسم</th>
+                <th>الفصل</th>
+                <th>هاتف ولي الأمر</th>
+                <th>الحالة</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${list.map(s=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(s.student_number)}
+                </td>
+
+                <td>
+                    ${escapeHtml(s.name)}
+                </td>
+
+                <td>
+                    ${escapeHtml(s.class_name)}
+                </td>
+
+                <td>
+                    ${escapeHtml(s.parent_phone)}
+                </td>
+
+                <td>
+                    ${escapeHtml(s.status)}
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+    </table>
+
+    </div>
+
+    `;
+
+}
+
+
+function filterStudents(){
+
+    const value =
+        document.getElementById(
+            "studentSearch"
+        ).value
+        .toLowerCase();
+
+    renderStudents(
+        studentsCache.filter(s=>
+            String(s.name || "")
+                .toLowerCase()
+                .includes(value)
+            ||
+            String(s.student_number || "")
+                .toLowerCase()
+                .includes(value)
+        )
+    );
+
+}
+
+
+/* =====================================================
+   ATTENDANCE
+===================================================== */
+
+async function loadAttendance(){
+
+    const date =
+        document.getElementById(
+            "attendanceDate"
+        ).value;
+
+    if(!date){
+
+        toast(
+            "اختر التاريخ",
+            "error"
+        );
+
+        return;
+    }
+
+    const box =
+        document.getElementById(
+            "attendanceTable"
+        );
+
+    try{
+
+        const data =
+            await api(
+                `/api/attendance?date=${encodeURIComponent(date)}`
+            );
+
+        const rows =
+            Array.isArray(data)
+            ? data
+            : data.attendance || [];
+
+        if(!rows.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد بيانات حضور
+                 </div>`;
+
+            return;
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>الطالب</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+                <th>وقت الدخول</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${rows.map(r=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(
+                        r.student_name ||
+                        r.name ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.date)}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.status)}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.check_in || "-")}
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+/* =====================================================
+   EMPLOYEES
+===================================================== */
+
+async function loadEmployees(){
+
+    const box =
+        document.getElementById(
+            "employeesTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/employees");
+
+        employeesCache =
+            data.employees ||
+            (Array.isArray(data) ? data : []);
+
+        if(!employeesCache.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا يوجد موظفون
+                 </div>`;
+
+            return;
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>الاسم</th>
+                <th>الوظيفة</th>
+                <th>القسم</th>
+                <th>الهاتف</th>
+                <th>الراتب الأساسي</th>
+                <th>البدل</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${employeesCache.map(e=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(e.name)}
+                </td>
+
+                <td>
+                    ${escapeHtml(e.job_title)}
+                </td>
+
+                <td>
+                    ${escapeHtml(e.department)}
+                </td>
+
+                <td>
+                    ${escapeHtml(e.phone)}
+                </td>
+
+                <td>
+                    ${Number(e.basic_salary || 0).toFixed(2)}
+                </td>
+
+                <td>
+                    ${Number(e.allowance || 0).toFixed(2)}
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function openEmployeeModal(){
+
+    openModal(
+        "إضافة موظف",
+        `
+
+        <form
+            onsubmit="saveEmployee(event)"
         >
 
-            <div class="page-header">
+            <div class="form-grid">
 
-                <div>
+                <div class="form-group">
+                    <label>اسم الموظف</label>
+                    <input id="employeeName" required>
+                </div>
 
-                    <h1>
-                        👥 المستخدمون
-                    </h1>
+                <div class="form-group">
+                    <label>الوظيفة</label>
+                    <input id="employeeJob">
+                </div>
 
-                    <p>
-                        إدارة الحسابات والصلاحيات
-                    </p>
+                <div class="form-group">
+                    <label>القسم</label>
+                    <input id="employeeDepartment">
+                </div>
+
+                <div class="form-group">
+                    <label>الهاتف</label>
+                    <input id="employeePhone">
+                </div>
+
+                <div class="form-group">
+                    <label>الرقم الوظيفي</label>
+                    <input id="employeeNumber">
+                </div>
+
+                <div class="form-group">
+                    <label>تاريخ التعيين</label>
+                    <input
+                        id="employeeHireDate"
+                        type="date"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>الراتب الأساسي</label>
+                    <input
+                        id="employeeSalary"
+                        type="number"
+                        step="0.01"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>البدل</label>
+                    <input
+                        id="employeeAllowance"
+                        type="number"
+                        step="0.01"
+                    >
+                </div>
+
+            </div>
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                حفظ الموظف
+            </button>
+
+        </form>
+
+        `
+    );
+
+}
+
+
+async function saveEmployee(e){
+
+    e.preventDefault();
+
+    try{
+
+        await api(
+            "/api/employees",
+            {
+                method:"POST",
+                body:JSON.stringify({
+
+                    name:
+                        document.getElementById(
+                            "employeeName"
+                        ).value,
+
+                    job_title:
+                        document.getElementById(
+                            "employeeJob"
+                        ).value,
+
+                    department:
+                        document.getElementById(
+                            "employeeDepartment"
+                        ).value,
+
+                    phone:
+                        document.getElementById(
+                            "employeePhone"
+                        ).value,
+
+                    employee_number:
+                        document.getElementById(
+                            "employeeNumber"
+                        ).value,
+
+                    hire_date:
+                        document.getElementById(
+                            "employeeHireDate"
+                        ).value,
+
+                    basic_salary:
+                        Number(
+                            document.getElementById(
+                                "employeeSalary"
+                            ).value
+                        ),
+
+                    allowance:
+                        Number(
+                            document.getElementById(
+                                "employeeAllowance"
+                            ).value
+                        )
+
+                })
+            }
+        );
+
+        closeModal();
+
+        toast("تم إضافة الموظف");
+
+        loadEmployees();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   PAYROLL
+===================================================== */
+
+async function loadPayroll(){
+
+    const month =
+        document.getElementById(
+            "payrollMonth"
+        ).value;
+
+    if(!month){
+
+        toast(
+            "اختر الشهر",
+            "error"
+        );
+
+        return;
+    }
+
+    const box =
+        document.getElementById(
+            "payrollTable"
+        );
+
+    if(!employeesCache.length){
+        await loadEmployees();
+    }
+
+    if(!employeesCache.length){
+
+        box.innerHTML =
+            `<div class="empty">
+                لا يوجد موظفون
+             </div>`;
+
+        return;
+    }
+
+    const results = [];
+
+    try{
+
+        for(const employee of employeesCache){
+
+            const data =
+                await api(
+                    `/api/employees/${employee.id}/payroll?month=${encodeURIComponent(month)}`
+                );
+
+            results.push(data);
+
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>الموظف</th>
+                <th>الأساسي</th>
+                <th>البدل</th>
+                <th>المكافآت</th>
+                <th>الخصومات</th>
+                <th>الإجمالي</th>
+                <th>الصافي</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${results.map(r=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(
+                        r.employee?.name
+                    )}
+                </td>
+
+                <td>
+                    ${r.basic_salary}
+                </td>
+
+                <td>
+                    ${r.allowance}
+                </td>
+
+                <td>
+                    ${r.bonuses}
+                </td>
+
+                <td>
+                    ${r.deductions}
+                </td>
+
+                <td>
+                    ${r.gross}
+                </td>
+
+                <td>
+                    <strong>
+                        ${r.net}
+                    </strong>
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function openPayrollSettings(){
+
+    openModal(
+        "إعدادات الرواتب",
+        `
+
+        <div class="loading">
+            جاري تحميل الإعدادات...
+        </div>
+
+        `
+    );
+
+    api("/api/payroll-settings")
+        .then(s=>{
+
+            document.getElementById(
+                "modalBody"
+            ).innerHTML = `
+
+            <form
+                onsubmit="savePayrollSettings(event)"
+            >
+
+                <div class="form-group">
+
+                    <label>
+                        خصم الغياب
+                    </label>
+
+                    <input
+                        id="absenceDeduction"
+                        type="number"
+                        value="${s.absence_deduction || 0}"
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        خصم التأخير
+                    </label>
+
+                    <input
+                        id="lateDeduction"
+                        type="number"
+                        value="${s.late_deduction || 0}"
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        الدقائق المسموحة للتأخير
+                    </label>
+
+                    <input
+                        id="allowedLate"
+                        type="number"
+                        value="${s.allowed_late_minutes || 15}"
+                    >
 
                 </div>
 
                 <button
                     class="btn btn-primary"
-                    id="add-user-button"
+                    type="submit"
                 >
-                    + إضافة مستخدم
+                    حفظ
                 </button>
 
-            </div>
+            </form>
 
+            `;
 
-            <div class="panel">
+        })
+        .catch(error=>{
 
-                <div class="table-container">
+            document.getElementById(
+                "modalBody"
+            ).innerHTML =
+                `<div class="empty">
+                    ${escapeHtml(error.message)}
+                 </div>`;
 
-                    <table>
+        });
 
-                        <thead>
+}
 
-                            <tr>
 
-                                <th>
-                                    #
-                                </th>
+async function savePayrollSettings(e){
 
-                                <th>
-                                    الاسم
-                                </th>
+    e.preventDefault();
 
-                                <th>
-                                    اسم المستخدم
-                                </th>
+    try{
 
-                                <th>
-                                    الصلاحية
-                                </th>
+        await api(
+            "/api/payroll-settings",
+            {
+                method:"PATCH",
+                body:JSON.stringify({
 
-                                <th>
-                                    البريد
-                                </th>
+                    absence_deduction:
+                        Number(
+                            document.getElementById(
+                                "absenceDeduction"
+                            ).value
+                        ),
 
-                                <th>
-                                    الحالة
-                                </th>
+                    late_deduction:
+                        Number(
+                            document.getElementById(
+                                "lateDeduction"
+                            ).value
+                        ),
 
-                                <th>
-                                    الاتصال
-                                </th>
+                    allowed_late_minutes:
+                        Number(
+                            document.getElementById(
+                                "allowedLate"
+                            ).value
+                        )
 
-                                <th>
-                                    آخر دخول
-                                </th>
+                })
+            }
+        );
 
-                                <th>
-                                    الإجراءات
-                                </th>
+        closeModal();
 
-                            </tr>
+        toast(
+            "تم تحديث إعدادات الرواتب"
+        );
 
-                        </thead>
+    }catch(error){
 
-                        <tbody
-                            id="users-table-body"
-                        >
+        toast(
+            error.message,
+            "error"
+        );
 
-                            <tr>
+    }
 
-                                <td colspan="9">
-                                    جاري التحميل...
-                                </td>
+}
 
-                            </tr>
 
-                        </tbody>
+/* =====================================================
+   NOTES
+===================================================== */
 
-                    </table>
+async function loadNoteStudents(){
 
-                </div>
+    try{
 
-            </div>
+        if(!studentsCache.length){
 
-        </section>
+            const data =
+                await api("/api/students");
 
+            studentsCache =
+                data.students ||
+                (Array.isArray(data)
+                    ? data
+                    : []);
 
-        <!-- =================================================
-             STUDENTS
-        ================================================== -->
+        }
 
-        <section
-            data-section="students"
-            class="page-section"
-            style="display:none;"
-        >
+        const select =
+            document.getElementById(
+                "noteStudentSelect"
+            );
 
-            <div class="page-header">
+        select.innerHTML =
+            `<option value="">
+                اختر الطالب
+             </option>`;
 
-                <div>
+        studentsCache.forEach(s=>{
 
-                    <h1>
-                        🎓 الطلاب
-                    </h1>
+            select.innerHTML += `
+                <option value="${s.id}">
+                    ${escapeHtml(s.name)}
+                </option>
+            `;
 
-                    <p>
-                        ملفات الطلاب وبياناتهم
-                    </p>
+        });
 
-                </div>
+        select.onchange = () => {
 
-                <button class="btn btn-primary">
-                    + إضافة طالب
-                </button>
+            if(select.value){
+                loadNotes(select.value);
+            }
 
-            </div>
+        };
 
+    }catch(error){
 
-            <div class="panel">
+        toast(
+            error.message,
+            "error"
+        );
 
-                <div class="table-container">
+    }
 
-                    <table>
+}
 
-                        <thead>
 
-                            <tr>
+async function loadNotes(studentId){
 
-                                <th>
-                                    #
-                                </th>
+    const box =
+        document.getElementById(
+            "notesTable"
+        );
 
-                                <th>
-                                    رقم الطالب
-                                </th>
+    try{
 
-                                <th>
-                                    الاسم
-                                </th>
+        const data =
+            await api(
+                `/api/notes/${studentId}`
+            );
 
-                                <th>
-                                    الفصل
-                                </th>
+        const notes =
+            Array.isArray(data)
+            ? data
+            : [];
 
-                                <th>
-                                    ولي الأمر
-                                </th>
+        if(!notes.length){
 
-                                <th>
-                                    الحالة
-                                </th>
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد ملاحظات
+                 </div>`;
 
-                                <th>
-                                    تاريخ الإضافة
-                                </th>
+            return;
 
-                            </tr>
+        }
 
-                        </thead>
+        box.innerHTML = `
 
-                        <tbody
-                            id="students-table-body"
-                        >
-
-                            <tr>
-
-                                <td colspan="7">
-                                    جاري التحميل...
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             EMPLOYEES
-        ================================================== -->
-
-        <section
-            data-section="employees"
-            class="page-section"
-            style="display:none;"
-        >
-
-            <div class="page-header">
-
-                <div>
-
-                    <h1>
-                        👨‍🏫 الموظفون
-                    </h1>
-
-                    <p>
-                        إدارة الموظفين
-                    </p>
-
-                </div>
-
-                <button class="btn btn-primary">
-                    + إضافة موظف
-                </button>
-
-            </div>
-
-
-            <div class="panel">
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    #
-                                </th>
-
-                                <th>
-                                    الاسم
-                                </th>
-
-                                <th>
-                                    الوظيفة
-                                </th>
-
-                                <th>
-                                    القسم
-                                </th>
-
-                                <th>
-                                    الهاتف
-                                </th>
-
-                                <th>
-                                    تاريخ التعيين
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody
-                            id="employees-table-body"
-                        >
-
-                            <tr>
-
-                                <td colspan="6">
-                                    جاري التحميل...
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             ATTENDANCE
-        ================================================== -->
-
-        <section
-            data-section="attendance"
-            class="page-section"
-            style="display:none;"
-        >
-
-            <div class="page-header">
-
-                <div>
-
-                    <h1>
-                        📋 الحضور
-                    </h1>
-
-                    <p>
-                        سجل الحضور والغياب والتأخير
-                    </p>
-
-                </div>
-
-                <button class="btn btn-primary">
-                    + تسجيل حضور
-                </button>
-
-            </div>
-
-
-            <div class="panel">
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    الاسم
-                                </th>
-
-                                <th>
-                                    الحالة
-                                </th>
-
-                                <th>
-                                    الدخول
-                                </th>
-
-                                <th>
-                                    الخروج
-                                </th>
-
-                                <th>
-                                    التاريخ
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody
-                            id="attendance-table-body"
-                        >
-
-                            <tr>
-
-                                <td colspan="5">
-                                    جاري التحميل...
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             NOTES
-        ================================================== -->
-
-        <section
-            data-section="notes"
-            class="page-section"
-            style="display:none;"
-        >
-
-            <div class="page-header">
-
-                <div>
-
-                    <h1>
-                        📝 الملاحظات
-                    </h1>
-
-                    <p>
-                        الملاحظات الأكاديمية والسلوكية
-                    </p>
-
-                </div>
-
-                <button class="btn btn-primary">
-                    + إضافة ملاحظة
-                </button>
-
-            </div>
-
+        ${notes.map(n=>`
 
             <div
-                id="notes-list"
-                class="cards-grid"
+                class="panel"
+                style="margin-bottom:10px"
             >
 
-                <div class="empty-state">
-                    جاري التحميل...
-                </div>
+                <strong>
+                    ${escapeHtml(n.type)}
+                </strong>
 
-            </div>
+                <p>
+                    ${escapeHtml(n.text)}
+                </p>
 
-        </section>
+                <small>
+                    ${escapeHtml(n.user_name || "")}
+                    —
+                    ${escapeHtml(n.created_at || "")}
+                </small>
 
+                <br><br>
 
-        <!-- =================================================
-             LESSONS
-        ================================================== -->
-
-        <section
-            data-section="lessons"
-            class="page-section"
-            style="display:none;"
-        >
-
-            <div class="page-header">
-
-                <div>
-
-                    <h1>
-                        🎥 الحصص
-                    </h1>
-
-                    <p>
-                        الحصص والفيديوهات والواجبات
-                    </p>
-
-                </div>
-
-                <button class="btn btn-primary">
-                    + نشر حصة
+                <button
+                    class="btn btn-danger"
+                    onclick="deleteNote(${n.id})"
+                >
+                    حذف
                 </button>
 
             </div>
 
+        `).join("")}
 
-            <div
-                id="lessons-list"
-                class="cards-grid"
-            >
+        `;
 
-                <div class="empty-state">
-                    جاري التحميل...
-                </div>
+    }catch(error){
 
-            </div>
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
 
-        </section>
+    }
+
+}
 
 
-        <!-- =================================================
-             REQUESTS
-        ================================================== -->
+function openNoteModal(){
 
-        <section
-            data-section="requests"
-            class="page-section"
-            style="display:none;"
+    const studentId =
+        document.getElementById(
+            "noteStudentSelect"
+        ).value;
+
+    if(!studentId){
+
+        toast(
+            "اختر الطالب أولاً",
+            "error"
+        );
+
+        return;
+    }
+
+    openModal(
+        "إضافة ملاحظة",
+        `
+
+        <form
+            onsubmit="saveNote(event,${studentId})"
         >
 
-            <div class="page-header">
+            <div class="form-group">
 
-                <div>
+                <label>نوع الملاحظة</label>
 
-                    <h1>
-                        📨 الطلبات
-                    </h1>
+                <select id="noteType">
 
-                    <p>
-                        الإجازات والسلف والطلبات الإدارية
-                    </p>
+                    <option value="عام">
+                        عام
+                    </option>
 
-                </div>
+                    <option value="سلوكي">
+                        سلوكي
+                    </option>
 
-                <button class="btn btn-primary">
-                    + طلب جديد
-                </button>
+                    <option value="أكاديمي">
+                        أكاديمي
+                    </option>
+
+                    <option value="إيجابي">
+                        إيجابي
+                    </option>
+
+                </select>
 
             </div>
 
+            <div class="form-group">
 
-            <div class="panel">
+                <label>الملاحظة</label>
 
-                <div class="table-container">
+                <textarea
+                    id="noteText"
+                    rows="5"
+                    required
+                ></textarea>
 
-                    <table>
+            </div>
 
-                        <thead>
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                حفظ الملاحظة
+            </button>
 
-                            <tr>
+        </form>
 
-                                <th>
-                                    #
-                                </th>
+        `
+    );
 
-                                <th>
-                                    النوع
-                                </th>
+}
 
-                                <th>
-                                    العنوان
-                                </th>
 
-                                <th>
-                                    الحالة
-                                </th>
+async function saveNote(e,studentId){
 
-                                <th>
-                                    التاريخ
-                                </th>
+    e.preventDefault();
 
-                            </tr>
+    try{
 
-                        </thead>
+        await api(
+            "/api/notes",
+            {
+                method:"POST",
+                body:JSON.stringify({
 
-                        <tbody
-                            id="requests-table-body"
+                    student_id:studentId,
+
+                    type:
+                        document.getElementById(
+                            "noteType"
+                        ).value,
+
+                    text:
+                        document.getElementById(
+                            "noteText"
+                        ).value
+
+                })
+            }
+        );
+
+        closeModal();
+
+        toast("تم حفظ الملاحظة");
+
+        loadNotes(studentId);
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+async function deleteNote(id){
+
+    if(!confirm("هل تريد حذف الملاحظة؟"))
+        return;
+
+    try{
+
+        await api(
+            `/api/notes/${id}`,
+            {
+                method:"DELETE"
+            }
+        );
+
+        toast("تم حذف الملاحظة");
+
+        const studentId =
+            document.getElementById(
+                "noteStudentSelect"
+            ).value;
+
+        if(studentId)
+            loadNotes(studentId);
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   VIDEOS
+===================================================== */
+
+async function loadVideos(){
+
+    const box =
+        document.getElementById(
+            "videosTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/videos");
+
+        const videos =
+            Array.isArray(data)
+            ? data
+            : [];
+
+        if(!videos.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد حصص
+                 </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>العنوان</th>
+                <th>المادة</th>
+                <th>المعلم</th>
+                <th>الفصل</th>
+                <th>الفيديو</th>
+                <th>PDF</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${videos.map(v=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(v.title)}
+                </td>
+
+                <td>
+                    ${escapeHtml(v.subject)}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        v.teacher_name || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(v.class_name)}
+                </td>
+
+                <td>
+
+                    ${
+                        v.video_url
+                        ?
+                        `<a
+                            href="${escapeHtml(v.video_url)}"
+                            target="_blank"
                         >
+                            فتح الفيديو
+                        </a>`
+                        :
+                        "-"
+                    }
 
-                            <tr>
+                </td>
 
-                                <td colspan="5">
-                                    جاري التحميل...
-                                </td>
+                <td>
 
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             ANNOUNCEMENTS
-        ================================================== -->
-
-        <section
-            data-section="announcements"
-            class="page-section"
-            style="display:none;"
-        >
-
-            <div class="page-header">
-
-                <div>
-
-                    <h1>
-                        📢 التعاميم
-                    </h1>
-
-                    <p>
-                        الأخبار والتعاميم المدرسية
-                    </p>
-
-                </div>
-
-                <button class="btn btn-primary">
-                    + إضافة تعميم
-                </button>
-
-            </div>
-
-
-            <div
-                id="announcements-list"
-                class="cards-grid"
-            >
-
-                <div class="empty-state">
-                    جاري التحميل...
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             AUDIT
-        ================================================== -->
-
-        <section
-            data-section="audit"
-            class="page-section"
-            style="display:none;"
-        >
-
-            <div class="page-header">
-
-                <div>
-
-                    <h1>
-                        📜 سجل العمليات
-                    </h1>
-
-                    <p>
-                        كل العمليات التي تمت داخل النظام
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="panel">
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    #
-                                </th>
-
-                                <th>
-                                    المستخدم
-                                </th>
-
-                                <th>
-                                    العملية
-                                </th>
-
-                                <th>
-                                    التفاصيل
-                                </th>
-
-                                <th>
-                                    التاريخ
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody
-                            id="audit-table-body"
+                    ${
+                        v.pdf_url
+                        ?
+                        `<a
+                            href="${escapeHtml(v.pdf_url)}"
+                            target="_blank"
                         >
+                            فتح PDF
+                        </a>`
+                        :
+                        "-"
+                    }
 
-                            <tr>
+                </td>
 
-                                <td colspan="5">
-                                    جاري التحميل...
-                                </td>
+            </tr>
 
-                            </tr>
+        `).join("")}
 
-                        </tbody>
+        </tbody>
 
-                    </table>
+        </table>
 
-                </div>
-
-            </div>
-
-        </section>
-
-
-    </main>
-
-</div>
-
-
-<!-- =====================================================
-     NOTIFICATIONS
-===================================================== -->
-
-<div
-    id="notifications-container"
-></div>
-
-
-<!-- =====================================================
-     LOADER
-===================================================== -->
-
-<div
-    id="app-loader"
-    style="display:none;"
->
-
-    <div class="loader-box">
-
-        <div class="loader-spinner"></div>
-
-        <div>
-            جاري التحميل...
         </div>
 
-    </div>
+        `;
 
-</div>
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
 
 
-<!-- =====================================================
-     SCRIPTS
-===================================================== -->
+function openVideoModal(){
 
-<script src="app.js"></script>
+    openModal(
+        "إضافة حصة",
+        `
 
-<script>
+        <form
+            onsubmit="saveVideo(event)"
+        >
 
-    /* التاريخ الحالي */
+            <div class="form-grid">
 
-    document.addEventListener(
-        "DOMContentLoaded",
-        function () {
+                <div class="form-group">
+                    <label>اسم الحصة</label>
+                    <input id="videoTitle" required>
+                </div>
 
-            const element =
-                document.getElementById(
-                    "current-date"
-                );
+                <div class="form-group">
+                    <label>المادة</label>
+                    <input id="videoSubject">
+                </div>
 
-            if (element) {
+                <div class="form-group">
+                    <label>الفصل</label>
+                    <input id="videoClass">
+                </div>
 
-                element.textContent =
-                    new Date().toLocaleDateString(
-                        "ar-EG",
-                        {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric"
-                        }
-                    );
-            }
+                <div class="form-group">
+                    <label>رابط الفيديو</label>
+                    <input id="videoUrl">
+                </div>
 
-        }
+                <div class="form-group">
+                    <label>رابط PDF</label>
+                    <input id="videoPdf">
+                </div>
+
+                <div class="form-group full">
+                    <label>الواجب</label>
+                    <textarea id="videoHomework"></textarea>
+                </div>
+
+            </div>
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                حفظ الحصة
+            </button>
+
+        </form>
+
+        `
     );
 
+}
 
-    /* عنوان الصفحة */
 
-    document.addEventListener(
-        "click",
-        function (event) {
+async function saveVideo(e){
 
-            const item =
-                event.target.closest(
-                    "[data-page]"
-                );
+    e.preventDefault();
 
-            if (!item) return;
+    try{
 
-            const titles = {
+        await api(
+            "/api/videos",
+            {
+                method:"POST",
+                body:JSON.stringify({
 
-                dashboard:
-                    "لوحة التحكم",
+                    title:
+                        document.getElementById(
+                            "videoTitle"
+                        ).value,
 
-                schools:
-                    "المدارس",
+                    subject:
+                        document.getElementById(
+                            "videoSubject"
+                        ).value,
 
-                users:
-                    "المستخدمون",
+                    class_name:
+                        document.getElementById(
+                            "videoClass"
+                        ).value,
 
-                students:
-                    "الطلاب",
+                    video_url:
+                        document.getElementById(
+                            "videoUrl"
+                        ).value,
 
-                employees:
-                    "الموظفون",
+                    pdf_url:
+                        document.getElementById(
+                            "videoPdf"
+                        ).value,
 
-                attendance:
-                    "الحضور",
+                    homework:
+                        document.getElementById(
+                            "videoHomework"
+                        ).value
 
-                notes:
-                    "الملاحظات",
-
-                lessons:
-                    "الحصص",
-
-                requests:
-                    "الطلبات",
-
-                announcements:
-                    "التعاميم",
-
-                audit:
-                    "سجل العمليات"
-
-            };
-
-            const page =
-                item.getAttribute(
-                    "data-page"
-                );
-
-            const title =
-                document.getElementById(
-                    "page-title"
-                );
-
-            if (title) {
-
-                title.textContent =
-                    titles[page] ||
-                    "لوحة التحكم";
+                })
             }
+        );
+
+        closeModal();
+
+        toast("تم حفظ الحصة");
+
+        loadVideos();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   ANNOUNCEMENTS
+===================================================== */
+
+async function loadAnnouncements(){
+
+    const box =
+        document.getElementById(
+            "announcementsTable"
+        );
+
+    try{
+
+        const data =
+            await api(
+                "/api/announcements"
+            );
+
+        const rows =
+            Array.isArray(data)
+            ? data
+            : [];
+
+        if(!rows.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد تعاميم
+                 </div>`;
+
+            return;
 
         }
+
+        box.innerHTML =
+            rows.map(a=>`
+
+                <div class="panel">
+
+                    <h3>
+                        ${escapeHtml(a.title)}
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(a.message)}
+                    </p>
+
+                    <small>
+                        ${escapeHtml(
+                            a.creator_name || ""
+                        )}
+                        —
+                        ${escapeHtml(
+                            a.created_at || ""
+                        )}
+                    </small>
+
+                </div>
+
+            `).join("");
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function openAnnouncementModal(){
+
+    openModal(
+        "نشر تعميم",
+        `
+
+        <form
+            onsubmit="saveAnnouncement(event)"
+        >
+
+            <div class="form-group">
+                <label>العنوان</label>
+                <input id="announcementTitle" required>
+            </div>
+
+            <div class="form-group">
+                <label>التوجيه إلى</label>
+
+                <select id="announcementRole">
+
+                    <option value="all">
+                        الجميع
+                    </option>
+
+                    <option value="teacher">
+                        المعلمين
+                    </option>
+
+                    <option value="parent">
+                        أولياء الأمور
+                    </option>
+
+                    <option value="student">
+                        الطلاب
+                    </option>
+
+                    <option value="worker">
+                        الموظفين
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>الرسالة</label>
+
+                <textarea
+                    id="announcementMessage"
+                    rows="6"
+                    required
+                ></textarea>
+
+            </div>
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                نشر التعميم
+            </button>
+
+        </form>
+
+        `
     );
+
+}
+
+
+async function saveAnnouncement(e){
+
+    e.preventDefault();
+
+    try{
+
+        await api(
+            "/api/announcements",
+            {
+                method:"POST",
+                body:JSON.stringify({
+
+                    title:
+                        document.getElementById(
+                            "announcementTitle"
+                        ).value,
+
+                    message:
+                        document.getElementById(
+                            "announcementMessage"
+                        ).value,
+
+                    target_role:
+                        document.getElementById(
+                            "announcementRole"
+                        ).value
+
+                })
+            }
+        );
+
+        closeModal();
+
+        toast("تم نشر التعميم");
+
+        loadAnnouncements();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   REQUESTS
+===================================================== */
+
+async function loadRequests(){
+
+    const box =
+        document.getElementById(
+            "requestsTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/requests");
+
+        const rows =
+            Array.isArray(data)
+            ? data
+            : [];
+
+        if(!rows.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد طلبات
+                 </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>النوع</th>
+                <th>العنوان</th>
+                <th>الوصف</th>
+                <th>المبلغ</th>
+                <th>الحالة</th>
+                <th>إجراء</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${rows.map(r=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(r.type)}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.title)}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.description)}
+                </td>
+
+                <td>
+                    ${r.amount || 0}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.status)}
+                </td>
+
+                <td>
+
+                ${
+                    ["owner","admin","hr"]
+                        .includes(currentUser.role)
+                    ?
+                    `
+
+                    <button
+                        class="btn btn-success"
+                        onclick="changeRequest(${r.id},'approved')"
+                    >
+                        موافقة
+                    </button>
+
+                    <button
+                        class="btn btn-danger"
+                        onclick="changeRequest(${r.id},'rejected')"
+                    >
+                        رفض
+                    </button>
+
+                    `
+                    :
+                    ""
+                }
+
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function openRequestModal(){
+
+    openModal(
+        "طلب جديد",
+        `
+
+        <form
+            onsubmit="saveRequest(event)"
+        >
+
+            <div class="form-group">
+
+                <label>نوع الطلب</label>
+
+                <select id="requestType">
+
+                    <option value="إجازة">
+                        إجازة
+                    </option>
+
+                    <option value="سلفة">
+                        سلفة
+                    </option>
+
+                    <option value="شراء">
+                        شراء
+                    </option>
+
+                    <option value="أخرى">
+                        أخرى
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+                <label>العنوان</label>
+                <input id="requestTitle">
+            </div>
+
+            <div class="form-group">
+                <label>الوصف</label>
+                <textarea id="requestDescription"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>المبلغ</label>
+                <input
+                    id="requestAmount"
+                    type="number"
+                    step="0.01"
+                >
+            </div>
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                إرسال الطلب
+            </button>
+
+        </form>
+
+        `
+    );
+
+}
+
+
+async function saveRequest(e){
+
+    e.preventDefault();
+
+    try{
+
+        await api(
+            "/api/requests",
+            {
+                method:"POST",
+                body:JSON.stringify({
+
+                    type:
+                        document.getElementById(
+                            "requestType"
+                        ).value,
+
+                    title:
+                        document.getElementById(
+                            "requestTitle"
+                        ).value,
+
+                    description:
+                        document.getElementById(
+                            "requestDescription"
+                        ).value,
+
+                    amount:
+                        Number(
+                            document.getElementById(
+                                "requestAmount"
+                            ).value
+                        )
+
+                })
+            }
+        );
+
+        closeModal();
+
+        toast("تم إرسال الطلب");
+
+        loadRequests();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+async function changeRequest(id,status){
+
+    try{
+
+        await api(
+            `/api/requests/${id}/status`,
+            {
+                method:"PATCH",
+                body:JSON.stringify({
+                    status
+                })
+            }
+        );
+
+        toast(
+            status === "approved"
+            ? "تم اعتماد الطلب"
+            : "تم رفض الطلب"
+        );
+
+        loadRequests();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   MESSAGES
+===================================================== */
+
+async function loadMessages(){
+
+    const box =
+        document.getElementById(
+            "messagesTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/messages");
+
+        const rows =
+            Array.isArray(data)
+            ? data
+            : [];
+
+        if(!rows.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد رسائل
+                 </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = `
+
+        ${rows.map(m=>`
+
+            <div class="panel">
+
+                <h3>
+                    ${escapeHtml(
+                        m.subject || "رسالة"
+                    )}
+                </h3>
+
+                <p>
+                    ${escapeHtml(m.message)}
+                </p>
+
+                <small>
+
+                    من:
+                    ${escapeHtml(
+                        m.sender_name || ""
+                    )}
+
+                    |
+
+                    إلى:
+                    ${escapeHtml(
+                        m.receiver_name || ""
+                    )}
+
+                    |
+
+                    ${escapeHtml(
+                        m.created_at || ""
+                    )}
+
+                </small>
+
+                ${
+                    m.receiver_id === currentUser.id
+                    && !m.read_at
+                    ?
+                    `
+                    <br><br>
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="markMessageRead(${m.id})"
+                    >
+                        تحديد كمقروءة
+                    </button>
+                    `
+                    :
+                    ""
+                }
+
+            </div>
+
+        `).join("")}
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+function openMessageModal(){
+
+    api("/api/users")
+        .then(data=>{
+
+            const users =
+                data.users || [];
+
+            openModal(
+                "رسالة جديدة",
+                `
+
+                <form
+                    onsubmit="saveMessage(event)"
+                >
+
+                    <div class="form-group">
+
+                        <label>
+                            المستلم
+                        </label>
+
+                        <select id="receiverId">
+
+                            <option value="">
+                                اختر المستخدم
+                            </option>
+
+                            ${users
+                                .filter(
+                                    u =>
+                                    u.id !== currentUser.id
+                                )
+                                .map(u=>`
+
+                                    <option
+                                        value="${u.id}"
+                                    >
+                                        ${escapeHtml(
+                                            u.name
+                                        )}
+                                        -
+                                        ${escapeHtml(
+                                            u.username
+                                        )}
+                                    </option>
+
+                                `)
+                                .join("")}
+
+                        </select>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>
+                            الموضوع
+                        </label>
+
+                        <input id="messageSubject">
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>
+                            الرسالة
+                        </label>
+
+                        <textarea
+                            id="messageText"
+                            rows="6"
+                            required
+                        ></textarea>
+
+                    </div>
+
+                    <button
+                        class="btn btn-primary"
+                        type="submit"
+                    >
+                        إرسال
+                    </button>
+
+                </form>
+
+                `
+            );
+
+        })
+        .catch(error=>{
+
+            toast(
+                error.message,
+                "error"
+            );
+
+        });
+
+}
+
+
+async function saveMessage(e){
+
+    e.preventDefault();
+
+    try{
+
+        await api(
+            "/api/messages",
+            {
+                method:"POST",
+                body:JSON.stringify({
+
+                    receiver_id:
+                        Number(
+                            document.getElementById(
+                                "receiverId"
+                            ).value
+                        ),
+
+                    subject:
+                        document.getElementById(
+                            "messageSubject"
+                        ).value,
+
+                    message:
+                        document.getElementById(
+                            "messageText"
+                        ).value
+
+                })
+            }
+        );
+
+        closeModal();
+
+        toast("تم إرسال الرسالة");
+
+        loadMessages();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+async function markMessageRead(id){
+
+    try{
+
+        await api(
+            `/api/messages/${id}/read`,
+            {
+                method:"PATCH"
+            }
+        );
+
+        loadMessages();
+
+    }catch(error){
+
+        toast(
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   REPORTS
+===================================================== */
+
+async function loadAttendanceReport(){
+
+    const box =
+        document.getElementById(
+            "reportsResult"
+        );
+
+    try{
+
+        const data =
+            await api(
+                "/api/reports/attendance"
+            );
+
+        const rows =
+            Array.isArray(data)
+            ? data
+            : [];
+
+        if(!rows.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد بيانات
+                 </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>التاريخ</th>
+                <th>الإجمالي</th>
+                <th>حاضر</th>
+                <th>غائب</th>
+                <th>متأخر</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${rows.map(r=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(r.date)}
+                </td>
+
+                <td>
+                    ${r.total || 0}
+                </td>
+
+                <td>
+                    ${r.present || 0}
+                </td>
+
+                <td>
+                    ${r.absent || 0}
+                </td>
+
+                <td>
+                    ${r.late || 0}
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+/* =====================================================
+   AUDIT
+===================================================== */
+
+async function loadAudit(){
+
+    const box =
+        document.getElementById(
+            "auditTable"
+        );
+
+    try{
+
+        const data =
+            await api("/api/audit-logs");
+
+        const rows =
+            Array.isArray(data)
+            ? data
+            : [];
+
+        if(!rows.length){
+
+            box.innerHTML =
+                `<div class="empty">
+                    لا توجد عمليات
+                 </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = `
+
+        <div class="table-wrapper">
+
+        <table>
+
+        <thead>
+
+            <tr>
+                <th>المستخدم</th>
+                <th>العملية</th>
+                <th>التفاصيل</th>
+                <th>التاريخ</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        ${rows.map(r=>`
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(
+                        r.user_name ||
+                        r.username ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.action)}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.details)}
+                </td>
+
+                <td>
+                    ${escapeHtml(r.created_at)}
+                </td>
+
+            </tr>
+
+        `).join("")}
+
+        </tbody>
+
+        </table>
+
+        </div>
+
+        `;
+
+    }catch(error){
+
+        box.innerHTML =
+            `<div class="empty">
+                ${escapeHtml(error.message)}
+             </div>`;
+
+    }
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    ()=>{
+
+        const date =
+            document.getElementById(
+                "attendanceDate"
+            );
+
+        if(date){
+            date.value =
+                new Date()
+                    .toISOString()
+                    .slice(0,10);
+        }
+
+        const month =
+            document.getElementById(
+                "payrollMonth"
+            );
+
+        if(month){
+
+            month.value =
+                new Date()
+                    .toISOString()
+                    .slice(0,7);
+
+        }
+
+        restoreSession();
+
+    }
+);
 
 </script>
 
 </body>
-
 </html>
