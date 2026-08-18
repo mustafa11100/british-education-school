@@ -41,6 +41,21 @@ function initSaaS(db) {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS school_registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_name TEXT NOT NULL,
+      admin_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT DEFAULT '',
+      address TEXT DEFAULT '',
+      admin_username TEXT NOT NULL,
+      admin_password_hash TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      school_id INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at TEXT,
+      FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE SET NULL
+    );
   `);
 
   let school = db.prepare('SELECT id FROM schools ORDER BY id LIMIT 1').get();
@@ -74,6 +89,51 @@ Module._load = function(request, parent, isMain) {
 
     const isProgrammer = req => ['مبرمج','مبرمج النظام'].includes(req.user?.role) || ['مبرمج','مبرمج النظام'].includes(req.enhancedUser?.role);
     const guard = (req, res, next) => isProgrammer(req) ? next() : res.status(403).json({success:false,message:'صلاحية المبرمج مطلوبة'});
+
+    // Public school registration. The school and its administrator remain pending until the platform owner approves them.
+    app.post('/api/saas/school-register', (req,res) => {
+      try {
+        const {school_name,admin_name,email,phone='',address='',username='',password=''}=req.body||{};
+        if(!school_name||!admin_name||!email||!password) return res.status(400).json({success:false,message:'اسم المدرسة واسم المسؤول والبريد وكلمة المرور مطلوبة'});
+        const base=String(username||admin_name).trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'.').replace(/^\.|\.$/g,'')||'admin';
+        let candidate=base, i=1;
+        while(db.prepare('SELECT id FROM users WHERE username=?').get(candidate) || db.prepare('SELECT id FROM school_registrations WHERE admin_username=? AND status=?').get(candidate,'pending')) candidate=`${base}${++i}`;
+        const codeBase=String(school_name).replace(/[^\p{L}\p{N}]+/gu,'').slice(0,8).toUpperCase()||'SCHOOL';
+        let code=`${codeBase}-${Date.now().toString().slice(-5)}`;
+        const crypto=require('crypto');
+        const r=db.prepare(`INSERT INTO school_registrations(school_name,admin_name,email,phone,address,admin_username,admin_password_hash)
+          VALUES(?,?,?,?,?,?,?)`).run(String(school_name).trim(),String(admin_name).trim(),String(email).trim(),String(phone).trim(),String(address).trim(),candidate,crypto.createHash('sha256').update(String(password)).digest('hex'));
+        res.status(201).json({success:true,registration_id:Number(r.lastInsertRowid),username:candidate,school_code:code,message:'تم إرسال طلب المدرسة للمراجعة والاعتماد قبل تفعيل الحساب'});
+      } catch(e){res.status(500).json({success:false,message:'تعذر إرسال طلب التسجيل'});}
+    });
+
+    app.get('/api/saas/registrations', guard, (req,res) => {
+      res.json({success:true,registrations:db.prepare('SELECT id,school_name,admin_name,email,phone,address,admin_username,status,created_at,reviewed_at FROM school_registrations ORDER BY id DESC').all()});
+    });
+
+    app.post('/api/saas/registrations/:id/approve', guard, (req,res) => {
+      const id=Number(req.params.id), row=db.prepare('SELECT * FROM school_registrations WHERE id=?').get(id);
+      if(!row) return res.status(404).json({success:false,message:'طلب التسجيل غير موجود'});
+      if(row.status!=='pending') return res.status(400).json({success:false,message:'الطلب تمت مراجعته مسبقاً'});
+      try {
+        const codeBase=String(row.school_name).replace(/[^\p{L}\p{N}]+/gu,'').slice(0,8).toUpperCase()||'SCHOOL';
+        let code=`${codeBase}-${Date.now().toString().slice(-5)}`;
+        while(db.prepare('SELECT id FROM schools WHERE code=?').get(code)) code=`${codeBase}-${Math.floor(Math.random()*90000+10000)}`;
+        const school=db.prepare(`INSERT INTO schools(code,name,logo_url,primary_color,secondary_color,phone,email,address,status,plan,subscription_status,max_students)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(code,row.school_name,'','#173b70','#24579b',row.phone,row.email,row.address,'active','basic','trial',500);
+        const user=db.prepare(`INSERT INTO users(username,password_hash,full_name,email,phone,role,school_id,active,must_change_password)
+          VALUES(?,?,?,?,?,?,?,?,?)`).run(row.admin_username,row.admin_password_hash,row.admin_name,row.email,row.phone,'مدير المدرسة',Number(school.lastInsertRowid),1,1);
+        db.prepare('UPDATE school_registrations SET status=\'approved\',school_id=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?').run(Number(school.lastInsertRowid),id);
+        res.json({success:true,school_id:Number(school.lastInsertRowid),admin_user_id:Number(user.lastInsertRowid),message:'تم اعتماد المدرسة وإنشاء حساب مديرها'});
+      } catch(e){res.status(400).json({success:false,message:'تعذر اعتماد الطلب'});}
+    });
+
+    app.post('/api/saas/registrations/:id/reject', guard, (req,res) => {
+      const id=Number(req.params.id);
+      const result=db.prepare("UPDATE school_registrations SET status='rejected',reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'").run(id);
+      if(!result.changes) return res.status(404).json({success:false,message:'طلب التسجيل غير موجود أو تمت مراجعته'});
+      res.json({success:true,message:'تم رفض طلب التسجيل'});
+    });
 
     app.get('/api/saas/schools', guard, (req,res) => {
       const schools = db.prepare(`SELECT s.*, (SELECT COUNT(*) FROM users u WHERE u.school_id=s.id) user_count,
