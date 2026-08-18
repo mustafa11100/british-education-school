@@ -2,34 +2,27 @@
   const byId=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const apply=()=>{
-    document.documentElement.lang='ar';
-    document.documentElement.dir='rtl';
-    const style=document.createElement('style');
-    style.textContent=`
+    document.documentElement.lang='ar'; document.documentElement.dir='rtl';
+    const style=document.createElement('style'); style.textContent=`
       body{font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif!important}
       .login{background:radial-gradient(circle at 15% 15%,#3d6aa8 0,#173b70 38%,#081a35 100%)!important}
       .loginbox{border:1px solid rgba(255,255,255,.18);box-shadow:0 35px 110px rgba(0,0,0,.42)!important}
       .hero{position:relative;overflow:hidden;background:linear-gradient(145deg,#0b1f3c,#173b70 55%,#24579b)!important}
       .hero:after{content:"";position:absolute;width:280px;height:280px;border:1px solid rgba(255,255,255,.14);border-radius:50%;left:-100px;bottom:-120px}
       .hero .logo{background:linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.2)}
-      .hero h1{letter-spacing:.2px}
-      .educore-footer{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.16);font-size:12px;color:#dbeafe;line-height:1.9}
-      .educore-footer b{color:#fff}
+      .hero h1{letter-spacing:.2px}.educore-footer{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.16);font-size:12px;color:#dbeafe;line-height:1.9}.educore-footer b{color:#fff}
       .loginform .educore-meta{margin-top:22px;padding:14px 16px;border:1px solid #e6ebf2;border-radius:14px;background:#f8fafc;color:#667085;font-size:12px;line-height:1.9}
-      .brandname{font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif!important}
-    `;
-    document.head.appendChild(style);
+      .educore-register{width:100%;margin-top:10px;background:#eef4fb!important;color:#173b70!important;border:1px solid #d9e5f2}.educore-modal{position:fixed;inset:0;background:rgba(4,16,32,.72);display:grid;place-items:center;padding:18px;z-index:100}.educore-modal-box{width:min(680px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:26px;box-shadow:0 30px 90px rgba(0,0,0,.35)}.educore-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.educore-modal-grid .full{grid-column:1/-1}.educore-modal-box input{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:11px}.educore-modal-box label{display:block;font-weight:700;margin-bottom:6px}.educore-modal-box .field{margin:10px 0}.educore-modal-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:15px}@media(max-width:650px){.educore-modal-grid{grid-template-columns:1fr}}
+    `; document.head.appendChild(style);
     const hero=document.querySelector('.hero');
-    if(hero){
-      const h=hero.querySelector('h1'); if(h) h.textContent='EduCore Platform';
-      const p=hero.querySelector('p'); if(p) p.textContent='منصة مختصة بإدارة المدارس والمؤسسات التعليمية، تجمع الإدارة الأكاديمية والتشغيلية في منظومة واحدة آمنة وقابلة للتخصيص.';
-      if(!hero.querySelector('.educore-footer')) hero.insertAdjacentHTML('beforeend','<div class="educore-footer"><div>إنتاج وتطوير <b>مصطفى عادل الحاج زيدان</b></div><div>الإصدار الأول · 2026</div></div>');
-    }
-    const title=document.querySelector('.loginform h2'); if(title) title.textContent='تسجيل الدخول إلى EduCore Platform';
-    const sub=document.querySelector('.loginform .muted'); if(sub) sub.textContent='أدخل بيانات حسابك للوصول إلى بيئة مدرستك بأمان.';
+    if(hero){const h=hero.querySelector('h1');if(h)h.textContent='EduCore Platform';const p=hero.querySelector('p');if(p)p.textContent='منصة مختصة بإدارة المدارس والمؤسسات التعليمية، تجمع الإدارة الأكاديمية والتشغيلية في منظومة واحدة آمنة وقابلة للتخصيص.';if(!hero.querySelector('.educore-footer'))hero.insertAdjacentHTML('beforeend','<div class="educore-footer"><div>إنتاج وتطوير <b>مصطفى عادل الحاج زيدان</b></div><div>الإصدار الأول · 2026</div></div>')}
+    const title=document.querySelector('.loginform h2');if(title)title.textContent='تسجيل الدخول إلى EduCore Platform';const sub=document.querySelector('.loginform .muted');if(sub)sub.textContent='أدخل بيانات حسابك للوصول إلى بيئة مدرستك بأمان';
     const form=document.querySelector('.loginform');
-    if(form && !form.querySelector('.educore-meta')) form.insertAdjacentHTML('beforeend','<div class="educore-meta"><b>منصة مختصة بإدارة المدارس والمؤسسات التعليمية</b><br>هوية المنصة مستقلة عن هوية كل مدرسة، مع تخصيص آمن لكل مؤسسة.</div>');
-    const brand=byId('brandName'); if(brand && (!window.S?.school?.name || window.S.school.name==='منصة إدارة المدارس')) brand.textContent='EduCore Platform';
+    if(form&&!form.querySelector('.educore-meta'))form.insertAdjacentHTML('beforeend','<div class="educore-meta"><b>منصة مختصة بإدارة المدارس والمؤسسات التعليمية</b><br>هوية المنصة مستقلة عن هوية كل مدرسة، مع تخصيص آمن لكل مؤسسة.</div>');
+    if(form&&!form.querySelector('.educore-register')){const b=document.createElement('button');b.className='educore-register';b.textContent='تسجيل مدرسة أو منشأة تعليمية';b.onclick=openRegistration;form.appendChild(b)}
+    const brand=byId('brandName');if(brand&&(!window.S?.school?.name||window.S.school.name==='منصة إدارة المدارس'))brand.textContent='EduCore Platform';
   };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',apply); else apply();
+  function openRegistration(){if(document.querySelector('.educore-modal'))return;const m=document.createElement('div');m.className='educore-modal';m.innerHTML=`<div class="educore-modal-box"><h2>تسجيل مدرسة أو منشأة تعليمية</h2><p class="muted">يُراجع الطلب أولاً من Super Admin قبل تفعيل الحساب والصلاحيات.</p><div class="educore-modal-grid"><div class="field"><label>اسم المدرسة</label><input id="ecSchoolName"></div><div class="field"><label>اسم المسؤول</label><input id="ecAdminName"></div><div class="field"><label>البريد الإلكتروني</label><input id="ecEmail" type="email"></div><div class="field"><label>رقم الهاتف</label><input id="ecPhone"></div><div class="field full"><label>العنوان</label><input id="ecAddress"></div><div class="field"><label>اسم المستخدم (اختياري)</label><input id="ecUsername" placeholder="يُولد تلقائياً من الاسم"></div><div class="field"><label>كلمة المرور</label><input id="ecPassword" type="password"></div></div><div id="ecMsg"></div><div class="educore-modal-actions"><button onclick="window.submitEduCoreRegistration()">إرسال طلب التسجيل</button><button class="light" onclick="document.querySelector('.educore-modal')?.remove()">إلغاء</button></div></div>`;document.body.appendChild(m)}
+  window.submitEduCoreRegistration=async()=>{const payload={school_name:byId('ecSchoolName').value.trim(),admin_name:byId('ecAdminName').value.trim(),email:byId('ecEmail').value.trim(),phone:byId('ecPhone').value.trim(),address:byId('ecAddress').value.trim(),username:byId('ecUsername').value.trim(),password:byId('ecPassword').value};const msg=byId('ecMsg');try{const r=await fetch('/api/saas/school-register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.message||'تعذر إرسال الطلب');msg.innerHTML='<div class="educore-meta">'+esc(d.message)+'<br>اسم المستخدم المقترح: <b>'+esc(d.username)+'</b></div>'}catch(e){msg.innerHTML='<div class="notice">'+esc(e.message)+'</div>'}};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
 })();
