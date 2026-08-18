@@ -74,7 +74,9 @@ function logAction(userId, action, details = "", schoolId = null) {
       INSERT INTO audit_logs (user_id, school_id, action, details, created_at)
       VALUES (?, ?, ?, ?, ?)
     `).run(userId || null, schoolId || null, action, details, nowISO());
-  } catch (error) { me Error: error.message; }
+  } catch (error) {
+    console.error("Audit Log Error:", error.message);
+  }
 }
 
 function addNotification(schoolId, userId, title, message, type = "info") {
@@ -277,7 +279,7 @@ app.post("/api/login", (req, res) => {
   });
 });
 
-// 2. التسجيل الجديد الموسّع
+// 2. التسجيل الجديد
 app.post("/api/register", (req, res) => {
   const { name, username, password, email, phone, role, department, photo } = req.body || {};
 
@@ -289,12 +291,11 @@ app.post("/api/register", (req, res) => {
   if (exists) return res.status(400).json({ error: "اسم المستخدم مستخدم بالفعل" });
 
   try {
-    const resInsert = db.prepare(`
+    db.prepare(`
       INSERT INTO users (school_id, username, password, role, name, email, phone, department, photo, active, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
     `).run(defaultSchool.id, username, password, role || "student", name, email || "", phone || "", department || "", photo || "", nowISO());
 
-    // إشعار للإدارة بالحساب الجديد
     addNotification(defaultSchool.id, null, "تسجيل جديد", `المستخدم ${name} قام بالتسجيل وهو بانتظار التفعيل.`, "warning");
 
     res.json({ success: true, message: "تم إنشاء الحساب بنجاح، الحساب الآن بانتظار موافقة الإدارة." });
@@ -313,7 +314,7 @@ app.get("/api/me", (req, res) => {
   res.json({ user, school, settings, permissions: permissions[user.role] || ["all"] });
 });
 
-// 4. لوحة التحكم والبيانات الإحصائية
+// 4. لوحة التحكم والإحصائيات
 app.get("/api/dashboard", (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: "غير مصرح" });
@@ -345,7 +346,7 @@ app.get("/api/dashboard", (req, res) => {
   });
 });
 
-// 5. إدارة الطلاب والرسوم والأقساط
+// 5. إدارة الطلاب
 app.get("/api/students", (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: "غير مصرح" });
@@ -371,8 +372,8 @@ app.post("/api/students", (req, res) => {
   if (!user || (user.role !== 'admin' && user.role !== 'accountant')) return res.status(403).json({ error: "ليس لديك صلاحية" });
 
   const { name, class_name, parent_phone, parent_email, total_tuition, payment_type, installments } = req.body;
-
   const sId = user.school_id || defaultSchool.id;
+
   const resSt = db.prepare(`
     INSERT INTO students (school_id, student_number, name, class_name, parent_phone, parent_email, total_tuition, payment_type, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -389,7 +390,6 @@ app.post("/api/students", (req, res) => {
       insertInst.run(sId, studentId, inst.title, inst.amount, inst.due_date, nowISO());
     });
   } else {
-    // دفعة واحدة
     db.prepare(`
       INSERT INTO student_installments (school_id, student_id, title, amount, due_date, status, created_at)
       VALUES (?, ?, 'الرسوم كاملة', ?, ?, 'pending', ?)
@@ -399,7 +399,7 @@ app.post("/api/students", (req, res) => {
   res.json({ success: true, message: "تم إضافة الطالب بنجاح" });
 });
 
-// 6. الإشعارات والتنبيهات
+// 6. الإشعارات
 app.get("/api/notifications", (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: "غير مصرح" });
@@ -413,7 +413,7 @@ app.get("/api/notifications", (req, res) => {
   res.json(notifs);
 });
 
-// 7. صفحة الإعدادات الفعالة
+// 7. الإعدادات
 app.get("/api/settings", (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: "غير مصرح" });
