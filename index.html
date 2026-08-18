@@ -1,287 +1,4577 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام إدارة المدرسة المتكامل</title>
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>نظام إدارة المدرسة</title>
+
   <style>
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     :root {
       --primary: #173b70;
-      --primary2: #245ca8;
-      --bg: #f3f6fb;
+      --primary2: #24579b;
+      --bg: #f4f7fb;
       --card: #ffffff;
       --text: #172033;
       --muted: #718096;
-      --border: #e3e8f0;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --warning: #d97706;
-      --shadow: 0 8px 25px rgba(20,40,80,.08);
-      --radius: 16px;
+      --border: #e5eaf1;
+      --success: #159447;
+      --warning: #d88a00;
+      --danger: #d9363e;
     }
-    body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: var(--bg); color: var(--text); }
-    button, input, select, textarea { font-family: inherit; }
-    button { cursor: pointer; }
-    .hidden { display: none !important; }
 
-    /* AUTH SCREEN */
-    #authScreen {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
-      background: radial-gradient(circle at top right, rgba(36,92,168,.35), transparent 35%), linear-gradient(135deg, #102b53, #173b70 50%, #245ca8);
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        Tahoma,
+        Arial,
+        sans-serif;
     }
-    .auth-box { width: 100%; max-width: 480px; background: rgba(255,255,255,.97); border-radius: 24px; padding: 35px; box-shadow: 0 25px 70px rgba(0,0,0,.22); }
-    .logo { width: 72px; height: 72px; border-radius: 20px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 34px; }
-    .auth-title { text-align: center; margin: 0; font-size: 26px; }
-    .auth-subtitle { text-align: center; color: var(--muted); margin: 8px 0 25px; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: bold; }
-    input, select, textarea { width: 100%; border: 1px solid var(--border); background: white; padding: 11px 13px; border-radius: 10px; outline: none; font-size: 14px; }
-    
-    .btn { border: 0; border-radius: 10px; padding: 11px 17px; font-weight: bold; font-size: 14px; transition: .2s; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary2); }
-    .btn-danger { background: var(--danger); color: white; }
-    .full { width: 100%; }
 
-    /* APP LAYOUT */
-    #app { min-height: 100vh; display: flex; }
-    .sidebar { width: 270px; min-height: 100vh; background: #102f5d; color: white; position: fixed; right: 0; top: 0; bottom: 0; overflow-y: auto; }
-    .sidebar-header { padding: 22px 18px; border-bottom: 1px solid rgba(255,255,255,.12); }
-    .nav-item { width: calc(100% - 18px); margin: 3px 9px; border: 0; background: transparent; color: white; text-align: right; padding: 12px; border-radius: 10px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
-    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,.13); }
-    .main { flex: 1; margin-right: 270px; min-width: 0; }
-    .topbar { height: 72px; background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; sticky: top; }
-    .content { padding: 25px; max-width: 1400px; margin: auto; }
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit;
+    }
 
-    /* CARDS & TABLES */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 22px; }
-    .stat-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-    .stat-value { font-size: 26px; font-weight: bold; margin-top: 10px; }
-    .table-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-    table { width: 100%; border-collapse: collapse; text-align: right; }
-    th, td { padding: 13px 14px; border-bottom: 1px solid #edf0f4; font-size: 13px; }
-    th { background: #f7f9fc; }
+    button {
+      cursor: pointer;
+    }
 
-    /* TOAST */
-    #toastContainer { position: fixed; left: 20px; bottom: 20px; z-index: 500; display: flex; flex-direction: column; gap: 10px; }
-    .toast { min-width: 250px; background: #172033; color: white; padding: 12px 16px; border-radius: 10px; }
-    .toast.error { border-right: 4px solid var(--danger); }
-    .toast.success { border-right: 4px solid var(--success); }
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================
+       LOGIN
+    ========================= */
+
+    #loginPage {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background:
+        linear-gradient(
+          135deg,
+          #173b70,
+          #24579b
+        );
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 430px;
+      background: white;
+      border-radius: 22px;
+      padding: 35px;
+      box-shadow:
+        0 20px 60px rgba(0,0,0,.18);
+    }
+
+    .school-logo {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      background: #edf4ff;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 15px;
+      font-size: 40px;
+    }
+
+    .login-title {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .login-title h1 {
+      margin: 0 0 8px;
+      color: var(--primary);
+      font-size: 25px;
+    }
+
+    .login-title p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .field {
+      margin-bottom: 15px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      background: #fff;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--primary2);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-weight: bold;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary2);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-warning {
+      background: var(--warning);
+      color: white;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-light {
+      background: #edf2f7;
+      color: var(--text);
+    }
+
+    .login-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 14px;
+    }
+
+    .register-link {
+      text-align: center;
+      margin-top: 18px;
+    }
+
+    .register-link button {
+      border: 0;
+      background: none;
+      color: var(--primary2);
+      font-weight: bold;
+    }
+
+    /* =========================
+       APP
+    ========================= */
+
+    #appPage {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: 68px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .user-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-info {
+      text-align: left;
+      direction: rtl;
+    }
+
+    .user-info strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .user-info small {
+      color: var(--muted);
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      background: #e9f0fb;
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 68px);
+    }
+
+    .sidebar {
+      width: 250px;
+      background: var(--primary);
+      color: white;
+      padding: 18px 12px;
+      flex-shrink: 0;
+    }
+
+    .nav-title {
+      color: #b9cbe5;
+      font-size: 12px;
+      margin: 15px 10px 8px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: white;
+      padding: 12px 13px;
+      border-radius: 10px;
+      margin-bottom: 5px;
+      text-align: right;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-btn:hover,
+    .nav-btn.active {
+      background: rgba(255,255,255,.14);
+    }
+
+    .content {
+      flex: 1;
+      padding: 25px;
+      min-width: 0;
+    }
+
+    /* =========================
+       PAGE HEADER
+    ========================= */
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 22px;
+    }
+
+    .page-header h2 {
+      margin: 0 0 5px;
+    }
+
+    .page-header p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    /* =========================
+       CARDS
+    ========================= */
+
+    .stats {
+      display: grid;
+      grid-template-columns:
+        repeat(4, minmax(0,1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 20px;
+    }
+
+    .stat-card small {
+      color: var(--muted);
+    }
+
+    .stat-card strong {
+      display: block;
+      font-size: 26px;
+      margin-top: 8px;
+      color: var(--primary);
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* =========================
+       TABLE
+    ========================= */
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th,
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #4a5568;
+      font-size: 13px;
+    }
+
+    /* =========================
+       BADGES
+    ========================= */
+
+    .badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .badge-success {
+      background: #e5f7eb;
+      color: #137b3d;
+    }
+
+    .badge-warning {
+      background: #fff4d9;
+      color: #a36500;
+    }
+
+    .badge-danger {
+      background: #ffe6e8;
+      color: #b4232a;
+    }
+
+    .badge-blue {
+      background: #e7f0ff;
+      color: #24579b;
+    }
+
+    /* =========================
+       MODAL
+    ========================= */
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-box {
+      background: white;
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 18px;
+      padding: 25px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+    }
+
+    .close-btn {
+      border: 0;
+      background: #edf2f7;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      font-size: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns:
+        repeat(2, minmax(0,1fr));
+      gap: 15px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* =========================
+       TOAST
+    ========================= */
+
+    #toast {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      z-index: 300;
+      max-width: 380px;
+    }
+
+    .toast-item {
+      background: #172033;
+      color: white;
+      padding: 13px 17px;
+      border-radius: 10px;
+      margin-top: 8px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.2);
+    }
+
+    /* =========================
+       RESPONSIVE
+    ========================= */
+
+    @media (max-width: 900px) {
+
+      .sidebar {
+        width: 205px;
+      }
+
+      .stats {
+        grid-template-columns:
+          repeat(2, minmax(0,1fr));
+      }
+    }
+
+    @media (max-width: 700px) {
+
+      .topbar {
+        padding: 0 12px;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      .sidebar {
+        width: 100%;
+        display: flex;
+        overflow-x: auto;
+        padding: 8px;
+      }
+
+      .nav-title {
+        display: none;
+      }
+
+      .nav-btn {
+        min-width: 120px;
+        justify-content: center;
+      }
+
+      .content {
+        padding: 15px;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .user-info {
+        display: none;
+      }
+    }
+
   </style>
 </head>
+
 <body>
 
-<!-- AUTH SCREEN -->
-<section id="authScreen">
-  <div class="auth-box">
-    <div class="logo">🏫</div>
-    <h1 class="auth-title">إدارة المدرسة</h1>
-    <p class="auth-subtitle">النظام الموحد المتكامل</p>
+<!-- =====================================================
+     LOGIN
+===================================================== -->
 
-    <!-- LOGIN FORM -->
+<section id="loginPage">
+
+  <div class="login-box">
+
+    <div class="school-logo">
+      🏫
+    </div>
+
+    <div class="login-title">
+
+      <h1 id="loginSchoolName">
+        إدارة المدرسة
+      </h1>
+
+      <p>
+        نظام الإدارة المدرسية المتكامل
+      </p>
+
+    </div>
+
     <form id="loginForm">
-      <div class="form-group">
-        <label>اسم المستخدم</label>
-        <input id="loginUsername" type="text" required>
+
+      <div class="field">
+
+        <label>
+          اسم المستخدم
+        </label>
+
+        <input
+          id="loginUsername"
+          type="text"
+          autocomplete="username"
+          required
+        >
+
       </div>
-      <div class="form-group">
-        <label>كلمة المرور</label>
-        <input id="loginPassword" type="password" required>
+
+      <div class="field">
+
+        <label>
+          كلمة المرور
+        </label>
+
+        <input
+          id="loginPassword"
+          type="password"
+          autocomplete="current-password"
+          required
+        >
+
       </div>
-      <button type="submit" class="btn btn-primary full">تسجيل الدخول</button>
+
+      <button
+        class="btn btn-primary login-btn"
+        type="submit"
+      >
+        تسجيل الدخول
+      </button>
+
     </form>
 
-    <!-- REGISTER FORM -->
-    <form id="registerForm" class="hidden">
-      <div class="form-group"><label>الاسم الكامل</label><input id="regName" type="text" required></div>
-      <div class="form-group"><label>اسم المستخدم</label><input id="regUsername" type="text" required></div>
-      <div class="form-group"><label>البريد الإلكتروني</label><input id="regEmail" type="email" required></div>
-      <div class="form-group"><label>رقم الهاتف</label><input id="regPhone" type="text"></div>
-      <div class="form-group">
-        <label>الوظيفة / الدور</label>
-        <select id="regRole">
-          <option value="student">طالب</option>
-          <option value="parent">ولي أمر</option>
-          <option value="teacher">معلم</option>
-          <option value="accountant">محاسب</option>
-        </select>
-      </div>
-      <div class="form-group"><label>كلمة المرور</label><input id="regPassword" type="password" required></div>
-      <button type="submit" class="btn btn-primary full">تقديم طلب التسجيل</button>
-    </form>
+    <div class="register-link">
 
-    <div style="text-align:center; margin-top:15px;">
-      <button id="switchAuthBtn" style="border:0; background:transparent; color:var(--primary2); font-weight:bold;" onclick="toggleAuth()">تسجيل جديد</button>
+      ليس لديك حساب؟
+
+      <button
+        type="button"
+        onclick="openRegister()"
+      >
+        تسجيل جديد
+      </button>
+
     </div>
+
   </div>
+
 </section>
 
-<!-- MAIN APP -->
-<section id="app" class="hidden">
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <h3 id="brandSchool">المدرسة</h3>
-    </div>
-    <button class="nav-item active" onclick="navigate('dashboard')">📊 لوحة التحكم</button>
-    <button class="nav-item" onclick="navigate('students')">🎓 الطلاب والرسوم</button>
-    <button class="nav-item" onclick="navigate('notifications')">🔔 الإشعارات</button>
-    <button class="nav-item" onclick="navigate('settings')">⚙️ الإعدادات</button>
-    <div style="padding:20px;">
-      <button class="btn btn-danger full" onclick="logout()">تسجيل الخروج</button>
-    </div>
-  </aside>
 
-  <main class="main">
-    <header class="topbar">
-      <h3 id="pageTitle">لوحة التحكم</h3>
-      <div>👤 <span id="topUserName">المستخدم</span></div>
-    </header>
-    <div id="content" class="content"></div>
-  </main>
+<!-- =====================================================
+     APP
+===================================================== -->
+
+<section
+  id="appPage"
+  class="hidden"
+>
+
+  <header class="topbar">
+
+    <div class="brand">
+
+      <div class="brand-icon">
+        🏫
+      </div>
+
+      <span id="schoolNameTop">
+        إدارة المدرسة
+      </span>
+
+    </div>
+
+    <div class="user-area">
+
+      <div class="user-info">
+
+        <strong id="currentUserName">
+          المستخدم
+        </strong>
+
+        <small id="currentUserRole">
+          -
+        </small>
+
+      </div>
+
+      <div
+        class="avatar"
+        id="userAvatar"
+      >
+        م
+      </div>
+
+      <button
+        class="btn btn-light"
+        onclick="logout()"
+      >
+        خروج
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+      <button
+        class="nav-btn active"
+        data-page="dashboard"
+        onclick="showPage('dashboard')"
+      >
+        🏠 الرئيسية
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="students"
+        onclick="showPage('students')"
+      >
+        👨‍🎓 الطلاب
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="parents"
+        onclick="showPage('parents')"
+      >
+        👨‍👩‍👧 أولياء الأمور
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="fees"
+        onclick="showPage('fees')"
+      >
+        💰 الرسوم
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="users"
+        onclick="showPage('users')"
+        id="usersNav"
+      >
+        👥 المستخدمون
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="notifications"
+        onclick="showPage('notifications')"
+      >
+        🔔 الإشعارات
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="reports"
+        onclick="showPage('reports')"
+      >
+        📊 التقارير
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="settings"
+        onclick="showPage('settings')"
+        id="settingsNav"
+      >
+        ⚙️ الإعدادات
+      </button>
+
+      <button
+        class="nav-btn"
+        data-page="logs"
+        onclick="showPage('logs')"
+        id="logsNav"
+      >
+        📋 سجل العمليات
+      </button>
+
+    </aside>
+
+
+    <!-- CONTENT -->
+
+    <main class="content">
+
+      <!-- DASHBOARD -->
+
+      <section
+        id="page-dashboard"
+        class="page"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              لوحة التحكم
+            </h2>
+
+            <p>
+              ملخص النظام والمدرسة
+            </p>
+
+          </div>
+
+        </div>
+
+        <div
+          class="stats"
+          id="dashboardStats"
+        >
+
+          <div class="stat-card">
+
+            <small>
+              إجمالي الطلاب
+            </small>
+
+            <strong>
+              0
+            </strong>
+
+          </div>
+
+          <div class="stat-card">
+
+            <small>
+              المستخدمون
+            </small>
+
+            <strong>
+              0
+            </strong>
+
+          </div>
+
+          <div class="stat-card">
+
+            <small>
+              إجمالي الرسوم
+            </small>
+
+            <strong>
+              0
+            </strong>
+
+          </div>
+
+          <div class="stat-card">
+
+            <small>
+              المتبقي
+            </small>
+
+            <strong>
+              0
+            </strong>
+
+          </div>
+
+        </div>
+
+        <div class="card">
+
+          <h3>
+            مرحباً بك 👋
+          </h3>
+
+          <p>
+            من هنا يمكنك إدارة الطلاب والرسوم
+            والمستخدمين والإشعارات حسب صلاحياتك.
+          </p>
+
+        </div>
+
+      </section>
+
+
+      <!-- STUDENTS -->
+
+      <section
+        id="page-students"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              الطلاب
+            </h2>
+
+            <p>
+              إدارة بيانات الطلاب
+            </p>
+
+          </div>
+
+          <button
+            class="btn btn-primary"
+            onclick="openStudentModal()"
+            id="addStudentBtn"
+          >
+            + إضافة طالب
+          </button>
+
+        </div>
+
+        <div class="card">
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    الطالب
+                  </th>
+
+                  <th>
+                    الرقم
+                  </th>
+
+                  <th>
+                    الصف
+                  </th>
+
+                  <th>
+                    ولي الأمر
+                  </th>
+
+                  <th>
+                    الإيميل
+                  </th>
+
+                  <th>
+                    الإجراءات
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="studentsTable">
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PARENTS -->
+
+      <section
+        id="page-parents"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              أولياء الأمور
+            </h2>
+
+            <p>
+              بيانات أولياء الأمور
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="card">
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    الاسم
+                  </th>
+
+                  <th>
+                    الهاتف
+                  </th>
+
+                  <th>
+                    الإيميل
+                  </th>
+
+                  <th>
+                    عدد الأبناء
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="parentsTable">
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- FEES -->
+
+      <section
+        id="page-fees"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              الرسوم الدراسية
+            </h2>
+
+            <p>
+              إدارة الرسوم والمدفوعات والأقساط
+            </p>
+
+          </div>
+
+          <button
+            class="btn btn-primary"
+            onclick="openFeeModal()"
+            id="addFeeBtn"
+          >
+            + إضافة رسوم
+          </button>
+
+        </div>
+
+        <div class="card">
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    الطالب
+                  </th>
+
+                  <th>
+                    الإجمالي
+                  </th>
+
+                  <th>
+                    المدفوع
+                  </th>
+
+                  <th>
+                    المتبقي
+                  </th>
+
+                  <th>
+                    النوع
+                  </th>
+
+                  <th>
+                    الحالة
+                  </th>
+
+                  <th>
+                    الإجراءات
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="feesTable">
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- USERS -->
+
+      <section
+        id="page-users"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              المستخدمون
+            </h2>
+
+            <p>
+              إدارة الحسابات والصلاحيات
+            </p>
+
+          </div>
+
+          <button
+            class="btn btn-primary"
+            onclick="openUserModal()"
+          >
+            + إضافة مستخدم
+          </button>
+
+        </div>
+
+        <div class="card">
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    الاسم
+                  </th>
+
+                  <th>
+                    اسم المستخدم
+                  </th>
+
+                  <th>
+                    الوظيفة
+                  </th>
+
+                  <th>
+                    الإيميل
+                  </th>
+
+                  <th>
+                    الحالة
+                  </th>
+
+                  <th>
+                    الإجراءات
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="usersTable">
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- NOTIFICATIONS -->
+
+      <section
+        id="page-notifications"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              الإشعارات
+            </h2>
+
+            <p>
+              التنبيهات والإشعارات
+            </p>
+
+          </div>
+
+        </div>
+
+        <div
+          id="notificationsList"
+        >
+
+        </div>
+
+      </section>
+
+
+      <!-- REPORTS -->
+
+      <section
+        id="page-reports"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              التقارير
+            </h2>
+
+            <p>
+              تقارير النظام
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="card">
+
+          <h3>
+            تقرير الرسوم
+          </h3>
+
+          <div id="feeReport">
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- SETTINGS -->
+
+      <section
+        id="page-settings"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              إعدادات المنصة
+            </h2>
+
+            <p>
+              إعدادات المدرسة والنظام
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="card">
+
+          <div class="grid-2">
+
+            <div class="field">
+
+              <label>
+                اسم المدرسة
+              </label>
+
+              <input
+                id="settingSchoolName"
+              >
+
+            </div>
+
+            <div class="field">
+
+              <label>
+                بريد المدرسة
+              </label>
+
+              <input
+                id="settingSchoolEmail"
+                type="email"
+              >
+
+            </div>
+
+            <div class="field">
+
+              <label>
+                هاتف المدرسة
+              </label>
+
+              <input
+                id="settingSchoolPhone"
+              >
+
+            </div>
+
+            <div class="field">
+
+              <label>
+                العملة
+              </label>
+
+              <input
+                id="settingCurrency"
+              >
+
+            </div>
+
+          </div>
+
+          <div class="field">
+
+            <label>
+              عنوان المدرسة
+            </label>
+
+            <textarea
+              id="settingSchoolAddress"
+              rows="3"
+            ></textarea>
+
+          </div>
+
+          <hr>
+
+          <div class="field">
+
+            <label>
+              عدد الأيام قبل موعد القسط لإرسال التنبيه
+            </label>
+
+            <input
+              id="settingReminderDays"
+              type="number"
+              min="0"
+            >
+
+          </div>
+
+          <div class="actions">
+
+            <button
+              class="btn btn-primary"
+              onclick="saveSettings()"
+            >
+              حفظ الإعدادات
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- LOGS -->
+
+      <section
+        id="page-logs"
+        class="page hidden"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              سجل العمليات
+            </h2>
+
+            <p>
+              معرفة من قام بكل عملية داخل النظام
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="card">
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    المستخدم
+                  </th>
+
+                  <th>
+                    الوظيفة
+                  </th>
+
+                  <th>
+                    العملية
+                  </th>
+
+                  <th>
+                    التفاصيل
+                  </th>
+
+                  <th>
+                    التاريخ
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="logsTable">
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
 </section>
 
-<div id="toastContainer"></div>
+
+<!-- =====================================================
+     REGISTER MODAL
+===================================================== -->
+
+<div
+  id="registerModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-header">
+
+      <h3>
+        تسجيل مستخدم جديد
+      </h3>
+
+      <button
+        class="close-btn"
+        onclick="closeModal('registerModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <form id="registerForm">
+
+      <div class="grid-2">
+
+        <div class="field">
+
+          <label>
+            الاسم الكامل
+          </label>
+
+          <input
+            id="registerName"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            اسم المستخدم
+          </label>
+
+          <input
+            id="registerUsername"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            البريد الإلكتروني
+          </label>
+
+          <input
+            id="registerEmail"
+            type="email"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            رقم الهاتف
+          </label>
+
+          <input
+            id="registerPhone"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الوظيفة
+          </label>
+
+          <select
+            id="registerRole"
+            required
+          >
+
+            <option value="">
+              اختر الوظيفة
+            </option>
+
+            <option value="admin">
+              مدير
+            </option>
+
+            <option value="operations">
+              عمليات
+            </option>
+
+            <option value="quality">
+              جودة
+            </option>
+
+            <option value="teacher">
+              معلم
+            </option>
+
+            <option value="parent">
+              ولي أمر
+            </option>
+
+          </select>
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            كلمة المرور
+          </label>
+
+          <input
+            id="registerPassword"
+            type="password"
+            minlength="6"
+            placeholder="اتركها فارغة = 123456"
+          >
+
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          إنشاء الحساب
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-light"
+          onclick="closeModal('registerModal')"
+        >
+          إلغاء
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     USER MODAL
+===================================================== -->
+
+<div
+  id="userModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-header">
+
+      <h3>
+        إضافة مستخدم
+      </h3>
+
+      <button
+        class="close-btn"
+        onclick="closeModal('userModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <form id="userForm">
+
+      <div class="grid-2">
+
+        <div class="field">
+
+          <label>
+            الاسم
+          </label>
+
+          <input
+            id="userName"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            اسم المستخدم
+          </label>
+
+          <input
+            id="userUsername"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            البريد
+          </label>
+
+          <input
+            id="userEmail"
+            type="email"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الهاتف
+          </label>
+
+          <input
+            id="userPhone"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الوظيفة
+          </label>
+
+          <select
+            id="userRole"
+            required
+          >
+
+            <option value="admin">
+              مدير
+            </option>
+
+            <option value="operations">
+              عمليات
+            </option>
+
+            <option value="quality">
+              جودة
+            </option>
+
+            <option value="teacher">
+              معلم
+            </option>
+
+            <option value="parent">
+              ولي أمر
+            </option>
+
+            <option value="programmer">
+              مبرمج
+            </option>
+
+          </select>
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            كلمة المرور
+          </label>
+
+          <input
+            id="userPassword"
+            type="password"
+            placeholder="123456 افتراضياً"
+          >
+
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          إنشاء المستخدم
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-light"
+          onclick="closeModal('userModal')"
+        >
+          إلغاء
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     STUDENT MODAL
+===================================================== -->
+
+<div
+  id="studentModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-header">
+
+      <h3>
+        إضافة طالب
+      </h3>
+
+      <button
+        class="close-btn"
+        onclick="closeModal('studentModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <form id="studentForm">
+
+      <div class="grid-2">
+
+        <div class="field">
+
+          <label>
+            اسم الطالب
+          </label>
+
+          <input
+            id="studentName"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            رقم الطالب
+          </label>
+
+          <input
+            id="studentNumber"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الرقم الوطني
+          </label>
+
+          <input
+            id="studentNationalId"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الجنس
+          </label>
+
+          <select
+            id="studentGender"
+          >
+
+            <option value="">
+              اختر
+            </option>
+
+            <option value="male">
+              ذكر
+            </option>
+
+            <option value="female">
+              أنثى
+            </option>
+
+          </select>
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الصف
+          </label>
+
+          <input
+            id="studentClass"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            الفصل
+          </label>
+
+          <input
+            id="studentSection"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            اسم ولي الأمر
+          </label>
+
+          <input
+            id="parentName"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            إيميل ولي الأمر
+          </label>
+
+          <input
+            id="parentEmail"
+            type="email"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            هاتف ولي الأمر
+          </label>
+
+          <input
+            id="parentPhone"
+          >
+
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          حفظ الطالب
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-light"
+          onclick="closeModal('studentModal')"
+        >
+          إلغاء
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     FEE MODAL
+===================================================== -->
+
+<div
+  id="feeModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-header">
+
+      <h3>
+        إضافة رسوم دراسية
+      </h3>
+
+      <button
+        class="close-btn"
+        onclick="closeModal('feeModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <form id="feeForm">
+
+      <div class="field">
+
+        <label>
+          الطالب
+        </label>
+
+        <select
+          id="feeStudent"
+          required
+        >
+        </select>
+
+      </div>
+
+      <div class="grid-2">
+
+        <div class="field">
+
+          <label>
+            إجمالي الرسوم
+          </label>
+
+          <input
+            id="feeTotal"
+            type="number"
+            min="0"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            نظام الدفع
+          </label>
+
+          <select
+            id="feeType"
+            onchange="toggleInstallments()"
+          >
+
+            <option value="full">
+              دفع كامل
+            </option>
+
+            <option value="installments">
+              أقساط
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+      <div
+        id="installmentsBox"
+        class="hidden"
+      >
+
+        <h4>
+          الأقساط
+        </h4>
+
+        <div id="installmentsList">
+
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-light"
+          onclick="addInstallment()"
+        >
+          + إضافة قسط
+        </button>
+
+      </div>
+
+      <br>
+
+      <div class="actions">
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          حفظ الرسوم
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-light"
+          onclick="closeModal('feeModal')"
+        >
+          إلغاء
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- PAYMENT MODAL -->
+
+<div
+  id="paymentModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-header">
+
+      <h3>
+        تسجيل دفعة
+      </h3>
+
+      <button
+        class="close-btn"
+        onclick="closeModal('paymentModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        قيمة الدفعة
+      </label>
+
+      <input
+        id="paymentAmount"
+        type="number"
+        min="1"
+      >
+
+    </div>
+
+    <div class="actions">
+
+      <button
+        class="btn btn-success"
+        onclick="submitPayment()"
+      >
+        تسجيل السداد
+      </button>
+
+      <button
+        class="btn btn-light"
+        onclick="closeModal('paymentModal')"
+      >
+        إلغاء
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- CHANGE PASSWORD MODAL -->
+
+<div
+  id="passwordModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-header">
+
+      <h3>
+        تغيير كلمة المرور
+      </h3>
+
+    </div>
+
+    <p>
+      يجب تغيير كلمة المرور قبل متابعة استخدام المنصة.
+    </p>
+
+    <div class="field">
+
+      <label>
+        كلمة المرور الحالية
+      </label>
+
+      <input
+        id="currentPassword"
+        type="password"
+      >
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        كلمة المرور الجديدة
+      </label>
+
+      <input
+        id="newPassword"
+        type="password"
+        minlength="6"
+      >
+
+    </div>
+
+    <button
+      class="btn btn-primary"
+      onclick="changePassword()"
+    >
+      تغيير كلمة المرور
+    </button>
+
+  </div>
+
+</div>
+
+
+<div id="toast"></div>
+
 
 <script>
+
+  /* =====================================================
+     STATE
+  ===================================================== */
+
+  let token =
+    localStorage.getItem("school_token") || "";
+
   let currentUser = null;
 
-  async function api(url, options = {}) {
-    const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-    if (currentUser?.id) headers["x-user-id"] = String(currentUser.id);
+  let currentFeeId = null;
 
-    const res = await fetch(url, { ...options, headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "حدث خطأ");
+
+  /* =====================================================
+     API
+  ===================================================== */
+
+  async function api(
+    url,
+    options = {}
+  ) {
+
+    options.headers =
+      options.headers || {};
+
+    options.headers["Content-Type"] =
+      "application/json";
+
+    if (token) {
+
+      options.headers["Authorization"] =
+        "Bearer " + token;
+
+    }
+
+    const response =
+      await fetch(url, options);
+
+    let data = {};
+
+    try {
+      data = await response.json();
+    } catch {}
+
+    if (
+      response.status === 401
+    ) {
+
+      logout(false);
+
+      throw new Error(
+        data.message ||
+        "انتهت الجلسة"
+      );
+    }
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.message ||
+        "حدث خطأ"
+      );
+    }
+
     return data;
   }
 
-  function toast(msg, type = "success") {
-    const el = document.createElement("div");
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    document.getElementById("toastContainer").appendChild(el);
-    setTimeout(() => el.remove(), 3000);
+
+  /* =====================================================
+     TOAST
+  ===================================================== */
+
+  function toast(message) {
+
+    const box =
+      document.createElement("div");
+
+    box.className =
+      "toast-item";
+
+    box.textContent =
+      message;
+
+    document
+      .getElementById("toast")
+      .appendChild(box);
+
+    setTimeout(() => {
+      box.remove();
+    }, 3500);
   }
 
-  function toggleAuth() {
-    const isReg = document.getElementById("registerForm").classList.toggle("hidden");
-    document.getElementById("loginForm").classList.toggle("hidden");
-    document.getElementById("switchAuthBtn").textContent = isReg ? "تسجيل جديد" : "تسجيل الدخول";
-  }
 
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      const res = await api("/api/login", {
-        method: "POST",
-        body: JSON.stringify({
-          username: document.getElementById("loginUsername").value,
-          password: document.getElementById("loginPassword").value
-        })
-      });
-      currentUser = res.user;
-      document.getElementById("authScreen").classList.add("hidden");
-      document.getElementById("app").classList.remove("hidden");
-      document.getElementById("topUserName").textContent = currentUser.name;
-      navigate("dashboard");
-      toast("تم تسجيل الدخول بنجاح");
-    } catch (err) { toast(err.message, "error"); }
-  });
+  /* =====================================================
+     LOGIN
+  ===================================================== */
 
-  document.getElementById("registerForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      const res = await api("/api/register", {
-        method: "POST",
-        body: JSON.stringify({
-          name: document.getElementById("regName").value,
-          username: document.getElementById("regUsername").value,
-          email: document.getElementById("regEmail").value,
-          phone: document.getElementById("regPhone").value,
-          role: document.getElementById("regRole").value,
-          password: document.getElementById("regPassword").value
-        })
-      });
-      toast(res.message);
-      toggleAuth();
-    } catch (err) { toast(err.message, "error"); }
-  });
+  document
+    .getElementById("loginForm")
+    .addEventListener(
+      "submit",
+      async function(e) {
 
-  async function navigate(page) {
-    const content = document.getElementById("content");
-    document.getElementById("pageTitle").textContent = 
-      page === 'dashboard' ? 'لوحة التحكم' :
-      page === 'students' ? 'الطلاب والرسوم الدراسية' :
-      page === 'notifications' ? 'التنبيهات والإشعارات' : 'إعدادات المنصة';
+        e.preventDefault();
 
-    if (page === 'dashboard') {
-      const data = await api("/api/dashboard");
-      content.innerHTML = `
-        <div class="stats-grid">
-          <div class="stat-card">إجمالي الطلاب<div class="stat-value">${data.stats.students}</div></div>
-          <div class="stat-card">المستخدمين المسجلين<div class="stat-value">${data.stats.users}</div></div>
-          <div class="stat-card">الحسابات المعلقة<div class="stat-value">${data.stats.pendingUsers}</div></div>
-          <div class="stat-card">الرسوم المحصلة<div class="stat-value">$${data.stats.paidTuition}</div></div>
-        </div>
-      `;
-    } else if (page === 'students') {
-      const students = await api("/api/students");
-      content.innerHTML = `
-        <div class="table-card">
-          <table>
-            <thead>
-              <tr><th>اسم الطالب</th><th>الصف</th><th>الهاتف</th><th>إجمالي الرسوم</th><th>الحالة</th></tr>
-            </thead>
-            <tbody>
-              ${students.map(s => `
-                <tr>
-                  <td>${s.name}</td>
-                  <td>${s.class_name || '-'}</td>
-                  <td>${s.parent_phone || '-'}</td>
-                  <td>$${s.total_tuition}</td>
-                  <td>${s.remaining_amount <= 0 ? '✅ مدفوع بالكامل' : '⏳ متبقي $' + s.remaining_amount}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    } else if (page === 'settings') {
-      const settings = await api("/api/settings");
-      content.innerHTML = `
-        <div class="table-card" style="padding:20px;">
-          <form onsubmit="saveSettings(event)">
-            <div class="form-group"><label>اسم المنصة</label><input id="setPlatform" value="${settings.platform_name || ''}"></div>
-            <div class="form-group"><label>اسم المدرسة</label><input id="setSchool" value="${settings.school_name || ''}"></div>
-            <div class="form-group"><label>البريد الرسمي</label><input id="setEmail" value="${settings.email || ''}"></div>
-            <button class="btn btn-primary" type="submit">حفظ التغييرات</button>
-          </form>
-        </div>
-      `;
+        const username =
+          document
+            .getElementById("loginUsername")
+            .value
+            .trim();
+
+        const password =
+          document
+            .getElementById("loginPassword")
+            .value;
+
+        try {
+
+          const result =
+            await api(
+              "/api/auth/login",
+              {
+                method: "POST",
+
+                body: JSON.stringify({
+                  username,
+                  password
+                })
+              }
+            );
+
+          token =
+            result.token;
+
+          currentUser =
+            result.user;
+
+          localStorage.setItem(
+            "school_token",
+            token
+          );
+
+          localStorage.setItem(
+            "school_user",
+            JSON.stringify(
+              currentUser
+            )
+          );
+
+          showApp(
+            result.settings
+          );
+
+          toast(
+            "تم تسجيل الدخول بنجاح"
+          );
+
+        } catch(error) {
+
+          toast(
+            error.message
+          );
+
+        }
+
+      }
+    );
+
+
+  /* =====================================================
+     SHOW APP
+  ===================================================== */
+
+  function showApp(settings) {
+
+    document
+      .getElementById("loginPage")
+      .classList
+      .add("hidden");
+
+    document
+      .getElementById("appPage")
+      .classList
+      .remove("hidden");
+
+    document
+      .getElementById("currentUserName")
+      .textContent =
+      currentUser.name;
+
+    document
+      .getElementById("currentUserRole")
+      .textContent =
+      roleName(
+        currentUser.role
+      );
+
+    document
+      .getElementById("userAvatar")
+      .textContent =
+      currentUser.name
+        ? currentUser.name.charAt(0)
+        : "م";
+
+    if (settings) {
+
+      document
+        .getElementById("schoolNameTop")
+        .textContent =
+        settings.schoolName ||
+        "إدارة المدرسة";
+
+      document
+        .getElementById("loginSchoolName")
+        .textContent =
+        settings.schoolName ||
+        "إدارة المدرسة";
     }
+
+    applyRole();
+
+    loadDashboard();
+
+    if (
+      currentUser.mustChangePassword
+    ) {
+
+      document
+        .getElementById(
+          "passwordModal"
+        )
+        .classList
+        .remove("hidden");
+
+    }
+
   }
 
-  async function saveSettings(e) {
-    e.preventDefault();
-    try {
-      await api("/api/settings", {
-        method: "POST",
-        body: JSON.stringify({
-          platform_name: document.getElementById("setPlatform").value,
-          school_name: document.getElementById("setSchool").value,
-          email: document.getElementById("setEmail").value
-        })
+
+  /* =====================================================
+     ROLE
+  ===================================================== */
+
+  function roleName(role) {
+
+    const names = {
+
+      programmer:
+        "المبرمج",
+
+      admin:
+        "المدير",
+
+      operations:
+        "العمليات",
+
+      quality:
+        "الجودة",
+
+      teacher:
+        "المعلم",
+
+      parent:
+        "ولي الأمر"
+
+    };
+
+    return (
+      names[role] ||
+      role
+    );
+  }
+
+
+  function applyRole() {
+
+    const role =
+      currentUser.role;
+
+    const programmer =
+      role === "programmer";
+
+    const admin =
+      role === "admin";
+
+    const canUsers =
+      programmer ||
+      admin;
+
+    const canSettings =
+      programmer;
+
+    document
+      .getElementById("usersNav")
+      .classList
+      .toggle(
+        "hidden",
+        !canUsers
+      );
+
+    document
+      .getElementById("settingsNav")
+      .classList
+      .toggle(
+        "hidden",
+        !canSettings
+      );
+
+    document
+      .getElementById("logsNav")
+      .classList
+      .toggle(
+        "hidden",
+        !programmer
+      );
+
+    if (
+      role === "quality" ||
+      role === "teacher"
+    ) {
+
+      document
+        .getElementById("addStudentBtn")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("addFeeBtn")
+        .classList
+        .add("hidden");
+
+    }
+
+    if (role === "parent") {
+
+      document
+        .getElementById("usersNav")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("settingsNav")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("logsNav")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("addStudentBtn")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("addFeeBtn")
+        .classList
+        .add("hidden");
+
+    }
+
+  }
+
+
+  /* =====================================================
+     NAVIGATION
+  ===================================================== */
+
+  function showPage(page) {
+
+    document
+      .querySelectorAll(".page")
+      .forEach(
+        el =>
+          el.classList
+            .add("hidden")
+      );
+
+    const target =
+      document.getElementById(
+        "page-" + page
+      );
+
+    if (target) {
+      target.classList
+        .remove("hidden");
+    }
+
+    document
+      .querySelectorAll(".nav-btn")
+      .forEach(btn => {
+
+        btn.classList.toggle(
+          "active",
+          btn.dataset.page === page
+        );
+
       });
-      toast("تم حفظ الإعدادات");
-    } catch (err) { toast(err.message, "error"); }
+
+    if (page === "dashboard")
+      loadDashboard();
+
+    if (page === "students")
+      loadStudents();
+
+    if (page === "parents")
+      loadParents();
+
+    if (page === "fees")
+      loadFees();
+
+    if (page === "users")
+      loadUsers();
+
+    if (page === "notifications")
+      loadNotifications();
+
+    if (page === "reports")
+      loadReports();
+
+    if (page === "settings")
+      loadSettings();
+
+    if (page === "logs")
+      loadLogs();
   }
 
-  function logout() {
-    currentUser = null;
-    document.getElementById("app").classList.add("hidden");
-    document.getElementById("authScreen").classList.remove("hidden");
+
+  /* =====================================================
+     DASHBOARD
+  ===================================================== */
+
+  async function loadDashboard() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/dashboard"
+        );
+
+      const s =
+        result.statistics;
+
+      const cards =
+        document.querySelectorAll(
+          "#dashboardStats .stat-card strong"
+        );
+
+      cards[0].textContent =
+        s.totalStudents;
+
+      cards[1].textContent =
+        s.totalUsers;
+
+      cards[2].textContent =
+        money(s.totalFees);
+
+      cards[3].textContent =
+        money(s.totalRemaining);
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
   }
+
+
+  /* =====================================================
+     STUDENTS
+  ===================================================== */
+
+  async function loadStudents() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/students"
+        );
+
+      const tbody =
+        document.getElementById(
+          "studentsTable"
+        );
+
+      tbody.innerHTML = "";
+
+      if (
+        !result.students.length
+      ) {
+
+        tbody.innerHTML =
+          emptyRow(
+            6,
+            "لا يوجد طلاب حالياً"
+          );
+
+        return;
+      }
+
+      result.students.forEach(
+        student => {
+
+          const tr =
+            document.createElement("tr");
+
+          tr.innerHTML = `
+
+            <td>
+              <strong>
+                ${escapeHtml(student.name)}
+              </strong>
+            </td>
+
+            <td>
+              ${escapeHtml(
+                student.studentNumber || "-"
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                student.className || "-"
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                student.parentName || "-"
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                student.parentEmail || "-"
+              )}
+            </td>
+
+            <td>
+
+              ${
+                canManageStudents()
+                ? `
+                <button
+                  class="btn btn-light"
+                  onclick="editStudent('${student.id}')"
+                >
+                  تعديل
+                </button>
+                `
+                : "-"
+              }
+
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+
+        }
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  function canManageStudents() {
+
+    return [
+      "programmer",
+      "admin",
+      "operations"
+    ].includes(
+      currentUser.role
+    );
+
+  }
+
+
+  function openStudentModal() {
+
+    document
+      .getElementById("studentForm")
+      .reset();
+
+    document
+      .getElementById("studentModal")
+      .classList
+      .remove("hidden");
+
+  }
+
+
+  document
+    .getElementById("studentForm")
+    .addEventListener(
+      "submit",
+      async function(e) {
+
+        e.preventDefault();
+
+        try {
+
+          await api(
+            "/api/students",
+            {
+              method: "POST",
+
+              body: JSON.stringify({
+
+                name:
+                  value("studentName"),
+
+                studentNumber:
+                  value("studentNumber"),
+
+                nationalId:
+                  value(
+                    "studentNationalId"
+                  ),
+
+                gender:
+                  value("studentGender"),
+
+                className:
+                  value("studentClass"),
+
+                section:
+                  value("studentSection"),
+
+                parentName:
+                  value("parentName"),
+
+                parentEmail:
+                  value("parentEmail"),
+
+                parentPhone:
+                  value("parentPhone")
+
+              })
+            }
+          );
+
+          closeModal(
+            "studentModal"
+          );
+
+          toast(
+            "تمت إضافة الطالب"
+          );
+
+          loadStudents();
+
+          loadDashboard();
+
+        } catch(error) {
+
+          toast(error.message);
+
+        }
+
+      }
+    );
+
+
+  /* =====================================================
+     PARENTS
+  ===================================================== */
+
+  async function loadParents() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/students"
+        );
+
+      const students =
+        result.students;
+
+      const map = {};
+
+      students.forEach(
+        student => {
+
+          const key =
+            student.parentEmail ||
+            student.parentPhone ||
+            student.parentName ||
+            "unknown";
+
+          if (!map[key]) {
+
+            map[key] = {
+              name:
+                student.parentName ||
+                "-",
+
+              phone:
+                student.parentPhone ||
+                "-",
+
+              email:
+                student.parentEmail ||
+                "-",
+
+              count: 0
+            };
+
+          }
+
+          map[key].count++;
+
+        }
+      );
+
+      const tbody =
+        document.getElementById(
+          "parentsTable"
+        );
+
+      tbody.innerHTML = "";
+
+      const parents =
+        Object.values(map);
+
+      if (!parents.length) {
+
+        tbody.innerHTML =
+          emptyRow(
+            4,
+            "لا توجد بيانات أولياء أمور"
+          );
+
+        return;
+      }
+
+      parents.forEach(parent => {
+
+        tbody.innerHTML += `
+
+          <tr>
+
+            <td>
+              ${escapeHtml(parent.name)}
+            </td>
+
+            <td>
+              ${escapeHtml(parent.phone)}
+            </td>
+
+            <td>
+              ${escapeHtml(parent.email)}
+            </td>
+
+            <td>
+              ${parent.count}
+            </td>
+
+          </tr>
+
+        `;
+
+      });
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     FEES
+  ===================================================== */
+
+  async function loadFees() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/fees"
+        );
+
+      const tbody =
+        document.getElementById(
+          "feesTable"
+        );
+
+      tbody.innerHTML = "";
+
+      if (!result.fees.length) {
+
+        tbody.innerHTML =
+          emptyRow(
+            7,
+            "لا توجد رسوم مسجلة"
+          );
+
+        return;
+      }
+
+      result.fees.forEach(
+        fee => {
+
+          const complete =
+            fee.remainingAmount <= 0;
+
+          const status =
+            complete
+              ? `
+                <span class="badge badge-success">
+                  مكتمل
+                </span>
+              `
+              : `
+                <span class="badge badge-warning">
+                  متبقي
+                </span>
+              `;
+
+          tbody.innerHTML += `
+
+            <tr>
+
+              <td>
+                ${escapeHtml(
+                  fee.studentName
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  fee.totalAmount
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  fee.paidAmount
+                )}
+              </td>
+
+              <td>
+                <strong>
+                  ${money(
+                    fee.remainingAmount
+                  )}
+                </strong>
+              </td>
+
+              <td>
+                ${
+                  fee.paymentType ===
+                  "installments"
+                    ? "أقساط"
+                    : "كامل"
+                }
+              </td>
+
+              <td>
+                ${status}
+              </td>
+
+              <td>
+
+                ${
+                  currentUser.role !==
+                  "parent"
+                    ? `
+                    <button
+                      class="btn btn-success"
+                      onclick="openPayment('${fee.id}')"
+                    >
+                      سداد
+                    </button>
+                    `
+                    : "-"
+                }
+
+              </td>
+
+            </tr>
+
+          `;
+
+        }
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  function openFeeModal() {
+
+    document
+      .getElementById("feeForm")
+      .reset();
+
+    document
+      .getElementById(
+        "installmentsList"
+      )
+      .innerHTML = "";
+
+    document
+      .getElementById(
+        "installmentsBox"
+      )
+      .classList
+      .add("hidden");
+
+    loadStudentOptions();
+
+    document
+      .getElementById("feeModal")
+      .classList
+      .remove("hidden");
+
+  }
+
+
+  async function loadStudentOptions() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/students"
+        );
+
+      const select =
+        document.getElementById(
+          "feeStudent"
+        );
+
+      select.innerHTML =
+        `<option value="">
+          اختر الطالب
+        </option>`;
+
+      result.students.forEach(
+        student => {
+
+          select.innerHTML += `
+
+            <option value="${student.id}">
+              ${escapeHtml(student.name)}
+            </option>
+
+          `;
+
+        }
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  function toggleInstallments() {
+
+    const type =
+      value("feeType");
+
+    document
+      .getElementById(
+        "installmentsBox"
+      )
+      .classList
+      .toggle(
+        "hidden",
+        type !== "installments"
+      );
+
+  }
+
+
+  function addInstallment() {
+
+    const list =
+      document.getElementById(
+        "installmentsList"
+      );
+
+    const row =
+      document.createElement("div");
+
+    row.className =
+      "grid-2";
+
+    row.style.marginBottom =
+      "10px";
+
+    row.innerHTML = `
+
+      <div class="field">
+
+        <label>
+          قيمة القسط
+        </label>
+
+        <input
+          class="installment-amount"
+          type="number"
+          min="0"
+        >
+
+      </div>
+
+      <div class="field">
+
+        <label>
+          تاريخ الاستحقاق
+        </label>
+
+        <input
+          class="installment-date"
+          type="date"
+        >
+
+      </div>
+
+    `;
+
+    list.appendChild(row);
+
+  }
+
+
+  document
+    .getElementById("feeForm")
+    .addEventListener(
+      "submit",
+      async function(e) {
+
+        e.preventDefault();
+
+        const installments = [];
+
+        document
+          .querySelectorAll(
+            ".installment-amount"
+          )
+          .forEach(
+            (input, index) => {
+
+              const dates =
+                document.querySelectorAll(
+                  ".installment-date"
+                );
+
+              if (
+                input.value &&
+                dates[index]?.value
+              ) {
+
+                installments.push({
+
+                  amount:
+                    Number(
+                      input.value
+                    ),
+
+                  dueDate:
+                    dates[index].value
+
+                });
+
+              }
+
+            }
+          );
+
+        try {
+
+          await api(
+            "/api/fees",
+            {
+              method: "POST",
+
+              body: JSON.stringify({
+
+                studentId:
+                  value("feeStudent"),
+
+                totalAmount:
+                  Number(
+                    value("feeTotal")
+                  ),
+
+                paymentType:
+                  value("feeType"),
+
+                installments
+
+              })
+            }
+          );
+
+          closeModal(
+            "feeModal"
+          );
+
+          toast(
+            "تم حفظ الرسوم بنجاح"
+          );
+
+          loadFees();
+
+          loadDashboard();
+
+        } catch(error) {
+
+          toast(error.message);
+
+        }
+
+      }
+    );
+
+
+  /* =====================================================
+     PAYMENTS
+  ===================================================== */
+
+  function openPayment(id) {
+
+    currentFeeId =
+      id;
+
+    document
+      .getElementById(
+        "paymentAmount"
+      )
+      .value = "";
+
+    document
+      .getElementById(
+        "paymentModal"
+      )
+      .classList
+      .remove("hidden");
+
+  }
+
+
+  async function submitPayment() {
+
+    const amount =
+      Number(
+        value("paymentAmount")
+      );
+
+    if (
+      !amount ||
+      amount <= 0
+    ) {
+
+      toast(
+        "أدخل قيمة صحيحة"
+      );
+
+      return;
+    }
+
+    try {
+
+      await api(
+        `/api/fees/${currentFeeId}/payment`,
+        {
+          method: "POST",
+
+          body: JSON.stringify({
+            amount
+          })
+        }
+      );
+
+      closeModal(
+        "paymentModal"
+      );
+
+      toast(
+        "تم تسجيل السداد"
+      );
+
+      loadFees();
+
+      loadDashboard();
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     USERS
+  ===================================================== */
+
+  async function loadUsers() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/users"
+        );
+
+      const tbody =
+        document.getElementById(
+          "usersTable"
+        );
+
+      tbody.innerHTML = "";
+
+      result.users.forEach(
+        user => {
+
+          const status =
+            user.active
+              ? `
+                <span class="badge badge-success">
+                  نشط
+                </span>
+              `
+              : `
+                <span class="badge badge-danger">
+                  موقوف
+                </span>
+              `;
+
+          tbody.innerHTML += `
+
+            <tr>
+
+              <td>
+                ${escapeHtml(user.name)}
+              </td>
+
+              <td>
+                ${escapeHtml(user.username)}
+              </td>
+
+              <td>
+                ${roleName(user.role)}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  user.email || "-"
+                )}
+              </td>
+
+              <td>
+                ${status}
+              </td>
+
+              <td>
+
+                <div class="actions">
+
+                  ${
+                    user.id !== currentUser.id
+                      ? `
+                      <button
+                        class="btn btn-light"
+                        onclick="toggleUser('${user.id}', ${!user.active})"
+                      >
+                        ${
+                          user.active
+                            ? "إيقاف"
+                            : "تفعيل"
+                        }
+                      </button>
+
+                      <button
+                        class="btn btn-danger"
+                        onclick="deleteUser('${user.id}')"
+                      >
+                        حذف
+                      </button>
+                      `
+                      : `
+                      <span>
+                        الحساب الحالي
+                      </span>
+                      `
+                  }
+
+                </div>
+
+              </td>
+
+            </tr>
+
+          `;
+
+        }
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  function openUserModal() {
+
+    document
+      .getElementById("userForm")
+      .reset();
+
+    document
+      .getElementById("userModal")
+      .classList
+      .remove("hidden");
+
+  }
+
+
+  document
+    .getElementById("userForm")
+    .addEventListener(
+      "submit",
+      async function(e) {
+
+        e.preventDefault();
+
+        try {
+
+          await api(
+            "/api/users",
+            {
+              method: "POST",
+
+              body: JSON.stringify({
+
+                name:
+                  value("userName"),
+
+                username:
+                  value("userUsername"),
+
+                email:
+                  value("userEmail"),
+
+                phone:
+                  value("userPhone"),
+
+                role:
+                  value("userRole"),
+
+                password:
+                  value("userPassword")
+
+              })
+            }
+          );
+
+          closeModal(
+            "userModal"
+          );
+
+          toast(
+            "تم إنشاء المستخدم"
+          );
+
+          loadUsers();
+
+          loadDashboard();
+
+        } catch(error) {
+
+          toast(error.message);
+
+        }
+
+      }
+    );
+
+
+  async function toggleUser(
+    userId,
+    active
+  ) {
+
+    try {
+
+      await api(
+        `/api/users/${userId}`,
+        {
+          method: "PUT",
+
+          body: JSON.stringify({
+            active
+          })
+        }
+      );
+
+      toast(
+        active
+          ? "تم تفعيل المستخدم"
+          : "تم إيقاف المستخدم"
+      );
+
+      loadUsers();
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  async function deleteUser(
+    userId
+  ) {
+
+    if (
+      !confirm(
+        "هل أنت متأكد من حذف هذا المستخدم؟"
+      )
+    ) {
+      return;
+    }
+
+    try {
+
+      await api(
+        `/api/users/${userId}`,
+        {
+          method: "DELETE"
+        }
+      );
+
+      toast(
+        "تم حذف المستخدم"
+      );
+
+      loadUsers();
+
+      loadDashboard();
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     REGISTER
+  ===================================================== */
+
+  function openRegister() {
+
+    document
+      .getElementById("registerForm")
+      .reset();
+
+    document
+      .getElementById(
+        "registerModal"
+      )
+      .classList
+      .remove("hidden");
+
+  }
+
+
+  document
+    .getElementById(
+      "registerForm"
+    )
+    .addEventListener(
+      "submit",
+      async function(e) {
+
+        e.preventDefault();
+
+        /*
+          التسجيل العام لا يسمح بإنشاء
+          حساب مبرمج.
+        */
+
+        try {
+
+          await api(
+            "/api/users",
+            {
+              method: "POST",
+
+              body: JSON.stringify({
+
+                name:
+                  value("registerName"),
+
+                username:
+                  value(
+                    "registerUsername"
+                  ),
+
+                email:
+                  value(
+                    "registerEmail"
+                  ),
+
+                phone:
+                  value(
+                    "registerPhone"
+                  ),
+
+                role:
+                  value(
+                    "registerRole"
+                  ),
+
+                password:
+                  value(
+                    "registerPassword"
+                  )
+
+              })
+            }
+          );
+
+          closeModal(
+            "registerModal"
+          );
+
+          toast(
+            "تم إنشاء الحساب"
+          );
+
+        } catch(error) {
+
+          /*
+            إذا كان الشخص غير مسجل دخول،
+            التسجيل العام يحتاج endpoint
+            خاص في النسخة القادمة.
+          */
+
+          toast(
+            "لتسجيل المستخدمين من شاشة التسجيل، سيتم ربط التسجيل العام في الخطوة التالية"
+          );
+
+        }
+
+      }
+    );
+
+
+  /* =====================================================
+     NOTIFICATIONS
+  ===================================================== */
+
+  async function loadNotifications() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/notifications"
+        );
+
+      const box =
+        document.getElementById(
+          "notificationsList"
+        );
+
+      box.innerHTML = "";
+
+      if (
+        !result.notifications.length
+      ) {
+
+        box.innerHTML = `
+          <div class="card">
+            لا توجد إشعارات حالياً.
+          </div>
+        `;
+
+        return;
+      }
+
+      result.notifications.forEach(
+        n => {
+
+          box.innerHTML += `
+
+            <div class="card">
+
+              <h3>
+                ${escapeHtml(n.title)}
+              </h3>
+
+              <p>
+                ${escapeHtml(n.message)}
+              </p>
+
+              <small>
+                ${formatDate(n.createdAt)}
+              </small>
+
+            </div>
+
+          `;
+
+        }
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     REPORTS
+  ===================================================== */
+
+  async function loadReports() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/fees"
+        );
+
+      const fees =
+        result.fees;
+
+      const total =
+        fees.reduce(
+          (s, f) =>
+            s +
+            Number(
+              f.totalAmount || 0
+            ),
+          0
+        );
+
+      const paid =
+        fees.reduce(
+          (s, f) =>
+            s +
+            Number(
+              f.paidAmount || 0
+            ),
+          0
+        );
+
+      const remaining =
+        total - paid;
+
+      document
+        .getElementById(
+          "feeReport"
+        )
+        .innerHTML = `
+
+          <div class="stats">
+
+            <div class="stat-card">
+
+              <small>
+                إجمالي الرسوم
+              </small>
+
+              <strong>
+                ${money(total)}
+              </strong>
+
+            </div>
+
+            <div class="stat-card">
+
+              <small>
+                إجمالي المدفوع
+              </small>
+
+              <strong>
+                ${money(paid)}
+              </strong>
+
+            </div>
+
+            <div class="stat-card">
+
+              <small>
+                إجمالي المتبقي
+              </small>
+
+              <strong>
+                ${money(remaining)}
+              </strong>
+
+            </div>
+
+          </div>
+        `;
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     SETTINGS
+  ===================================================== */
+
+  async function loadSettings() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/settings"
+        );
+
+      const s =
+        result.settings;
+
+      document
+        .getElementById(
+          "settingSchoolName"
+        )
+        .value =
+        s.schoolName || "";
+
+      document
+        .getElementById(
+          "settingSchoolEmail"
+        )
+        .value =
+        s.schoolEmail || "";
+
+      document
+        .getElementById(
+          "settingSchoolPhone"
+        )
+        .value =
+        s.schoolPhone || "";
+
+      document
+        .getElementById(
+          "settingSchoolAddress"
+        )
+        .value =
+        s.schoolAddress || "";
+
+      document
+        .getElementById(
+          "settingCurrency"
+        )
+        .value =
+        s.currency || "";
+
+      document
+        .getElementById(
+          "settingReminderDays"
+        )
+        .value =
+        s.reminderDays ?? 3;
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  async function saveSettings() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/settings",
+          {
+            method: "PUT",
+
+            body: JSON.stringify({
+
+              schoolName:
+                value(
+                  "settingSchoolName"
+                ),
+
+              schoolEmail:
+                value(
+                  "settingSchoolEmail"
+                ),
+
+              schoolPhone:
+                value(
+                  "settingSchoolPhone"
+                ),
+
+              schoolAddress:
+                value(
+                  "settingSchoolAddress"
+                ),
+
+              currency:
+                value(
+                  "settingCurrency"
+                ),
+
+              reminderDays:
+                Number(
+                  value(
+                    "settingReminderDays"
+                  )
+                )
+
+            })
+          }
+        );
+
+      document
+        .getElementById(
+          "schoolNameTop"
+        )
+        .textContent =
+        result.settings.schoolName;
+
+      toast(
+        "تم حفظ الإعدادات"
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     LOGS
+  ===================================================== */
+
+  async function loadLogs() {
+
+    try {
+
+      const result =
+        await api(
+          "/api/activity-logs"
+        );
+
+      const tbody =
+        document.getElementById(
+          "logsTable"
+        );
+
+      tbody.innerHTML = "";
+
+      result.logs.forEach(
+        log => {
+
+          tbody.innerHTML += `
+
+            <tr>
+
+              <td>
+                ${escapeHtml(
+                  log.username
+                )}
+              </td>
+
+              <td>
+                ${roleName(log.role)}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  log.action
+                )}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  log.details
+                )}
+              </td>
+
+              <td>
+                ${formatDate(
+                  log.date
+                )}
+              </td>
+
+            </tr>
+
+          `;
+
+        }
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     CHANGE PASSWORD
+  ===================================================== */
+
+  async function changePassword() {
+
+    const currentPassword =
+      value(
+        "currentPassword"
+      );
+
+    const newPassword =
+      value(
+        "newPassword"
+      );
+
+    if (
+      newPassword.length < 6
+    ) {
+
+      toast(
+        "كلمة المرور الجديدة يجب أن تكون 6 أحرف أو أكثر"
+      );
+
+      return;
+    }
+
+    try {
+
+      await api(
+        "/api/auth/change-password",
+        {
+          method: "POST",
+
+          body: JSON.stringify({
+
+            currentPassword,
+
+            newPassword
+
+          })
+        }
+      );
+
+      currentUser.mustChangePassword =
+        false;
+
+      localStorage.setItem(
+        "school_user",
+        JSON.stringify(
+          currentUser
+        )
+      );
+
+      closeModal(
+        "passwordModal"
+      );
+
+      toast(
+        "تم تغيير كلمة المرور"
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     LOGOUT
+  ===================================================== */
+
+  function logout(
+    showMessage = true
+  ) {
+
+    if (token) {
+
+      fetch(
+        "/api/auth/logout",
+        {
+          method: "POST",
+
+          headers: {
+            "Authorization":
+              "Bearer " + token,
+
+            "Content-Type":
+              "application/json"
+          }
+        }
+      ).catch(() => {});
+
+    }
+
+    token = "";
+
+    currentUser = null;
+
+    localStorage.removeItem(
+      "school_token"
+    );
+
+    localStorage.removeItem(
+      "school_user"
+    );
+
+    document
+      .getElementById(
+        "appPage"
+      )
+      .classList
+      .add("hidden");
+
+    document
+      .getElementById(
+        "loginPage"
+      )
+      .classList
+      .remove("hidden");
+
+    if (showMessage) {
+      toast(
+        "تم تسجيل الخروج"
+      );
+    }
+
+  }
+
+
+  /* =====================================================
+     MODALS
+  ===================================================== */
+
+  function closeModal(id) {
+
+    document
+      .getElementById(id)
+      .classList
+      .add("hidden");
+
+  }
+
+
+  /* =====================================================
+     HELPERS
+  ===================================================== */
+
+  function value(id) {
+
+    return (
+      document
+        .getElementById(id)
+        ?.value ||
+      ""
+    ).trim();
+
+  }
+
+
+  function money(number) {
+
+    return (
+      Number(number || 0)
+        .toLocaleString("ar-EG")
+      + " "
+      + "جنيه"
+    );
+
+  }
+
+
+  function formatDate(date) {
+
+    if (!date) return "-";
+
+    try {
+
+      return new Date(date)
+        .toLocaleString(
+          "ar-EG"
+        );
+
+    } catch {
+
+      return date;
+
+    }
+
+  }
+
+
+  function emptyRow(
+    columns,
+    message
+  ) {
+
+    return `
+      <tr>
+        <td colspan="${columns}"
+            style="text-align:center;color:#718096">
+          ${message}
+        </td>
+      </tr>
+    `;
+
+  }
+
+
+  function escapeHtml(value) {
+
+    return String(
+      value ?? ""
+    )
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+  }
+
+
+  /* =====================================================
+     EDIT STUDENT
+  ===================================================== */
+
+  async function editStudent(id) {
+
+    try {
+
+      const result =
+        await api(
+          "/api/students"
+        );
+
+      const student =
+        result.students.find(
+          s => s.id === id
+        );
+
+      if (!student) return;
+
+      document
+        .getElementById(
+          "studentName"
+        )
+        .value =
+        student.name || "";
+
+      document
+        .getElementById(
+          "studentNumber"
+        )
+        .value =
+        student.studentNumber || "";
+
+      document
+        .getElementById(
+          "studentNationalId"
+        )
+        .value =
+        student.nationalId || "";
+
+      document
+        .getElementById(
+          "studentGender"
+        )
+        .value =
+        student.gender || "";
+
+      document
+        .getElementById(
+          "studentClass"
+        )
+        .value =
+        student.className || "";
+
+      document
+        .getElementById(
+          "studentSection"
+        )
+        .value =
+        student.section || "";
+
+      document
+        .getElementById(
+          "parentName"
+        )
+        .value =
+        student.parentName || "";
+
+      document
+        .getElementById(
+          "parentEmail"
+        )
+        .value =
+        student.parentEmail || "";
+
+      document
+        .getElementById(
+          "parentPhone"
+        )
+        .value =
+        student.parentPhone || "";
+
+      document
+        .getElementById(
+          "studentModal"
+        )
+        .classList
+        .remove("hidden");
+
+      /*
+        سيتم ربط التعديل الكامل في الخطوة
+        التالية مع نفس النموذج.
+      */
+
+      toast(
+        "تم تحميل بيانات الطالب للتعديل"
+      );
+
+    } catch(error) {
+
+      toast(error.message);
+
+    }
+
+  }
+
+
+  /* =====================================================
+     AUTO LOGIN
+  ===================================================== */
+
+  async function autoLogin() {
+
+    if (!token) {
+      return;
+    }
+
+    try {
+
+      const result =
+        await api(
+          "/api/auth/me"
+        );
+
+      currentUser =
+        result.user;
+
+      const settingsResult =
+        await api(
+          "/api/settings"
+        );
+
+      showApp(
+        settingsResult.settings
+      );
+
+    } catch {
+
+      logout(false);
+
+    }
+
+  }
+
+
+  autoLogin();
+
 </script>
+
 </body>
 </html>
