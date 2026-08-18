@@ -1,7 +1,7 @@
 {
-  "name": "british-education-school",
+  "name": "educore-platform",
   "version": "2.3.0",
-  "description": "منصة إدارة المدارس متعددة المؤسسات",
+  "description": "EduCore Platform — منصة إدارة المدارس والمؤسسات التعليمية متعددة المؤسسات",
   "main": "server.js",
   "scripts": {"start": "node proxy2.js"},
   "dependencies": {"better-sqlite3": "^11.0.0","express": "^4.19.2","nodemailer": "^6.9.13"},
