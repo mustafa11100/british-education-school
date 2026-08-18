@@ -1,14 +1,17 @@
 {
   "name": "british-education-school",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "نظام إدارة المدرسة المتكامل",
-  "main": "start.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node start.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
     "express": "^4.19.2",
     "nodemailer": "^6.9.13"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
