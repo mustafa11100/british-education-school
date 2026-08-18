@@ -1,124 +1,32 @@
-"use strict";
-
 // =====================================================
-// School Portal - app.js
-// متوافق مع server.js و index.html
+// School Management System - app.js
 // =====================================================
-
-const API = "/api";
 
 let currentUser = null;
 let studentsCache = [];
 let employeesCache = [];
 let usersCache = [];
-let notesCache = [];
-let videosCache = [];
-let currentPage = "dashboard";
 
 // =====================================================
-// أدوات مساعدة
+// Helpers
 // =====================================================
 
-function $(id) {
-  return document.getElementById(id);
-}
-
-function escapeHTML(value) {
-  if (value === null || value === undefined) return "";
-
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function formatDate(value) {
-  if (!value) return "-";
-
-  try {
-    return new Date(value).toLocaleString("ar-EG", {
-      dateStyle: "medium",
-      timeStyle: "short"
-    });
-  } catch {
-    return value;
-  }
-}
-
-function todayDate() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
-
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
-}
-
-function showToast(message, type = "success") {
-  const toast = $("toast");
-
-  if (!toast) return;
-
-  toast.textContent = message;
-
-  toast.className = "toast";
-
-  if (type === "error") {
-    toast.classList.add("toast-error");
-  } else {
-    toast.classList.add("toast-success");
-  }
-
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 3000);
-}
-
-function showLoginMessage(message, type = "error") {
-  const box = $("loginMessage");
-
-  if (!box) return;
-
-  box.textContent = message;
-  box.className = "message";
-
-  if (type === "success") {
-    box.classList.add("success");
-  } else {
-    box.classList.add("error");
-  }
-}
+const $ = (id) => document.getElementById(id);
 
 async function api(url, options = {}) {
-  const config = {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
-  };
-
   try {
-    const response = await fetch(API + url, config);
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      },
+      ...options
+    });
 
-    let data;
-
-    try {
-      data = await response.json();
-    } catch {
-      data = {};
-    }
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(
-        data.error ||
-        data.message ||
-        `خطأ في الاتصال (${response.status})`
-      );
+      throw new Error(data.error || "حدث خطأ في الطلب");
     }
 
     return data;
@@ -129,30 +37,54 @@ async function api(url, options = {}) {
   }
 }
 
-// =====================================================
-// Modal
-// =====================================================
+function showToast(message, type = "success") {
+  const toast = $("toast");
 
-function openModal(title, html) {
-  $("modalTitle").textContent = title;
-  $("modalBody").innerHTML = html;
-  $("modal").classList.remove("hidden");
+  if (!toast) return;
+
+  toast.textContent = message;
+  toast.className = `toast ${type}`;
+
+  clearTimeout(window.toastTimer);
+
+  window.toastTimer = setTimeout(() => {
+    toast.className = "toast";
+    toast.textContent = "";
+  }, 3000);
 }
 
-function closeModal() {
-  $("modal").classList.add("hidden");
-  $("modalBody").innerHTML = "";
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-$("modalClose")?.addEventListener("click", closeModal);
+function formatDate(date) {
+  if (!date) return "-";
 
-document.querySelector(".modal-overlay")?.addEventListener(
-  "click",
-  closeModal
-);
+  try {
+    return new Date(date).toLocaleString("ar-EG");
+  } catch {
+    return date;
+  }
+}
+
+function roleName(role) {
+  const roles = {
+    admin: "مدير",
+    teacher: "معلم",
+    parent: "ولي أمر",
+    student: "طالب"
+  };
+
+  return roles[role] || role;
+}
 
 // =====================================================
-// تسجيل الدخول
+// Login
 // =====================================================
 
 $("loginForm")?.addEventListener("submit", async (event) => {
@@ -161,20 +93,17 @@ $("loginForm")?.addEventListener("submit", async (event) => {
   const username = $("username").value.trim();
   const password = $("password").value;
 
+  const message = $("loginMessage");
+
   if (!username || !password) {
-    showLoginMessage("أدخل اسم المستخدم وكلمة المرور");
+    message.textContent = "أدخل اسم المستخدم وكلمة المرور";
     return;
   }
 
-  const button = event.submitter;
-
-  if (button) {
-    button.disabled = true;
-    button.textContent = "جاري الدخول...";
-  }
+  message.textContent = "جاري تسجيل الدخول...";
 
   try {
-    const user = await api("/login", {
+    const user = await api("/api/login", {
       method: "POST",
       body: JSON.stringify({
         username,
@@ -189,51 +118,42 @@ $("loginForm")?.addEventListener("submit", async (event) => {
       JSON.stringify(user)
     );
 
-    showLoginMessage("تم تسجيل الدخول بنجاح", "success");
+    showApp();
 
-    setTimeout(() => {
-      enterApplication();
-    }, 300);
+    showToast(`مرحباً ${user.name}`);
+
+    await initializeApp();
 
   } catch (error) {
-    showLoginMessage(error.message);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = "تسجيل الدخول";
-    }
+    message.textContent = error.message;
+    showToast(error.message, "error");
   }
 });
 
 // =====================================================
-// دخول النظام
+// Show App
 // =====================================================
 
-function enterApplication() {
-  $("loginPage").classList.add("hidden");
-  $("appPage").classList.remove("hidden");
+function showApp() {
+  $("loginPage")?.classList.add("hidden");
+  $("appPage")?.classList.remove("hidden");
 
   if ($("currentUserName")) {
     $("currentUserName").textContent =
-      currentUser?.name || "المستخدم";
+      `${currentUser.name} — ${roleName(currentUser.role)}`;
   }
 
   applyPermissions();
-
-  navigateTo("dashboard");
-
-  loadDashboard();
-  startActivity();
 }
 
 // =====================================================
-// الصلاحيات
+// Permissions
 // =====================================================
 
 function applyPermissions() {
   if (!currentUser) return;
 
-  const role = currentUser.role;
+  const isAdmin = currentUser.role === "admin";
 
   const usersButton =
     document.querySelector('[data-page="users"]');
@@ -247,7 +167,7 @@ function applyPermissions() {
   const logsButton =
     document.querySelector('[data-page="logs"]');
 
-  if (role !== "admin") {
+  if (!isAdmin) {
     usersButton?.classList.add("hidden");
     employeesButton?.classList.add("hidden");
     payrollButton?.classList.add("hidden");
@@ -256,7 +176,7 @@ function applyPermissions() {
 }
 
 // =====================================================
-// تسجيل الخروج
+// Logout
 // =====================================================
 
 $("logoutButton")?.addEventListener("click", () => {
@@ -264,58 +184,48 @@ $("logoutButton")?.addEventListener("click", () => {
 
   localStorage.removeItem("school_current_user");
 
-  $("appPage").classList.add("hidden");
-  $("loginPage").classList.remove("hidden");
+  $("appPage")?.classList.add("hidden");
+  $("loginPage")?.classList.remove("hidden");
 
   $("username").value = "";
   $("password").value = "";
 
-  showLoginMessage("");
+  showToast("تم تسجيل الخروج");
 });
 
 // =====================================================
-// القائمة الجانبية
+// Navigation
 // =====================================================
 
 document.querySelectorAll(".nav-item").forEach(button => {
+
   button.addEventListener("click", () => {
+
     const page = button.dataset.page;
 
-    navigateTo(page);
+    if (!page) return;
 
-    if (window.innerWidth <= 900) {
-      $("sidebar")?.classList.remove("open");
-    }
+    document.querySelectorAll(".nav-item")
+      .forEach(item => item.classList.remove("active"));
+
+    button.classList.add("active");
+
+    document.querySelectorAll(".page-section")
+      .forEach(section => section.classList.add("hidden"));
+
+    const target =
+      document.getElementById(`page-${page}`);
+
+    target?.classList.remove("hidden");
+
+    loadPage(page);
+
   });
+
 });
 
-function navigateTo(page) {
-  currentPage = page;
-
-  document.querySelectorAll(".page-section").forEach(section => {
-    section.classList.add("hidden");
-  });
-
-  const target = $(`page-${page}`);
-
-  if (target) {
-    target.classList.remove("hidden");
-  }
-
-  document.querySelectorAll(".nav-item").forEach(button => {
-    button.classList.remove("active");
-  });
-
-  const activeButton =
-    document.querySelector(`[data-page="${page}"]`);
-
-  activeButton?.classList.add("active");
-
-  loadPageData(page);
-}
-
 // =====================================================
-// زر القائمة
+// Mobile Menu
 // =====================================================
 
 $("menuButton")?.addEventListener("click", () => {
@@ -323,12 +233,15 @@ $("menuButton")?.addEventListener("click", () => {
 });
 
 // =====================================================
-// تحميل بيانات الصفحة
+// Load Page
 // =====================================================
 
-async function loadPageData(page) {
+async function loadPage(page) {
+
   try {
+
     switch (page) {
+
       case "dashboard":
         await loadDashboard();
         break;
@@ -354,7 +267,7 @@ async function loadPageData(page) {
         break;
 
       case "notes":
-        await loadNotesPage();
+        await loadNotes();
         break;
 
       case "videos":
@@ -364,7 +277,9 @@ async function loadPageData(page) {
       case "logs":
         await loadLogs();
         break;
+
     }
+
   } catch (error) {
     console.error(error);
     showToast(error.message, "error");
@@ -372,18 +287,44 @@ async function loadPageData(page) {
 }
 
 // =====================================================
+// Initialize
+// =====================================================
+
+async function initializeApp() {
+
+  await loadDashboard();
+
+  await loadStudents();
+
+  await loadEmployees();
+
+  await loadUsers();
+
+  await loadNotes();
+
+  await loadVideos();
+
+  await loadLogs();
+
+  startActivityHeartbeat();
+}
+
+// =====================================================
 // Dashboard
 // =====================================================
 
 async function loadDashboard() {
+
   try {
-    const [users, students, employees, health] =
-      await Promise.all([
-        api("/users"),
-        api("/students"),
-        api("/employees"),
-        api("/health")
-      ]);
+
+    const users = await api("/api/users");
+    const students = await api("/api/students");
+    const employees = await api("/api/employees");
+    const health = await api("/api/health");
+
+    usersCache = users.users || [];
+    studentsCache = students || [];
+    employeesCache = employees || [];
 
     $("statUsers").textContent =
       users.total || 0;
@@ -397,19 +338,10 @@ async function loadDashboard() {
     $("statEmployees").textContent =
       employees.length || 0;
 
-    $("usersTotal").textContent =
-      users.total || 0;
-
-    $("usersActive").textContent =
-      users.active_count || 0;
-
-    $("usersOnline").textContent =
-      users.online_count || 0;
-
     if ($("healthStatus")) {
       $("healthStatus").innerHTML = `
-        <div class="status-box success">
-          🟢 ${escapeHTML(health.message || "النظام يعمل")}
+        <div class="status-success">
+          🟢 النظام يعمل بشكل طبيعي
           <br>
           <small>${formatDate(health.time)}</small>
         </div>
@@ -419,30 +351,29 @@ async function loadDashboard() {
     const onlineUsers =
       (users.users || []).filter(user => user.online);
 
-    if ($("onlineUsersList")) {
-      if (!onlineUsers.length) {
-        $("onlineUsersList").innerHTML =
-          "لا يوجد مستخدمون متصلون الآن";
-      } else {
-        $("onlineUsersList").innerHTML =
-          onlineUsers.map(user => `
-            <div class="online-user">
-              <span>🟢</span>
-              <strong>${escapeHTML(user.name)}</strong>
-              <small>
-                ${escapeHTML(user.role)}
-              </small>
-            </div>
-          `).join("");
-      }
+    if (!onlineUsers.length) {
+
+      $("onlineUsersList").innerHTML =
+        "لا يوجد مستخدمون متصلون الآن";
+
+    } else {
+
+      $("onlineUsersList").innerHTML =
+        onlineUsers.map(user => `
+          <div class="online-user">
+            <span>🟢</span>
+            <strong>${escapeHTML(user.name)}</strong>
+            <small>${escapeHTML(user.username)}</small>
+          </div>
+        `).join("");
+
     }
 
   } catch (error) {
-    console.error(error);
 
     if ($("healthStatus")) {
       $("healthStatus").innerHTML =
-        `<span class="error">🔴 تعذر الاتصال بالسيرفر</span>`;
+        `<span class="status-error">🔴 ${escapeHTML(error.message)}</span>`;
     }
 
     throw error;
@@ -455,11 +386,58 @@ $("refreshDashboard")?.addEventListener(
 );
 
 // =====================================================
+// Activity Heartbeat
+// =====================================================
+
+function startActivityHeartbeat() {
+
+  if (!currentUser) return;
+
+  if (window.activityInterval) {
+    clearInterval(window.activityInterval);
+  }
+
+  window.activityInterval = setInterval(async () => {
+
+    if (!currentUser) return;
+
+    try {
+
+      const result = await api("/api/activity", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: currentUser.id
+        })
+      });
+
+      currentUser.last_seen = result.last_seen;
+
+      localStorage.setItem(
+        "school_current_user",
+        JSON.stringify(currentUser)
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Activity error:",
+        error
+      );
+
+    }
+
+  }, 30000);
+}
+
+// =====================================================
 // Users
 // =====================================================
 
 async function loadUsers() {
-  const data = await api("/users");
+
+  if (currentUser?.role !== "admin") return;
+
+  const data = await api("/api/users");
 
   usersCache = data.users || [];
 
@@ -472,11 +450,13 @@ async function loadUsers() {
   $("usersOnline").textContent =
     data.online_count || 0;
 
-  const body = $("usersTableBody");
+  const body =
+    $("usersTableBody");
 
   if (!body) return;
 
   if (!usersCache.length) {
+
     body.innerHTML = `
       <tr>
         <td colspan="7">
@@ -484,114 +464,268 @@ async function loadUsers() {
         </td>
       </tr>
     `;
+
     return;
   }
 
-  body.innerHTML = usersCache.map((user, index) => `
-    <tr>
+  body.innerHTML = usersCache.map(user => {
 
-      <td>${index + 1}</td>
+    const status = user.active
+      ? `<span class="badge success">نشط</span>`
+      : `<span class="badge danger">موقوف</span>`;
 
-      <td>
-        <strong>
-          ${escapeHTML(user.username)}
-        </strong>
-      </td>
+    const online = user.online
+      ? `<span class="online-text">🟢 متصل</span>`
+      : `<span>⚪ غير متصل</span>`;
 
-      <td>
-        ${escapeHTML(user.name)}
-      </td>
+    let action = "";
 
-      <td>
-        ${roleName(user.role)}
-      </td>
+    if (user.username === "admin") {
 
-      <td>
+      action = `
+        <button
+          class="btn btn-secondary btn-small"
+          onclick="changeUserPassword(${user.id})"
+        >
+          🔑 كلمة المرور
+        </button>
+      `;
+
+    } else {
+
+      action = `
         ${
-          user.online
-            ? `<span class="badge success">متصل</span>`
-            : user.active
-              ? `<span class="badge">نشط</span>`
-              : `<span class="badge danger">موقوف</span>`
-        }
-      </td>
-
-      <td>
-        ${formatDate(user.last_seen)}
-      </td>
-
-      <td>
-
-        ${
-          user.username !== "admin"
+          user.active
             ? `
               <button
-                class="btn btn-small"
-                onclick="toggleUser(${user.id}, ${user.active ? "true" : "false"})"
+                class="btn btn-warning btn-small"
+                onclick="disableUser(${user.id})"
               >
-                ${user.active ? "إيقاف" : "تفعيل"}
-              </button>
-
-              <button
-                class="btn btn-small btn-danger"
-                onclick="deleteUser(${user.id})"
-              >
-                حذف
+                إيقاف
               </button>
             `
             : `
-              <span>المدير الرئيسي</span>
+              <button
+                class="btn btn-success btn-small"
+                onclick="enableUser(${user.id})"
+              >
+                تفعيل
+              </button>
             `
         }
 
-      </td>
+        <button
+          class="btn btn-secondary btn-small"
+          onclick="changeUserPassword(${user.id})"
+        >
+          🔑
+        </button>
 
-    </tr>
-  `).join("");
+        <button
+          class="btn btn-danger btn-small"
+          onclick="deleteUser(${user.id})"
+        >
+          حذف
+        </button>
+      `;
+
+    }
+
+    return `
+      <tr>
+
+        <td>${user.id}</td>
+
+        <td>
+          <strong>${escapeHTML(user.username)}</strong>
+        </td>
+
+        <td>
+          ${escapeHTML(user.name)}
+        </td>
+
+        <td>
+          ${escapeHTML(roleName(user.role))}
+        </td>
+
+        <td>
+          ${status}
+          <br>
+          ${online}
+        </td>
+
+        <td>
+          ${formatDate(user.last_seen)}
+        </td>
+
+        <td>
+          <div class="action-buttons">
+            ${action}
+          </div>
+        </td>
+
+      </tr>
+    `;
+
+  }).join("");
 }
 
-function roleName(role) {
-  const roles = {
-    admin: "مدير",
-    teacher: "معلم",
-    parent: "ولي أمر",
-    student: "طالب"
-  };
+// =====================================================
+// Add User
+// =====================================================
 
-  return roles[role] || role;
+$("addUserButton")?.addEventListener(
+  "click",
+  showAddUserModal
+);
+
+function showAddUserModal() {
+
+  openModal(
+    "إضافة مستخدم",
+    `
+      <form id="addUserForm">
+
+        <div class="form-group">
+          <label>اسم المستخدم</label>
+          <input id="newUsername" required>
+        </div>
+
+        <div class="form-group">
+          <label>كلمة المرور</label>
+          <input id="newPassword" type="password" required>
+        </div>
+
+        <div class="form-group">
+          <label>الاسم</label>
+          <input id="newName" required>
+        </div>
+
+        <div class="form-group">
+          <label>الصلاحية</label>
+
+          <select id="newRole">
+
+            <option value="teacher">
+              معلم
+            </option>
+
+            <option value="parent">
+              ولي أمر
+            </option>
+
+            <option value="student">
+              طالب
+            </option>
+
+            <option value="admin">
+              مدير
+            </option>
+
+          </select>
+
+        </div>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          إضافة المستخدم
+        </button>
+
+      </form>
+    `
+  );
+
+  $("addUserForm").addEventListener(
+    "submit",
+    async event => {
+
+      event.preventDefault();
+
+      try {
+
+        await api("/api/users", {
+          method: "POST",
+          body: JSON.stringify({
+            username: $("newUsername").value.trim(),
+            password: $("newPassword").value,
+            name: $("newName").value.trim(),
+            role: $("newRole").value
+          })
+        });
+
+        closeModal();
+
+        showToast("تم إضافة المستخدم");
+
+        await loadUsers();
+
+      } catch (error) {
+
+        showToast(error.message, "error");
+
+      }
+
+    }
+  );
 }
 
-window.toggleUser = async function(id, active) {
+// =====================================================
+// User Actions
+// =====================================================
+
+async function disableUser(id) {
+
+  if (!confirm("هل تريد إيقاف هذا المستخدم؟")) {
+    return;
+  }
+
   try {
-    const endpoint =
-      active
-        ? `/users/${id}/disable`
-        : `/users/${id}/enable`;
 
-    await api(endpoint, {
+    await api(`/api/users/${id}/disable`, {
       method: "PATCH"
     });
 
-    showToast(
-      active
-        ? "تم إيقاف المستخدم"
-        : "تم تفعيل المستخدم"
-    );
+    showToast("تم إيقاف المستخدم");
 
     await loadUsers();
 
   } catch (error) {
-    showToast(error.message, "error");
-  }
-};
 
-window.deleteUser = async function(id) {
-  if (!confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
+    showToast(error.message, "error");
+
+  }
+}
+
+async function enableUser(id) {
+
+  try {
+
+    await api(`/api/users/${id}/enable`, {
+      method: "PATCH"
+    });
+
+    showToast("تم تفعيل المستخدم");
+
+    await loadUsers();
+
+  } catch (error) {
+
+    showToast(error.message, "error");
+
+  }
+}
+
+async function deleteUser(id) {
+
+  if (!confirm("هل أنت متأكد من حذف المستخدم؟")) {
     return;
   }
 
   try {
-    await api(`/users/${id}`, {
+
+    await api(`/api/users/${id}`, {
       method: "DELETE"
     });
 
@@ -600,104 +734,95 @@ window.deleteUser = async function(id) {
     await loadUsers();
 
   } catch (error) {
+
     showToast(error.message, "error");
+
   }
-};
+}
 
-$("addUserButton")?.addEventListener(
-  "click",
-  () => {
+async function changeUserPassword(id) {
 
-    openModal(
-      "إضافة مستخدم",
-      `
-        <form id="addUserForm">
+  openModal(
+    "تغيير كلمة المرور",
+    `
+      <form id="changePasswordForm">
 
-          <div class="form-group">
-            <label>اسم المستخدم</label>
-            <input id="newUsername" required>
-          </div>
+        <div class="form-group">
 
-          <div class="form-group">
-            <label>كلمة المرور</label>
-            <input
-              id="newPassword"
-              type="password"
-              required
-            >
-          </div>
+          <label>
+            كلمة المرور الجديدة
+          </label>
 
-          <div class="form-group">
-            <label>الاسم</label>
-            <input id="newName" required>
-          </div>
-
-          <div class="form-group">
-            <label>الصلاحية</label>
-
-            <select id="newRole" required>
-              <option value="admin">مدير</option>
-              <option value="teacher">معلم</option>
-              <option value="parent">ولي أمر</option>
-              <option value="student">طالب</option>
-            </select>
-          </div>
-
-          <button
-            class="btn btn-primary"
-            type="submit"
+          <input
+            id="newUserPassword"
+            type="password"
+            minlength="4"
+            required
           >
-            حفظ
-          </button>
 
-        </form>
-      `
-    );
+        </div>
 
-    $("addUserForm").addEventListener(
-      "submit",
-      async event => {
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          تغيير كلمة المرور
+        </button>
 
-        event.preventDefault();
+      </form>
+    `
+  );
 
-        try {
+  $("changePasswordForm").addEventListener(
+    "submit",
+    async event => {
 
-          await api("/users", {
-            method: "POST",
-            body: JSON.stringify({
-              username: $("newUsername").value.trim(),
-              password: $("newPassword").value,
-              name: $("newName").value.trim(),
-              role: $("newRole").value
-            })
-          });
+      event.preventDefault();
 
-          closeModal();
+      try {
 
-          showToast("تم إضافة المستخدم");
+        await api(`/api/users/${id}/password`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            new_password:
+              $("newUserPassword").value
+          })
+        });
 
-          await loadUsers();
+        closeModal();
 
-        } catch (error) {
-          showToast(error.message, "error");
-        }
+        showToast(
+          "تم تغيير كلمة المرور"
+        );
+
+      } catch (error) {
+
+        showToast(error.message, "error");
+
       }
-    );
-  }
-);
+
+    }
+  );
+}
 
 // =====================================================
 // Students
 // =====================================================
 
 async function loadStudents() {
-  studentsCache = await api("/students");
 
-  const body = $("studentsTableBody");
+  const students =
+    await api("/api/students");
+
+  studentsCache = students || [];
+
+  const body =
+    $("studentsTableBody");
 
   if (!body) return;
 
-  if (!studentsCache.length) {
+  if (!students.length) {
+
     body.innerHTML = `
       <tr>
         <td colspan="6">
@@ -709,250 +834,176 @@ async function loadStudents() {
     return;
   }
 
-  body.innerHTML = studentsCache.map((student, index) => `
-    <tr>
+  body.innerHTML =
+    students.map(student => {
 
-      <td>${index + 1}</td>
+      const status =
+        student.status === "حاضر"
+          ? `<span class="badge success">حاضر</span>`
+          : `<span class="badge danger">غائب</span>`;
 
-      <td>
-        <strong>
-          ${escapeHTML(student.name)}
-        </strong>
-      </td>
+      return `
+        <tr>
 
-      <td>
-        ${escapeHTML(student.class_name || "-")}
-      </td>
+          <td>${student.id}</td>
 
-      <td>
-        ${escapeHTML(student.parent_phone || "-")}
-      </td>
+          <td>
+            <strong>
+              ${escapeHTML(student.name)}
+            </strong>
+          </td>
 
-      <td>
-        ${
-          student.status === "حاضر"
-            ? `<span class="badge success">حاضر</span>`
-            : `<span class="badge danger">غائب</span>`
-        }
-      </td>
+          <td>
+            ${escapeHTML(student.class_name)}
+          </td>
 
-      <td>
+          <td>
+            ${escapeHTML(student.parent_phone)}
+          </td>
 
-        <button
-          class="btn btn-small"
-          onclick="toggleStudentAttendance(${student.id})"
-        >
-          تغيير الحالة
-        </button>
+          <td>
+            ${status}
+          </td>
 
-        <button
-          class="btn btn-small btn-secondary"
-          onclick="showStudentAttendance(${student.id})"
-        >
-          السجل
-        </button>
+          <td>
 
-      </td>
+            <button
+              class="btn btn-secondary btn-small"
+              onclick="toggleStudentAttendance(${student.id})"
+            >
+              تغيير الحالة
+            </button>
 
-    </tr>
-  `).join("");
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
 
   fillStudentSelect();
 }
 
-function fillStudentSelect() {
-  const select = $("noteStudent");
-
-  if (!select) return;
-
-  select.innerHTML = `
-    <option value="">
-      اختر الطالب
-    </option>
-  `;
-
-  studentsCache.forEach(student => {
-    const option = document.createElement("option");
-
-    option.value = student.id;
-    option.textContent =
-      `${student.name} - ${student.class_name || ""}`;
-
-    select.appendChild(option);
-  });
-}
-
 $("addStudentButton")?.addEventListener(
   "click",
-  () => {
-
-    openModal(
-      "إضافة طالب",
-      `
-        <form id="addStudentForm">
-
-          <div class="form-group">
-            <label>اسم الطالب</label>
-            <input id="studentName" required>
-          </div>
-
-          <div class="form-group">
-            <label>الفصل</label>
-            <input id="studentClass" required>
-          </div>
-
-          <div class="form-group">
-            <label>هاتف ولي الأمر</label>
-            <input id="studentPhone">
-          </div>
-
-          <button
-            type="submit"
-            class="btn btn-primary"
-          >
-            حفظ الطالب
-          </button>
-
-        </form>
-      `
-    );
-
-    $("addStudentForm").addEventListener(
-      "submit",
-      async event => {
-
-        event.preventDefault();
-
-        try {
-
-          await api("/students", {
-            method: "POST",
-            body: JSON.stringify({
-              name: $("studentName").value.trim(),
-              class_name: $("studentClass").value.trim(),
-              parent_phone: $("studentPhone").value.trim()
-            })
-          });
-
-          closeModal();
-
-          showToast("تم إضافة الطالب");
-
-          await loadStudents();
-
-        } catch (error) {
-          showToast(error.message, "error");
-        }
-      }
-    );
-  }
+  showAddStudentModal
 );
 
-window.toggleStudentAttendance = async function(id) {
+function showAddStudentModal() {
+
+  openModal(
+    "إضافة طالب",
+    `
+      <form id="addStudentForm">
+
+        <div class="form-group">
+          <label>اسم الطالب</label>
+          <input id="studentName" required>
+        </div>
+
+        <div class="form-group">
+          <label>الفصل</label>
+          <input id="studentClass" required>
+        </div>
+
+        <div class="form-group">
+          <label>هاتف ولي الأمر</label>
+          <input id="studentPhone">
+        </div>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          إضافة الطالب
+        </button>
+
+      </form>
+    `
+  );
+
+  $("addStudentForm").addEventListener(
+    "submit",
+    async event => {
+
+      event.preventDefault();
+
+      try {
+
+        await api("/api/students", {
+          method: "POST",
+          body: JSON.stringify({
+            name:
+              $("studentName").value.trim(),
+
+            class_name:
+              $("studentClass").value.trim(),
+
+            parent_phone:
+              $("studentPhone").value.trim()
+          })
+        });
+
+        closeModal();
+
+        showToast("تم إضافة الطالب");
+
+        await loadStudents();
+
+        await loadDashboard();
+
+      } catch (error) {
+
+        showToast(error.message, "error");
+
+      }
+
+    }
+  );
+}
+
+async function toggleStudentAttendance(id) {
+
   try {
 
     const result =
-      await api(`/students/${id}/status`, {
+      await api(`/api/students/${id}/status`, {
         method: "PATCH"
       });
 
     showToast(
-      `تم تسجيل الطالب: ${result.status}`
+      `تم تغيير الحالة إلى ${result.status}`
     );
 
     await loadStudents();
 
-  } catch (error) {
-    showToast(error.message, "error");
-  }
-};
-
-window.showStudentAttendance = async function(id) {
-  try {
-
-    const data =
-      await api(`/students/${id}/attendance`);
-
-    const student =
-      studentsCache.find(x => x.id === Number(id));
-
-    openModal(
-      `سجل حضور ${student?.name || ""}`,
-      `
-        <div class="stats-grid small-stats">
-
-          <div class="stat-card">
-            <span>حاضر</span>
-            <strong>${data.present}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>غائب</span>
-            <strong>${data.absent}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>النسبة</span>
-            <strong>${data.percentage}%</strong>
-          </div>
-
-        </div>
-
-        <div class="table-wrapper">
-
-          <table>
-
-            <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>الحالة</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${
-                data.records.length
-                  ? data.records.map(item => `
-                    <tr>
-                      <td>${escapeHTML(item.date)}</td>
-                      <td>${escapeHTML(item.status)}</td>
-                    </tr>
-                  `).join("")
-                  : `
-                    <tr>
-                      <td colspan="2">
-                        لا يوجد سجل
-                      </td>
-                    </tr>
-                  `
-              }
-
-            </tbody>
-
-          </table>
-
-        </div>
-      `
-    );
+    await loadAttendance();
 
   } catch (error) {
+
     showToast(error.message, "error");
+
   }
-};
+}
 
 // =====================================================
 // Employees
 // =====================================================
 
 async function loadEmployees() {
-  employeesCache = await api("/employees");
 
-  const body = $("employeesTableBody");
+  const employees =
+    await api("/api/employees");
+
+  employeesCache = employees || [];
+
+  const body =
+    $("employeesTableBody");
 
   if (!body) return;
 
-  if (!employeesCache.length) {
+  if (!employees.length) {
+
     body.innerHTML = `
       <tr>
         <td colspan="9">
@@ -964,324 +1015,382 @@ async function loadEmployees() {
     return;
   }
 
-  body.innerHTML = employeesCache.map((employee, index) => `
-    <tr>
+  body.innerHTML =
+    employees.map(employee => {
 
-      <td>${index + 1}</td>
+      const salary =
+        Number(employee.basic_salary || 0) +
+        Number(employee.allowance || 0);
 
-      <td>
-        ${escapeHTML(employee.employee_number || "-")}
-      </td>
+      const status =
+        employee.active
+          ? `<span class="badge success">نشط</span>`
+          : `<span class="badge danger">موقوف</span>`;
 
-      <td>
-        <strong>
-          ${escapeHTML(employee.name)}
-        </strong>
-      </td>
+      return `
+        <tr>
 
-      <td>
-        ${escapeHTML(employee.job_title || "-")}
-      </td>
+          <td>${employee.id}</td>
 
-      <td>
-        ${escapeHTML(employee.department || "-")}
-      </td>
+          <td>
+            ${escapeHTML(employee.employee_number || "-")}
+          </td>
 
-      <td>
-        ${escapeHTML(employee.phone || "-")}
-      </td>
+          <td>
+            <strong>
+              ${escapeHTML(employee.name)}
+            </strong>
+          </td>
 
-      <td>
-        ${Number(employee.basic_salary || 0) +
-          Number(employee.allowance || 0)}
-      </td>
+          <td>
+            ${escapeHTML(employee.job_title || "-")}
+          </td>
 
-      <td>
-        ${
-          employee.active
-            ? `<span class="badge success">نشط</span>`
-            : `<span class="badge danger">موقوف</span>`
-        }
-      </td>
+          <td>
+            ${escapeHTML(employee.department || "-")}
+          </td>
 
-      <td>
+          <td>
+            ${escapeHTML(employee.phone || "-")}
+          </td>
 
-        <button
-          class="btn btn-small"
-          onclick="showEmployeeAttendance(${employee.id})"
-        >
-          الحضور
-        </button>
+          <td>
+            ${salary.toLocaleString()} 
+          </td>
 
-        <button
-          class="btn btn-small btn-secondary"
-          onclick="showEmployeePayroll(${employee.id})"
-        >
-          الراتب
-        </button>
+          <td>
+            ${status}
+          </td>
 
-      </td>
+          <td>
 
-    </tr>
-  `).join("");
+            <button
+              class="btn btn-secondary btn-small"
+              onclick="employeeDetails(${employee.id})"
+            >
+              التفاصيل
+            </button>
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
 }
 
 $("addEmployeeButton")?.addEventListener(
   "click",
-  () => {
-
-    openModal(
-      "إضافة موظف",
-      `
-        <form id="addEmployeeForm">
-
-          <div class="form-group">
-            <label>رقم الموظف</label>
-            <input id="employeeNumber">
-          </div>
-
-          <div class="form-group">
-            <label>اسم الموظف</label>
-            <input id="employeeName" required>
-          </div>
-
-          <div class="form-group">
-            <label>الوظيفة</label>
-            <input id="employeeJob">
-          </div>
-
-          <div class="form-group">
-            <label>القسم</label>
-            <input id="employeeDepartment">
-          </div>
-
-          <div class="form-group">
-            <label>الهاتف</label>
-            <input id="employeePhone">
-          </div>
-
-          <div class="form-group">
-            <label>تاريخ التعيين</label>
-            <input
-              id="employeeHireDate"
-              type="date"
-            >
-          </div>
-
-          <div class="form-group">
-            <label>الراتب الأساسي</label>
-            <input
-              id="employeeSalary"
-              type="number"
-              min="0"
-              value="0"
-            >
-          </div>
-
-          <div class="form-group">
-            <label>البدلات</label>
-            <input
-              id="employeeAllowance"
-              type="number"
-              min="0"
-              value="0"
-            >
-          </div>
-
-          <button
-            type="submit"
-            class="btn btn-primary"
-          >
-            حفظ الموظف
-          </button>
-
-        </form>
-      `
-    );
-
-    $("addEmployeeForm").addEventListener(
-      "submit",
-      async event => {
-
-        event.preventDefault();
-
-        try {
-
-          await api("/employees", {
-            method: "POST",
-            body: JSON.stringify({
-              employee_number:
-                $("employeeNumber").value.trim(),
-
-              name:
-                $("employeeName").value.trim(),
-
-              job_title:
-                $("employeeJob").value.trim(),
-
-              department:
-                $("employeeDepartment").value.trim(),
-
-              phone:
-                $("employeePhone").value.trim(),
-
-              hire_date:
-                $("employeeHireDate").value,
-
-              basic_salary:
-                Number($("employeeSalary").value || 0),
-
-              allowance:
-                Number($("employeeAllowance").value || 0)
-            })
-          });
-
-          closeModal();
-
-          showToast("تم إضافة الموظف");
-
-          await loadEmployees();
-
-        } catch (error) {
-          showToast(error.message, "error");
-        }
-      }
-    );
-  }
+  showAddEmployeeModal
 );
 
-window.showEmployeeAttendance = async function(id) {
-  try {
+function showAddEmployeeModal() {
 
-    const data =
-      await api(`/employees/${id}/attendance`);
+  openModal(
+    "إضافة موظف",
+    `
+      <form id="addEmployeeForm">
 
-    const employee =
-      employeesCache.find(x => x.id === Number(id));
-
-    openModal(
-      `حضور ${employee?.name || ""}`,
-      `
-        <div class="stats-grid small-stats">
-
-          <div class="stat-card">
-            <span>الحضور</span>
-            <strong>${data.present}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>الغياب</span>
-            <strong>${data.absent}</strong>
-          </div>
-
-          <div class="stat-card">
-            <span>التأخير</span>
-            <strong>${data.late}</strong>
-          </div>
-
+        <div class="form-group">
+          <label>رقم الموظف</label>
+          <input id="employeeNumber">
         </div>
 
-        <div class="table-wrapper">
-
-          <table>
-
-            <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>الدخول</th>
-                <th>الخروج</th>
-                <th>الحالة</th>
-                <th>التأخير</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${
-                data.records.length
-                  ? data.records.map(item => `
-                    <tr>
-                      <td>${escapeHTML(item.date)}</td>
-                      <td>${escapeHTML(item.check_in || "-")}</td>
-                      <td>${escapeHTML(item.check_out || "-")}</td>
-                      <td>${escapeHTML(item.status)}</td>
-                      <td>${item.late_minutes || 0} دقيقة</td>
-                    </tr>
-                  `).join("")
-                  : `
-                    <tr>
-                      <td colspan="5">
-                        لا يوجد سجل
-                      </td>
-                    </tr>
-                  `
-              }
-
-            </tbody>
-
-          </table>
-
+        <div class="form-group">
+          <label>اسم الموظف</label>
+          <input id="employeeName" required>
         </div>
-      `
+
+        <div class="form-group">
+          <label>الوظيفة</label>
+          <input id="employeeJob">
+        </div>
+
+        <div class="form-group">
+          <label>القسم</label>
+          <input id="employeeDepartment">
+        </div>
+
+        <div class="form-group">
+          <label>الهاتف</label>
+          <input id="employeePhone">
+        </div>
+
+        <div class="form-group">
+          <label>تاريخ التعيين</label>
+          <input id="employeeHireDate" type="date">
+        </div>
+
+        <div class="form-group">
+          <label>الراتب الأساسي</label>
+          <input id="employeeSalary" type="number" min="0">
+        </div>
+
+        <div class="form-group">
+          <label>البدل</label>
+          <input id="employeeAllowance" type="number" min="0">
+        </div>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          إضافة الموظف
+        </button>
+
+      </form>
+    `
+  );
+
+  $("addEmployeeForm").addEventListener(
+    "submit",
+    async event => {
+
+      event.preventDefault();
+
+      try {
+
+        await api("/api/employees", {
+          method: "POST",
+          body: JSON.stringify({
+
+            employee_number:
+              $("employeeNumber").value.trim(),
+
+            name:
+              $("employeeName").value.trim(),
+
+            job_title:
+              $("employeeJob").value.trim(),
+
+            department:
+              $("employeeDepartment").value.trim(),
+
+            phone:
+              $("employeePhone").value.trim(),
+
+            hire_date:
+              $("employeeHireDate").value,
+
+            basic_salary:
+              Number($("employeeSalary").value || 0),
+
+            allowance:
+              Number($("employeeAllowance").value || 0)
+
+          })
+        });
+
+        closeModal();
+
+        showToast("تم إضافة الموظف");
+
+        await loadEmployees();
+
+        await loadDashboard();
+
+      } catch (error) {
+
+        showToast(error.message, "error");
+
+      }
+
+    }
+  );
+}
+
+async function employeeDetails(id) {
+
+  const employee =
+    employeesCache.find(
+      x => Number(x.id) === Number(id)
     );
 
-  } catch (error) {
-    showToast(error.message, "error");
-  }
-};
+  if (!employee) return;
+
+  let payroll = null;
+
+  try {
+    payroll =
+      await api(`/api/employees/${id}/payroll`);
+  } catch {}
+
+  openModal(
+    "بيانات الموظف",
+    `
+      <div class="details-box">
+
+        <p>
+          <strong>الاسم:</strong>
+          ${escapeHTML(employee.name)}
+        </p>
+
+        <p>
+          <strong>رقم الموظف:</strong>
+          ${escapeHTML(employee.employee_number || "-")}
+        </p>
+
+        <p>
+          <strong>الوظيفة:</strong>
+          ${escapeHTML(employee.job_title || "-")}
+        </p>
+
+        <p>
+          <strong>القسم:</strong>
+          ${escapeHTML(employee.department || "-")}
+        </p>
+
+        <p>
+          <strong>الهاتف:</strong>
+          ${escapeHTML(employee.phone || "-")}
+        </p>
+
+        ${
+          payroll
+            ? `
+              <hr>
+
+              <p>
+                <strong>الأساسي:</strong>
+                ${payroll.basic_salary.toLocaleString()}
+              </p>
+
+              <p>
+                <strong>البدلات:</strong>
+                ${payroll.allowance.toLocaleString()}
+              </p>
+
+              <p>
+                <strong>المكافآت:</strong>
+                ${payroll.bonuses.toLocaleString()}
+              </p>
+
+              <p>
+                <strong>الخصومات:</strong>
+                ${payroll.deductions.toLocaleString()}
+              </p>
+
+              <p>
+                <strong>الصافي:</strong>
+                ${payroll.net.toLocaleString()}
+              </p>
+            `
+            : ""
+        }
+
+      </div>
+    `
+  );
+}
 
 // =====================================================
 // Attendance
 // =====================================================
 
+document.querySelectorAll(".attendance-tab")
+  .forEach(button => {
+
+    button.addEventListener("click", async () => {
+
+      document.querySelectorAll(".attendance-tab")
+        .forEach(item =>
+          item.classList.remove("active")
+        );
+
+      button.classList.add("active");
+
+      const type =
+        button.dataset.attendanceType;
+
+      if (type === "students") {
+
+        $("studentAttendancePanel")
+          ?.classList.remove("hidden");
+
+        $("employeeAttendancePanel")
+          ?.classList.add("hidden");
+
+        await loadStudentAttendance();
+
+      } else {
+
+        $("studentAttendancePanel")
+          ?.classList.add("hidden");
+
+        $("employeeAttendancePanel")
+          ?.classList.remove("hidden");
+
+        await loadEmployeeAttendance();
+
+      }
+
+    });
+
+  });
+
 async function loadAttendance() {
+
   await loadStudentAttendance();
-  await loadEmployeeAttendance();
+
 }
 
 async function loadStudentAttendance() {
-  const students = await api("/students");
 
-  const body = $("attendanceStudentsBody");
+  const students =
+    await api("/api/students");
+
+  const body =
+    $("attendanceStudentsBody");
 
   if (!body) return;
 
-  body.innerHTML = students.map(student => `
-    <tr>
+  body.innerHTML =
+    students.map(student => {
 
-      <td>
-        ${escapeHTML(student.name)}
-      </td>
+      const status =
+        student.status === "حاضر"
+          ? `<span class="badge success">حاضر</span>`
+          : `<span class="badge danger">غائب</span>`;
 
-      <td>
-        ${escapeHTML(student.class_name || "-")}
-      </td>
+      return `
+        <tr>
 
-      <td>
-        ${
-          student.status === "حاضر"
-            ? `<span class="badge success">حاضر</span>`
-            : `<span class="badge danger">غائب</span>`
-        }
-      </td>
+          <td>
+            ${escapeHTML(student.name)}
+          </td>
 
-      <td>
-        <button
-          class="btn btn-small"
-          onclick="toggleStudentAttendance(${student.id})"
-        >
-          تغيير
-        </button>
-      </td>
+          <td>
+            ${escapeHTML(student.class_name)}
+          </td>
 
-    </tr>
-  `).join("");
+          <td>
+            ${status}
+          </td>
+
+          <td>
+
+            <button
+              class="btn btn-secondary btn-small"
+              onclick="toggleStudentAttendance(${student.id})"
+            >
+              تغيير
+            </button>
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
 }
 
 async function loadEmployeeAttendance() {
-  const employees = await api("/employees");
 
-  const body = $("attendanceEmployeesBody");
+  const employees =
+    await api("/api/employees");
+
+  const body =
+    $("attendanceEmployeesBody");
 
   if (!body) return;
 
@@ -1292,11 +1401,14 @@ async function loadEmployeeAttendance() {
     try {
 
       const data =
-        await api(`/employees/${employee.id}/attendance`);
+        await api(
+          `/api/employees/${employee.id}/attendance`
+        );
 
-      const records = data.records || [];
+      const latest =
+        data.records?.[0];
 
-      if (!records.length) {
+      if (!latest) {
 
         body.innerHTML += `
           <tr>
@@ -1304,91 +1416,56 @@ async function loadEmployeeAttendance() {
             <td>-</td>
             <td>-</td>
             <td>-</td>
-            <td>-</td>
+            <td>لا يوجد سجل</td>
             <td>-</td>
           </tr>
         `;
 
-      } else {
-
-        records.slice(0, 20).forEach(record => {
-
-          body.innerHTML += `
-            <tr>
-
-              <td>
-                ${escapeHTML(employee.name)}
-              </td>
-
-              <td>
-                ${escapeHTML(record.date)}
-              </td>
-
-              <td>
-                ${escapeHTML(record.check_in || "-")}
-              </td>
-
-              <td>
-                ${escapeHTML(record.check_out || "-")}
-              </td>
-
-              <td>
-                ${escapeHTML(record.status)}
-              </td>
-
-              <td>
-                ${record.late_minutes || 0} دقيقة
-              </td>
-
-            </tr>
-          `;
-
-        });
+        continue;
       }
 
+      body.innerHTML += `
+        <tr>
+
+          <td>
+            ${escapeHTML(employee.name)}
+          </td>
+
+          <td>
+            ${latest.date}
+          </td>
+
+          <td>
+            ${latest.check_in || "-"}
+          </td>
+
+          <td>
+            ${latest.check_out || "-"}
+          </td>
+
+          <td>
+            ${escapeHTML(latest.status)}
+          </td>
+
+          <td>
+            ${latest.late_minutes || 0} دقيقة
+          </td>
+
+        </tr>
+      `;
+
     } catch (error) {
+
       console.error(error);
+
     }
+
   }
 }
 
-document.querySelectorAll(".attendance-tab")
-  .forEach(tab => {
-
-    tab.addEventListener("click", () => {
-
-      document.querySelectorAll(".attendance-tab")
-        .forEach(x => x.classList.remove("active"));
-
-      tab.classList.add("active");
-
-      const type =
-        tab.dataset.attendanceType;
-
-      if (type === "students") {
-
-        $("studentAttendancePanel")
-          ?.classList.remove("hidden");
-
-        $("employeeAttendancePanel")
-          ?.classList.add("hidden");
-
-      } else {
-
-        $("studentAttendancePanel")
-          ?.classList.add("hidden");
-
-        $("employeeAttendancePanel")
-          ?.classList.remove("hidden");
-
-      }
-    });
-
-  });
-
 $("refreshStudentAttendance")?.addEventListener(
   "click",
-  loadAttendance
+  loadStudentAttendance
 );
 
 // =====================================================
@@ -1396,24 +1473,14 @@ $("refreshStudentAttendance")?.addEventListener(
 // =====================================================
 
 async function loadPayroll() {
-  const employees = await api("/employees");
 
-  const body = $("payrollTableBody");
+  const employees =
+    await api("/api/employees");
+
+  const body =
+    $("payrollTableBody");
 
   if (!body) return;
-
-  if (!employees.length) {
-
-    body.innerHTML = `
-      <tr>
-        <td colspan="7">
-          لا يوجد موظفون
-        </td>
-      </tr>
-    `;
-
-    return;
-  }
 
   body.innerHTML = "";
 
@@ -1423,7 +1490,7 @@ async function loadPayroll() {
 
       const payroll =
         await api(
-          `/employees/${employee.id}/payroll?month=${encodeURIComponent(currentMonth())}`
+          `/api/employees/${employee.id}/payroll`
         );
 
       body.innerHTML += `
@@ -1434,34 +1501,34 @@ async function loadPayroll() {
           </td>
 
           <td>
-            ${payroll.basic_salary}
+            ${payroll.basic_salary.toLocaleString()}
           </td>
 
           <td>
-            ${payroll.allowance}
+            ${payroll.allowance.toLocaleString()}
           </td>
 
           <td>
-            ${payroll.bonuses}
+            ${payroll.bonuses.toLocaleString()}
           </td>
 
           <td>
-            ${payroll.deductions}
+            ${payroll.deductions.toLocaleString()}
           </td>
 
           <td>
             <strong>
-              ${payroll.net}
+              ${payroll.net.toLocaleString()}
             </strong>
           </td>
 
           <td>
 
             <button
-              class="btn btn-small"
-              onclick="showEmployeePayroll(${employee.id})"
+              class="btn btn-secondary btn-small"
+              onclick="employeePayroll(${employee.id})"
             >
-              التفاصيل
+              كشف الراتب
             </button>
 
           </td>
@@ -1473,230 +1540,298 @@ async function loadPayroll() {
 
       console.error(error);
 
-      body.innerHTML += `
-        <tr>
-          <td colspan="7">
-            تعذر حساب راتب ${escapeHTML(employee.name)}
-          </td>
-        </tr>
-      `;
     }
+
   }
 }
 
-window.showEmployeePayroll = async function(id) {
+async function employeePayroll(id) {
+
   try {
 
     const payroll =
       await api(
-        `/employees/${id}/payroll?month=${encodeURIComponent(currentMonth())}`
+        `/api/employees/${id}/payroll`
       );
 
-    const employee =
-      employeesCache.find(x => x.id === Number(id));
-
     openModal(
-      `كشف راتب ${employee?.name || ""}`,
+      "كشف الراتب",
       `
         <div class="payroll-details">
 
-          <p>
-            <strong>الشهر:</strong>
-            ${escapeHTML(payroll.month)}
-          </p>
+          <h3>
+            ${escapeHTML(payroll.employee.name)}
+          </h3>
 
           <p>
-            الراتب الأساسي:
-            <strong>${payroll.basic_salary}</strong>
-          </p>
-
-          <p>
-            البدلات:
-            <strong>${payroll.allowance}</strong>
-          </p>
-
-          <p>
-            المكافآت:
-            <strong>${payroll.bonuses}</strong>
-          </p>
-
-          <p>
-            الخصومات:
-            <strong>${payroll.deductions}</strong>
+            الشهر:
+            ${payroll.month}
           </p>
 
           <hr>
 
-          <h3>
-            صافي الراتب:
-            ${payroll.net}
-          </h3>
+          <p>
+            الأساسي:
+            <strong>
+              ${payroll.basic_salary.toLocaleString()}
+            </strong>
+          </p>
+
+          <p>
+            البدلات:
+            <strong>
+              ${payroll.allowance.toLocaleString()}
+            </strong>
+          </p>
+
+          <p>
+            المكافآت:
+            <strong>
+              ${payroll.bonuses.toLocaleString()}
+            </strong>
+          </p>
+
+          <p>
+            الخصومات:
+            <strong>
+              ${payroll.deductions.toLocaleString()}
+            </strong>
+          </p>
+
+          <hr>
+
+          <h2>
+            الصافي:
+            ${payroll.net.toLocaleString()}
+          </h2>
 
         </div>
       `
     );
 
   } catch (error) {
+
     showToast(error.message, "error");
+
   }
-};
+}
 
 $("payrollSettingsButton")?.addEventListener(
   "click",
-  async () => {
-
-    try {
-
-      const settings =
-        await api("/payroll-settings");
-
-      openModal(
-        "إعدادات الرواتب",
-        `
-          <form id="payrollSettingsForm">
-
-            <div class="form-group">
-              <label>
-                خصم الغياب
-              </label>
-
-              <input
-                id="absenceDeduction"
-                type="number"
-                min="0"
-                value="${settings.absence_deduction || 0}"
-              >
-            </div>
-
-            <div class="form-group">
-              <label>
-                خصم التأخير
-              </label>
-
-              <input
-                id="lateDeduction"
-                type="number"
-                min="0"
-                value="${settings.late_deduction || 0}"
-              >
-            </div>
-
-            <div class="form-group">
-              <label>
-                الدقائق المسموحة للتأخير
-              </label>
-
-              <input
-                id="allowedLate"
-                type="number"
-                min="0"
-                value="${settings.allowed_late_minutes || 0}"
-              >
-            </div>
-
-            <button
-              class="btn btn-primary"
-              type="submit"
-            >
-              حفظ الإعدادات
-            </button>
-
-          </form>
-        `
-      );
-
-      $("payrollSettingsForm")
-        .addEventListener(
-          "submit",
-          async event => {
-
-            event.preventDefault();
-
-            try {
-
-              await api("/payroll-settings", {
-                method: "PATCH",
-                body: JSON.stringify({
-
-                  absence_deduction:
-                    Number($("absenceDeduction").value),
-
-                  late_deduction:
-                    Number($("lateDeduction").value),
-
-                  allowed_late_minutes:
-                    Number($("allowedLate").value)
-
-                })
-              });
-
-              closeModal();
-
-              showToast(
-                "تم تحديث إعدادات الرواتب"
-              );
-
-              await loadPayroll();
-
-            } catch (error) {
-              showToast(error.message, "error");
-            }
-          }
-        );
-
-    } catch (error) {
-      showToast(error.message, "error");
-    }
-  }
+  showPayrollSettings
 );
+
+async function showPayrollSettings() {
+
+  try {
+
+    const settings =
+      await api("/api/payroll-settings");
+
+    openModal(
+      "إعدادات الرواتب",
+      `
+        <form id="payrollSettingsForm">
+
+          <div class="form-group">
+            <label>
+              خصم الغياب
+            </label>
+
+            <input
+              id="absenceDeduction"
+              type="number"
+              value="${settings.absence_deduction}"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>
+              خصم التأخير
+            </label>
+
+            <input
+              id="lateDeduction"
+              type="number"
+              value="${settings.late_deduction}"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>
+              الدقائق المسموحة للتأخير
+            </label>
+
+            <input
+              id="allowedLate"
+              type="number"
+              value="${settings.allowed_late_minutes}"
+            >
+          </div>
+
+          <button
+            class="btn btn-primary"
+            type="submit"
+          >
+            حفظ الإعدادات
+          </button>
+
+        </form>
+      `
+    );
+
+    $("payrollSettingsForm").addEventListener(
+      "submit",
+      async event => {
+
+        event.preventDefault();
+
+        try {
+
+          await api("/api/payroll-settings", {
+            method: "PATCH",
+
+            body: JSON.stringify({
+
+              absence_deduction:
+                Number($("absenceDeduction").value),
+
+              late_deduction:
+                Number($("lateDeduction").value),
+
+              allowed_late_minutes:
+                Number($("allowedLate").value)
+
+            })
+          });
+
+          closeModal();
+
+          showToast(
+            "تم تحديث إعدادات الرواتب"
+          );
+
+        } catch (error) {
+
+          showToast(
+            error.message,
+            "error"
+          );
+
+        }
+
+      }
+    );
+
+  } catch (error) {
+
+    showToast(error.message, "error");
+
+  }
+}
 
 // =====================================================
 // Notes
 // =====================================================
 
-async function loadNotesPage() {
-  await loadStudents();
-  await loadSelectedStudentNotes();
+function fillStudentSelect() {
+
+  const select =
+    $("noteStudent");
+
+  if (!select) return;
+
+  select.innerHTML = `
+    <option value="">
+      اختر الطالب
+    </option>
+  `;
+
+  studentsCache.forEach(student => {
+
+    select.innerHTML += `
+      <option value="${student.id}">
+        ${escapeHTML(student.name)}
+      </option>
+    `;
+
+  });
 }
 
-async function loadSelectedStudentNotes() {
+$("saveNoteButton")?.addEventListener(
+  "click",
+  saveNote
+);
+
+async function saveNote() {
+
   const studentId =
-    $("noteStudent")?.value;
+    $("noteStudent").value;
 
-  const body = $("notesTableBody");
+  const text =
+    $("noteText").value.trim();
 
-  if (!body) return;
+  if (!studentId || !text) {
 
-  if (!studentId) {
-    body.innerHTML = `
-      <tr>
-        <td colspan="4">
-          اختر طالباً لعرض ملاحظاته
-        </td>
-      </tr>
-    `;
+    showToast(
+      "اختر الطالب واكتب الملاحظة",
+      "error"
+    );
+
     return;
   }
 
   try {
 
-    const notes =
-      await api(`/notes/${studentId}`);
+    await api("/api/notes", {
+      method: "POST",
+      body: JSON.stringify({
+        student_id: Number(studentId),
+        text
+      })
+    });
 
-    notesCache = notes;
+    $("noteText").value = "";
 
-    const student =
-      studentsCache.find(
-        x => x.id === Number(studentId)
-      );
+    showToast("تم حفظ الملاحظة");
 
-    body.innerHTML =
-      notes.length
-        ? notes.map(note => `
+    await loadNotes();
+
+  } catch (error) {
+
+    showToast(
+      error.message,
+      "error"
+    );
+
+  }
+}
+
+async function loadNotes() {
+
+  const body =
+    $("notesTableBody");
+
+  if (!body) return;
+
+  body.innerHTML = "";
+
+  for (const student of studentsCache) {
+
+    try {
+
+      const notes =
+        await api(
+          `/api/notes/${student.id}`
+        );
+
+      notes.forEach(note => {
+
+        body.innerHTML += `
           <tr>
 
             <td>
-              ${escapeHTML(student?.name || "-")}
+              ${escapeHTML(student.name)}
             </td>
 
             <td>
@@ -1708,287 +1843,260 @@ async function loadSelectedStudentNotes() {
             </td>
 
             <td>
+
               <button
-                class="btn btn-small btn-danger"
+                class="btn btn-danger btn-small"
                 onclick="deleteNote(${note.id})"
               >
                 حذف
               </button>
+
             </td>
 
-          </tr>
-        `).join("")
-        : `
-          <tr>
-            <td colspan="4">
-              لا توجد ملاحظات
-            </td>
           </tr>
         `;
 
-  } catch (error) {
-    showToast(error.message, "error");
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
   }
 }
 
-$("noteStudent")?.addEventListener(
-  "change",
-  loadSelectedStudentNotes
-);
+async function deleteNote(id) {
 
-$("saveNoteButton")?.addEventListener(
-  "click",
-  async () => {
-
-    const studentId =
-      $("noteStudent").value;
-
-    const text =
-      $("noteText").value.trim();
-
-    if (!studentId) {
-      showToast("اختر الطالب", "error");
-      return;
-    }
-
-    if (!text) {
-      showToast("اكتب الملاحظة", "error");
-      return;
-    }
-
-    try {
-
-      await api("/notes", {
-        method: "POST",
-        body: JSON.stringify({
-          student_id: Number(studentId),
-          text
-        })
-      });
-
-      $("noteText").value = "";
-
-      showToast("تم حفظ الملاحظة");
-
-      await loadSelectedStudentNotes();
-
-    } catch (error) {
-      showToast(error.message, "error");
-    }
-  }
-);
-
-window.deleteNote = async function(id) {
-
-  if (!confirm("هل تريد حذف هذه الملاحظة؟")) {
+  if (!confirm("هل تريد حذف الملاحظة؟")) {
     return;
   }
 
   try {
 
-    await api(`/notes/${id}`, {
+    await api(`/api/notes/${id}`, {
       method: "DELETE"
     });
 
     showToast("تم حذف الملاحظة");
 
-    await loadSelectedStudentNotes();
+    await loadNotes();
 
   } catch (error) {
-    showToast(error.message, "error");
+
+    showToast(
+      error.message,
+      "error"
+    );
+
   }
-};
+}
 
 // =====================================================
 // Videos
 // =====================================================
 
-async function loadVideos() {
-  videosCache = await api("/videos");
+$("addVideoButton")?.addEventListener(
+  "click",
+  showAddVideoModal
+);
 
-  const grid = $("videosGrid");
+function showAddVideoModal() {
+
+  openModal(
+    "إضافة حصة",
+    `
+      <form id="addVideoForm">
+
+        <div class="form-group">
+
+          <label>
+            اسم الحصة
+          </label>
+
+          <input
+            id="videoTitle"
+            required
+          >
+
+        </div>
+
+        <div class="form-group">
+
+          <label>
+            رابط أو اسم الفيديو
+          </label>
+
+          <input
+            id="videoFile"
+            placeholder="ضع الرابط هنا"
+          >
+
+        </div>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          حفظ الحصة
+        </button>
+
+      </form>
+    `
+  );
+
+  $("addVideoForm").addEventListener(
+    "submit",
+    async event => {
+
+      event.preventDefault();
+
+      try {
+
+        await api("/api/videos", {
+          method: "POST",
+
+          body: JSON.stringify({
+
+            title:
+              $("videoTitle").value.trim(),
+
+            file_name:
+              $("videoFile").value.trim()
+
+          })
+        });
+
+        closeModal();
+
+        showToast("تم إضافة الحصة");
+
+        await loadVideos();
+
+      } catch (error) {
+
+        showToast(
+          error.message,
+          "error"
+        );
+
+      }
+
+    }
+  );
+}
+
+async function loadVideos() {
+
+  const videos =
+    await api("/api/videos");
+
+  const grid =
+    $("videosGrid");
 
   if (!grid) return;
 
-  if (!videosCache.length) {
+  if (!videos.length) {
 
-    grid.innerHTML = `
-      <div class="card">
-        لا توجد حصص أو فيديوهات
-      </div>
-    `;
+    grid.innerHTML =
+      `<div class="card">لا توجد حصص حالياً</div>`;
 
     return;
   }
 
-  grid.innerHTML = videosCache.map(video => `
-    <div class="card video-card">
+  grid.innerHTML =
+    videos.map(video => {
 
-      <div class="video-icon">
-        🎥
-      </div>
+      const file =
+        video.file_name || "";
 
-      <h3>
-        ${escapeHTML(video.title)}
-      </h3>
+      return `
+        <div class="video-card">
 
-      ${
-        video.file_name
-          ? `
-            <p>
-              ${escapeHTML(video.file_name)}
-            </p>
-          `
-          : `
-            <p>
-              لم يتم تحديد ملف
-            </p>
-          `
-      }
+          <div class="video-icon">
+            🎥
+          </div>
 
-      <small>
-        ${formatDate(video.created_at)}
-      </small>
+          <h3>
+            ${escapeHTML(video.title)}
+          </h3>
 
-    </div>
-  `).join("");
+          ${
+            file
+              ? `
+                <a
+                  href="${escapeHTML(file)}"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-primary"
+                >
+                  مشاهدة الحصة
+                </a>
+              `
+              : `
+                <span>
+                  لم يتم إضافة رابط
+                </span>
+              `
+          }
+
+        </div>
+      `;
+
+    }).join("");
 }
-
-$("addVideoButton")?.addEventListener(
-  "click",
-  () => {
-
-    openModal(
-      "إضافة حصة",
-      `
-        <form id="addVideoForm">
-
-          <div class="form-group">
-
-            <label>
-              اسم الحصة
-            </label>
-
-            <input
-              id="videoTitle"
-              required
-              placeholder="مثال: الرياضيات - الدرس الأول"
-            >
-
-          </div>
-
-          <div class="form-group">
-
-            <label>
-              اسم الملف أو رابط الفيديو
-            </label>
-
-            <input
-              id="videoFile"
-              placeholder="مثال: lesson1.mp4"
-            >
-
-          </div>
-
-          <button
-            type="submit"
-            class="btn btn-primary"
-          >
-            حفظ الحصة
-          </button>
-
-        </form>
-      `
-    );
-
-    $("addVideoForm").addEventListener(
-      "submit",
-      async event => {
-
-        event.preventDefault();
-
-        try {
-
-          await api("/videos", {
-            method: "POST",
-            body: JSON.stringify({
-              title:
-                $("videoTitle").value.trim(),
-
-              file_name:
-                $("videoFile").value.trim()
-            })
-          });
-
-          closeModal();
-
-          showToast("تم إضافة الحصة");
-
-          await loadVideos();
-
-        } catch (error) {
-          showToast(error.message, "error");
-        }
-      }
-    );
-  }
-);
 
 // =====================================================
 // Logs
 // =====================================================
 
 async function loadLogs() {
+
+  if (currentUser?.role !== "admin") return;
+
   const logs =
-    await api("/audit-logs");
+    await api("/api/audit-logs");
 
   const body =
     $("logsTableBody");
 
   if (!body) return;
 
-  if (!logs.length) {
+  body.innerHTML =
+    logs.map(log => {
 
-    body.innerHTML = `
-      <tr>
-        <td colspan="5">
-          لا توجد عمليات
-        </td>
-      </tr>
-    `;
+      return `
+        <tr>
 
-    return;
-  }
+          <td>
+            ${log.id}
+          </td>
 
-  body.innerHTML = logs.map((log, index) => `
-    <tr>
+          <td>
+            ${escapeHTML(
+              log.user_name ||
+              log.username ||
+              "النظام"
+            )}
+          </td>
 
-      <td>
-        ${index + 1}
-      </td>
+          <td>
+            ${escapeHTML(log.action)}
+          </td>
 
-      <td>
-        ${escapeHTML(
-          log.user_name ||
-          log.username ||
-          "النظام"
-        )}
-      </td>
+          <td>
+            ${escapeHTML(log.details || "-")}
+          </td>
 
-      <td>
-        ${escapeHTML(log.action)}
-      </td>
+          <td>
+            ${formatDate(log.created_at)}
+          </td>
 
-      <td>
-        ${escapeHTML(log.details || "-")}
-      </td>
+        </tr>
+      `;
 
-      <td>
-        ${formatDate(log.created_at)}
-      </td>
-
-    </tr>
-  `).join("");
+    }).join("");
 }
 
 $("refreshLogs")?.addEventListener(
@@ -1997,142 +2105,116 @@ $("refreshLogs")?.addEventListener(
 );
 
 // =====================================================
-// تحديث النشاط
+// Modal
 // =====================================================
 
-let activityTimer = null;
+function openModal(title, html) {
 
-function startActivity() {
+  $("modalTitle").textContent = title;
 
-  if (!currentUser?.id) return;
+  $("modalBody").innerHTML = html;
 
-  if (activityTimer) {
-    clearInterval(activityTimer);
-  }
-
-  sendActivity();
-
-  activityTimer = setInterval(
-    sendActivity,
-    30000
-  );
+  $("modal").classList.remove("hidden");
 }
 
-async function sendActivity() {
+function closeModal() {
 
-  if (!currentUser?.id) return;
+  $("modal").classList.add("hidden");
 
-  try {
+  $("modalBody").innerHTML = "";
+}
 
-    const result =
-      await api("/activity", {
-        method: "POST",
-        body: JSON.stringify({
-          user_id: currentUser.id
-        })
-      });
+$("modalClose")?.addEventListener(
+  "click",
+  closeModal
+);
 
-    if ($("onlineIndicator")) {
-      $("onlineIndicator").textContent =
-        "● متصل";
-    }
+document.querySelector(".modal-overlay")
+  ?.addEventListener(
+    "click",
+    closeModal
+  );
 
-    if (result?.last_seen) {
+// =====================================================
+// Auto Login
+// =====================================================
+
+document.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+
+    try {
+
+      const saved =
+        localStorage.getItem(
+          "school_current_user"
+        );
+
+      if (!saved) {
+        return;
+      }
+
+      currentUser =
+        JSON.parse(saved);
+
+      if (!currentUser?.id) {
+        throw new Error("Invalid session");
+      }
+
+      const result =
+        await api("/api/activity", {
+          method: "POST",
+
+          body: JSON.stringify({
+            user_id: currentUser.id
+          })
+        });
+
       currentUser.last_seen =
         result.last_seen;
-    }
 
-  } catch (error) {
+      showApp();
 
-    console.error(
-      "Activity error:",
-      error
-    );
+      await initializeApp();
 
-    if ($("onlineIndicator")) {
-      $("onlineIndicator").textContent =
-        "● غير متصل";
-    }
-  }
-}
+    } catch (error) {
 
-// =====================================================
-// استعادة الجلسة
-// =====================================================
-
-async function restoreSession() {
-
-  try {
-
-    const saved =
-      localStorage.getItem(
-        "school_current_user"
+      console.log(
+        "No active session"
       );
-
-    if (!saved) return;
-
-    const user =
-      JSON.parse(saved);
-
-    if (!user?.id) return;
-
-    const users =
-      await api("/users");
-
-    const found =
-      (users.users || []).find(
-        x => x.id === user.id
-      );
-
-    if (!found || !found.active) {
 
       localStorage.removeItem(
         "school_current_user"
       );
 
-      return;
     }
-
-    currentUser = found;
-
-    enterApplication();
-
-  } catch (error) {
-
-    console.error(
-      "Session restore error:",
-      error
-    );
-
-  }
-}
-
-// =====================================================
-// تحديث دوري للوحة التحكم
-// =====================================================
-
-setInterval(() => {
-
-  if (
-    currentUser &&
-    currentPage === "dashboard"
-  ) {
-    loadDashboard().catch(
-      console.error
-    );
-  }
-
-}, 30000);
-
-// =====================================================
-// بدء التطبيق
-// =====================================================
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    restoreSession();
 
   }
 );
+
+// =====================================================
+// Global Functions
+// =====================================================
+
+window.disableUser = disableUser;
+window.enableUser = enableUser;
+window.deleteUser = deleteUser;
+window.changeUserPassword = changeUserPassword;
+
+window.toggleStudentAttendance =
+  toggleStudentAttendance;
+
+window.employeeDetails =
+  employeeDetails;
+
+window.employeePayroll =
+  employeePayroll;
+
+window.deleteNote =
+  deleteNote;
+
+window.openModal =
+  openModal;
+
+window.closeModal =
+  closeModal;
