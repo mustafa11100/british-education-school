@@ -1,7 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const boot = fs.readFileSync(path.join(__dirname, 'bootstrap.js'), 'utf8');
+let boot = fs.readFileSync(path.join(__dirname, 'bootstrap.js'), 'utf8');
+
+// Keep legacy backend role checks working while exposing the new job titles.
+boot = boot.replace("ADMIN:'مدير المدرسة'", "ADMIN:'مدير', SCHOOL_ADMIN:'مدير المدرسة'");
+boot = boot.replace("OPERATIONS:'مسؤول العمليات'", "OPERATIONS:'عمليات', SCHOOL_OPERATIONS:'مسؤول العمليات'");
+
 const marker = "require('./.server-runtime.js');";
 const inject = `
 const staticMarker='/* =========================================================\\n   STATIC FILES\\n========================================================= */';
