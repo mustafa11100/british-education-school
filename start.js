@@ -7,6 +7,12 @@ let boot = fs.readFileSync(path.join(__dirname, 'bootstrap.js'), 'utf8');
 boot = boot.replace("ADMIN:'مدير المدرسة'", "ADMIN:'مدير', SCHOOL_ADMIN:'مدير المدرسة'");
 boot = boot.replace("OPERATIONS:'مسؤول العمليات'", "OPERATIONS:'عمليات', SCHOOL_OPERATIONS:'مسؤول العمليات'");
 
+// Map new job titles to the legacy checks used by the original API.
+boot = boot.replace(
+  "if (!roles.includes(req.user.role)) {",
+  "const legacyRoleMap={'مدير المدرسة':'مدير','مسؤول العمليات':'عمليات','مدير الجودة':'جودة','مسؤول الجودة':'جودة','مشرف أكاديمي':'مشرف','مشرف تربوي':'مشرف','مشرف إداري':'مشرف','معلم أول':'معلم','معلم مساعد':'معلم','مدرس بديل':'معلم'}; const effectiveRole=legacyRoleMap[req.user.role]||req.user.role; if (!roles.includes(effectiveRole)) {"
+);
+
 // The bootstrap file is itself a template string. Convert the few dynamic
 // notification messages to normal string concatenation before evaluating it.
 boot = boot.replace("`تمت إضافة رسوم ${description} بقيمة ${Number(amount||0)}`", "'تمت إضافة رسوم '+description+' بقيمة '+Number(amount||0)");
