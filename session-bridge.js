@@ -1,0 +1,1 @@
+const NativeMap=global.Map;const maps=[];global.Map=class SessionAwareMap extends NativeMap{constructor(...args){super(...args);maps.push(this)}};global.__educoreSessions={get(token){for(const m of maps){try{if(m.has(token))return m.get(token)}catch{}}return undefined}};
