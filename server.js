@@ -2097,10 +2097,20 @@ app.get("/", (req, res) => {
 // تشغيل السيرفر
 // =====================================================
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(
-    `School portal running on port ${PORT}`
-  );
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`School portal running on port ${PORT}`);
+});
+
+server.on("error", (error) => {
+  console.error("SERVER ERROR:", error);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("UNCAUGHT EXCEPTION:", error);
+});
+
+process.on("unhandledRejection", (error) => {
+  console.error("UNHANDLED REJECTION:", error);
 });
