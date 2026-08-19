@@ -178,86 +178,17 @@ Module._load = function(request, parent, isMain) {
           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(code,schoolSlug,row.school_name,'','#173b70','#24579b',row.phone,row.email,row.address,'active','basic','trial',500);
         const user=db.prepare(`INSERT INTO users(username,password_hash,full_name,email,phone,role,school_id,active,must_change_password)
           VALUES(?,?,?,?,?,?,?,?,?)`).run(row.admin_username,row.admin_password_hash,row.admin_name,row.email,row.phone,'مدير المدرسة',Number(school.lastInsertRowid),1,1);
-        db.prepare("UPDATE school_registrations SET status='approved',school_id=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?").run(Number(school.lastInsertRowid),id);
-        res.json({success:true,school_id:Number(school.lastInsertRowid),admin_user_id:Number(user.lastInsertRowid),message:'تم اعتماد المدرسة وإنشاء حساب مديرها'});
-      } catch(e){res.status(400).json({success:false,message:'تعذر اعتماد الطلب'});}
+        db.prepare('UPDATE school_registrations SET status=?,school_id=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?').run('approved',Number(school.lastInsertRowid),id);
+        res.json({success:true,school_id:Number(school.lastInsertRowid),user_id:Number(user.lastInsertRowid),username:row.admin_username,message:'تم اعتماد المدرسة وإنشاء حساب المدير'});
+      } catch(e){res.status(500).json({success:false,message:'تعذر اعتماد المدرسة'});}
     });
-
-    app.post('/api/saas/registrations/:id/reject', guard, (req,res) => {
-      const id=Number(req.params.id);
-      const result=db.prepare("UPDATE school_registrations SET status='rejected',reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'").run(id);
-      if(!result.changes) return res.status(404).json({success:false,message:'طلب التسجيل غير موجود أو تمت مراجعته'});
-      res.json({success:true,message:'تم رفض طلب التسجيل'});
-    });
-
-    app.get('/api/saas/schools', guard, (req,res) => {
-      const schools = db.prepare(`SELECT s.*, (SELECT COUNT(*) FROM users u WHERE u.school_id=s.id) user_count,
-        (SELECT COUNT(*) FROM students st WHERE st.school_id=s.id) student_count FROM schools s ORDER BY s.id DESC`).all();
-      res.json({success:true,schools});
-    });
-
-    app.post('/api/saas/schools', guard, (req,res) => {
-      try {
-        const {name,code,plan='basic',max_students=500,primary_color='#173b70',secondary_color='#24579b',logo_url='',phone='',email='',address=''} = req.body;
-        if(!name || !code) return res.status(400).json({success:false,message:'اسم المدرسة والكود مطلوبان'});
-        const slug=uniqueSlug(db,name);
-        const r=db.prepare('INSERT INTO schools(code,slug,name,plan,max_students,primary_color,secondary_color,logo_url,phone,email,address) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(code.trim(),slug,name.trim(),plan,Number(max_students),primary_color,secondary_color,logo_url,phone,email,address);
-        res.json({success:true,school_id:Number(r.lastInsertRowid),message:'تم إنشاء المدرسة'});
-      } catch(e) { res.status(400).json({success:false,message:'كود المدرسة مستخدم أو البيانات غير صحيحة'}); }
-    });
-
-    app.put('/api/saas/schools/:id', (req,res) => {
-      if (!isProgrammer(req)) return res.status(403).json({success:false,message:'صلاحية المبرمج مطلوبة'});
-      const id=Number(req.params.id), x=req.body;
-      const exists=db.prepare('SELECT id FROM schools WHERE id=?').get(id);
-      if(!exists) return res.status(404).json({success:false,message:'المدرسة غير موجودة'});
-      db.prepare('UPDATE schools SET name=COALESCE(?,name),logo_url=COALESCE(?,logo_url),primary_color=COALESCE(?,primary_color),secondary_color=COALESCE(?,secondary_color),phone=COALESCE(?,phone),email=COALESCE(?,email),address=COALESCE(?,address),status=COALESCE(?,status),plan=COALESCE(?,plan),subscription_status=COALESCE(?,subscription_status),max_students=COALESCE(?,max_students),notes=COALESCE(?,notes),updated_at=CURRENT_TIMESTAMP WHERE id=?').run(x.name??null,x.logo_url??null,x.primary_color??null,x.secondary_color??null,x.phone??null,x.email??null,x.address??null,x.status??null,x.plan??null,x.subscription_status??null,x.max_students??null,x.notes??null,id);
-      res.json({success:true,message:'تم تحديث المدرسة'});
-    });
-
-    app.get('/api/saas/schools/:id', guard, (req,res) => {
-      const school=db.prepare('SELECT * FROM schools WHERE id=?').get(Number(req.params.id));
-      if(!school) return res.status(404).json({success:false,message:'المدرسة غير موجودة'});
-      const subscriptions=db.prepare('SELECT * FROM school_subscriptions WHERE school_id=? ORDER BY id DESC').all(school.id);
-      res.json({success:true,school,subscriptions});
-    });
-
-    app.post('/api/saas/schools/:id/subscriptions', guard, (req,res) => {
-      const id=Number(req.params.id), {plan,amount=0,billing_cycle='monthly',starts_at='',ends_at='',reference='',notes=''}=req.body;
-      if(!plan) return res.status(400).json({success:false,message:'الخطة مطلوبة'});
-      const r=db.prepare('INSERT INTO school_subscriptions(school_id,plan,amount,billing_cycle,starts_at,ends_at,reference,notes) VALUES(?,?,?,?,?,?,?,?)').run(id,plan,Number(amount),billing_cycle,starts_at,ends_at,reference,notes);
-      db.prepare("UPDATE schools SET plan=?,subscription_status='active',subscription_start=?,subscription_end=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(plan,starts_at||null,ends_at||null,id);
-      res.json({success:true,id:Number(r.lastInsertRowid),message:'تم تحديث اشتراك المدرسة'});
-    });
-
-    app.get('/api/saas/branding', (req,res) => {
-      const id=Number(req.headers['x-school-id'] || defaultSchoolId);
-      const school=db.prepare('SELECT id,name,logo_url,primary_color,secondary_color,phone,email,address,plan,subscription_status FROM schools WHERE id=?').get(id) || db.prepare('SELECT id,name,logo_url,primary_color,secondary_color,phone,email,address,plan,subscription_status FROM schools WHERE id=?').get(defaultSchoolId);
-      res.json({success:true,school});
-    });
-
-    app.post('/api/saas/schools/:id/admin', guard, (req,res) => {
-      const {username,password,full_name,email='',phone=''}=req.body;
-      if(!username||!password||!full_name) return res.status(400).json({success:false,message:'بيانات المدير مطلوبة'});
-      const cols=db.prepare('PRAGMA table_info(users)').all().map(x=>x.name);
-      if(!cols.includes('school_id')) return res.status(500).json({success:false,message:'قاعدة البيانات تحتاج ترقية'});
-      const crypto=require('crypto');
-      try {
-        const r=db.prepare('INSERT INTO users(username,password_hash,full_name,email,phone,role,school_id,must_change_password) VALUES(?,?,?,?,?,?,?,1)').run(username.trim(),crypto.createHash('sha256').update(String(password)).digest('hex'),full_name.trim(),email,phone,'مدير المدرسة',Number(req.params.id));
-        res.json({success:true,user_id:Number(r.lastInsertRowid),message:'تم إنشاء مدير المدرسة'});
-      } catch(e){res.status(400).json({success:false,message:'اسم المستخدم مستخدم بالفعل أو تعذر إنشاء المدير'});}
-    });
-
-    ensureColumn(db, 'users', 'school_id', 'INTEGER');
-    ensureColumn(db, 'students', 'school_id', 'INTEGER');
-    ensureColumn(db, 'parents', 'school_id', 'INTEGER');
-    db.prepare('UPDATE users SET school_id=? WHERE school_id IS NULL').run(defaultSchoolId);
-    db.prepare('UPDATE students SET school_id=? WHERE school_id IS NULL').run(defaultSchoolId);
-    db.prepare('UPDATE parents SET school_id=? WHERE school_id IS NULL').run(defaultSchoolId);
 
     return app;
   }
-  // Preserve Express static helpers (json, urlencoded, Router, etc.) for later wrappers.
+
+  // Preserve Express's static helpers (json, urlencoded, static, Router, etc.)
+  // when this module wraps the Express factory. Without this, later modules
+  // calling express.json() receive undefined and the backend exits at startup.
   Object.assign(wrappedExpress, loaded);
   return wrappedExpress;
 };
