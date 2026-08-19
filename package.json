@@ -3,7 +3,7 @@
   "version":"2.3.0",
   "description":"منصة EduCore Platform لإدارة المدارس والمؤسسات التعليمية",
   "main":"server.js",
-  "scripts":{"start":"node proxy2.js","postinstall":"npm rebuild better-sqlite3 --build-from-source"},
+  "scripts":{"start":"node bootstrap-db.js && node proxy2.js","postinstall":"npm rebuild better-sqlite3 --build-from-source"},
   "dependencies":{"better-sqlite3":"^11.0.0","express":"^4.19.2","nodemailer":"^6.9.13"},
   "engines":{"node":"20.20.2"}
 }
