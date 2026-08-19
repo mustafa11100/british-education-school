@@ -2,9 +2,10 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 // Runs before proxy2/server modules so legacy databases always have the
-// core tables required by the SaaS middleware.
+// core tables required by the multi-school SaaS middleware.
 const db = new Database(path.join(__dirname, 'school.db'));
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 function addColumn(table, column, definition) {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(x => x.name);
@@ -23,6 +24,24 @@ CREATE TABLE IF NOT EXISTS users (
   school_id INTEGER,
   active INTEGER DEFAULT 1,
   must_change_password INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS schools (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  logo_url TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  owner_approved INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS school_access_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  school_id INTEGER NOT NULL,
+  manager_user_id INTEGER NOT NULL,
+  status TEXT DEFAULT 'pending',
+  owner_note TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,10 +72,10 @@ CREATE TABLE IF NOT EXISTS parents (
 );
 `);
 
-// Existing installations may have been created before multi-school support.
 addColumn('users', 'school_id', 'INTEGER');
 addColumn('students', 'school_id', 'INTEGER');
 addColumn('parents', 'school_id', 'INTEGER');
+addColumn('schools', 'owner_approved', 'INTEGER DEFAULT 0');
 
 db.close();
-console.log('✅ Core database bootstrap completed');
+console.log('✅ Core multi-school database bootstrap completed');
