@@ -1,4 +1,5 @@
 const path = require('path');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 // Runs before proxy2/server modules so legacy databases always have the
@@ -10,6 +11,10 @@ db.pragma('foreign_keys = ON');
 function addColumn(table, column, definition) {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(x => x.name);
   if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(String(password)).digest('hex');
 }
 
 db.exec(`
@@ -76,6 +81,22 @@ addColumn('users', 'school_id', 'INTEGER');
 addColumn('students', 'school_id', 'INTEGER');
 addColumn('parents', 'school_id', 'INTEGER');
 addColumn('schools', 'owner_approved', 'INTEGER DEFAULT 0');
+
+// Ensure the production owner account exists. Password is supplied only
+// through Railway's environment variables and is never committed to GitHub.
+const ownerUsername = String(process.env.OWNER_USERNAME || '').trim();
+const ownerPassword = String(process.env.OWNER_PASSWORD || '');
+if (ownerUsername && ownerPassword) {
+  const existing = db.prepare('SELECT id FROM users WHERE username=?').get(ownerUsername);
+  if (existing) {
+    db.prepare(`UPDATE users SET password_hash=?, full_name=?, role=?, active=1, must_change_password=0, school_id=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+      .run(hashPassword(ownerPassword), 'مالك المنصة', 'مبرمج', existing.id);
+  } else {
+    db.prepare(`INSERT INTO users(username,password_hash,full_name,email,phone,role,school_id,active,must_change_password) VALUES(?,?,?,?,?,?,NULL,1,0)`)
+      .run(ownerUsername, hashPassword(ownerPassword), 'مالك المنصة', '', '', 'مبرمج');
+  }
+  console.log(`✅ Production owner account ready: ${ownerUsername}`);
+}
 
 db.close();
 console.log('✅ Core multi-school database bootstrap completed');
