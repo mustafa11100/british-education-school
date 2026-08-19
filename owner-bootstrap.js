@@ -3,11 +3,12 @@ const crypto = require('crypto');
 const path = require('path');
 
 // Ensure the platform owner exists before server.js registers its login routes.
-// The password is read only from Railway's environment variable `mustafa.adel`.
-const username = 'mustafa.adel';
-const password = process.env['mustafa.adel'];
+// Use normal Railway variable names. Do not use a variable name containing a dot.
+const username = String(process.env.OWNER_USERNAME || 'mustafa.adel').trim();
+const password = String(process.env.OWNER_PASSWORD || '');
+
 if (!password) {
-  console.warn('OWNER BOOTSTRAP: Railway variable mustafa.adel is not set; owner bootstrap skipped.');
+  console.warn('OWNER BOOTSTRAP: OWNER_PASSWORD is not set; owner bootstrap skipped.');
 } else {
   const db = new Database(path.join(__dirname, 'school.db'));
   db.exec(`CREATE TABLE IF NOT EXISTS users (
@@ -24,15 +25,23 @@ if (!password) {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`);
-  const hash = crypto.createHash('sha256').update(String(password)).digest('hex');
+
+  const hash = crypto.createHash('sha256').update(password).digest('hex');
   const existing = db.prepare('SELECT id FROM users WHERE username=?').get(username);
+
   if (existing) {
-    db.prepare("UPDATE users SET password_hash=?,full_name=?,role=?,active=1,must_change_password=0,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+    db.prepare(`UPDATE users
+      SET password_hash=?, full_name=?, role=?, active=1,
+          must_change_password=0, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?`)
       .run(hash, 'مالك المنصة', 'مبرمج', existing.id);
   } else {
-    db.prepare("INSERT INTO users(username,password_hash,full_name,role,active,must_change_password) VALUES(?,?,?,'مبرمج',1,0)")
+    db.prepare(`INSERT INTO users
+      (username,password_hash,full_name,role,active,must_change_password)
+      VALUES(?,?,?,'مبرمج',1,0)`)
       .run(username, hash, 'مالك المنصة');
   }
+
   db.close();
   console.log('OWNER BOOTSTRAP: owner account is ready:', username);
 }
