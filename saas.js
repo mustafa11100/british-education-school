@@ -5,11 +5,16 @@ const Module = require('module');
 const DB_PATH = path.join(__dirname, 'school.db');
 const originalLoad = Module._load;
 
+function ensureColumn(db, table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(x => x.name);
+  if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
 function initSaaS(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS schools (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      code TEXT UNIQUE NOT NULL,
+      code TEXT UNIQUE,
       name TEXT NOT NULL,
       logo_url TEXT DEFAULT '',
       primary_color TEXT DEFAULT '#173b70',
@@ -58,6 +63,38 @@ function initSaaS(db) {
     );
   `);
 
+  // Migrate databases created by older versions. CREATE TABLE IF NOT EXISTS does not
+  // change an existing table, so the previous schema may have no `code` column.
+  ensureColumn(db, 'schools', 'code', 'TEXT');
+  ensureColumn(db, 'schools', 'logo_url', "TEXT DEFAULT ''");
+  ensureColumn(db, 'schools', 'primary_color', "TEXT DEFAULT '#173b70'");
+  ensureColumn(db, 'schools', 'secondary_color', "TEXT DEFAULT '#24579b'");
+  ensureColumn(db, 'schools', 'phone', "TEXT DEFAULT ''");
+  ensureColumn(db, 'schools', 'email', "TEXT DEFAULT ''");
+  ensureColumn(db, 'schools', 'address', "TEXT DEFAULT ''");
+  ensureColumn(db, 'schools', 'status', "TEXT DEFAULT 'active'");
+  ensureColumn(db, 'schools', 'plan', "TEXT DEFAULT 'basic'");
+  ensureColumn(db, 'schools', 'subscription_status', "TEXT DEFAULT 'trial'");
+  ensureColumn(db, 'schools', 'subscription_start', 'TEXT');
+  ensureColumn(db, 'schools', 'subscription_end', 'TEXT');
+  ensureColumn(db, 'schools', 'max_students', 'INTEGER DEFAULT 500');
+  ensureColumn(db, 'schools', 'notes', "TEXT DEFAULT ''");
+  ensureColumn(db, 'schools', 'created_at', 'TEXT DEFAULT CURRENT_TIMESTAMP');
+  ensureColumn(db, 'schools', 'updated_at', 'TEXT DEFAULT CURRENT_TIMESTAMP');
+
+  const missingCodes = db.prepare("SELECT id,name FROM schools WHERE code IS NULL OR TRIM(code)='' ORDER BY id").all();
+  const used = new Set(db.prepare('SELECT code FROM schools WHERE code IS NOT NULL AND TRIM(code)<>\'\'').all().map(x => String(x.code)));
+  const setCode = db.prepare('UPDATE schools SET code=? WHERE id=?');
+  for (const row of missingCodes) {
+    const base = String(row.name || 'SCHOOL').replace(/[^\\p{L}\\p{N}]+/gu, '').slice(0, 8).toUpperCase() || 'SCHOOL';
+    let code = `${base}-${String(row.id).padStart(3, '0')}`;
+    let n = 1;
+    while (used.has(code)) code = `${base}-${String(row.id).padStart(3, '0')}-${n++}`;
+    setCode.run(code, row.id);
+    used.add(code);
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_schools_code_unique ON schools(code)');
+
   let school = db.prepare('SELECT id FROM schools ORDER BY id LIMIT 1').get();
   if (!school) {
     const r = db.prepare(`INSERT INTO schools
@@ -90,7 +127,6 @@ Module._load = function(request, parent, isMain) {
     const isProgrammer = req => ['مبرمج','مبرمج النظام'].includes(req.user?.role) || ['مبرمج','مبرمج النظام'].includes(req.enhancedUser?.role);
     const guard = (req, res, next) => isProgrammer(req) ? next() : res.status(403).json({success:false,message:'صلاحية المبرمج مطلوبة'});
 
-    // Public school registration. The school and its administrator remain pending until the platform owner approves them.
     app.post('/api/saas/school-register', (req,res) => {
       try {
         const {school_name,admin_name,email,phone='',address='',username='',password=''}=req.body||{};
@@ -99,7 +135,7 @@ Module._load = function(request, parent, isMain) {
         let candidate=base, i=1;
         while(db.prepare('SELECT id FROM users WHERE username=?').get(candidate) || db.prepare('SELECT id FROM school_registrations WHERE admin_username=? AND status=?').get(candidate,'pending')) candidate=`${base}${++i}`;
         const codeBase=String(school_name).replace(/[^\p{L}\p{N}]+/gu,'').slice(0,8).toUpperCase()||'SCHOOL';
-        let code=`${codeBase}-${Date.now().toString().slice(-5)}`;
+        const code=`${codeBase}-${Date.now().toString().slice(-5)}`;
         const crypto=require('crypto');
         const r=db.prepare(`INSERT INTO school_registrations(school_name,admin_name,email,phone,address,admin_username,admin_password_hash)
           VALUES(?,?,?,?,?,?,?)`).run(String(school_name).trim(),String(admin_name).trim(),String(email).trim(),String(phone).trim(),String(address).trim(),candidate,crypto.createHash('sha256').update(String(password)).digest('hex'));
@@ -107,9 +143,7 @@ Module._load = function(request, parent, isMain) {
       } catch(e){res.status(500).json({success:false,message:'تعذر إرسال طلب التسجيل'});}
     });
 
-    app.get('/api/saas/registrations', guard, (req,res) => {
-      res.json({success:true,registrations:db.prepare('SELECT id,school_name,admin_name,email,phone,address,admin_username,status,created_at,reviewed_at FROM school_registrations ORDER BY id DESC').all()});
-    });
+    app.get('/api/saas/registrations', guard, (req,res) => res.json({success:true,registrations:db.prepare('SELECT id,school_name,admin_name,email,phone,address,admin_username,status,created_at,reviewed_at FROM school_registrations ORDER BY id DESC').all()}));
 
     app.post('/api/saas/registrations/:id/approve', guard, (req,res) => {
       const id=Number(req.params.id), row=db.prepare('SELECT * FROM school_registrations WHERE id=?').get(id);
@@ -137,8 +171,7 @@ Module._load = function(request, parent, isMain) {
 
     app.get('/api/saas/schools', guard, (req,res) => {
       const schools = db.prepare(`SELECT s.*, (SELECT COUNT(*) FROM users u WHERE u.school_id=s.id) user_count,
-        (SELECT COUNT(*) FROM students st WHERE st.school_id=s.id) student_count
-        FROM schools s ORDER BY s.id DESC`).all();
+        (SELECT COUNT(*) FROM students st WHERE st.school_id=s.id) student_count FROM schools s ORDER BY s.id DESC`).all();
       res.json({success:true,schools});
     });
 
@@ -146,8 +179,7 @@ Module._load = function(request, parent, isMain) {
       try {
         const {name,code,plan='basic',max_students=500,primary_color='#173b70',secondary_color='#24579b',logo_url='',phone='',email='',address=''} = req.body;
         if(!name || !code) return res.status(400).json({success:false,message:'اسم المدرسة والكود مطلوبان'});
-        const r=db.prepare(`INSERT INTO schools(code,name,plan,max_students,primary_color,secondary_color,logo_url,phone,email,address)
-          VALUES(?,?,?,?,?,?,?,?,?,?)`).run(code.trim(),name.trim(),plan,Number(max_students),primary_color,secondary_color,logo_url,phone,email,address);
+        const r=db.prepare(`INSERT INTO schools(code,name,plan,max_students,primary_color,secondary_color,logo_url,phone,email,address) VALUES(?,?,?,?,?,?,?,?,?,?)`).run(code.trim(),name.trim(),plan,Number(max_students),primary_color,secondary_color,logo_url,phone,email,address);
         res.json({success:true,school_id:Number(r.lastInsertRowid),message:'تم إنشاء المدرسة'});
       } catch(e) { res.status(400).json({success:false,message:'كود المدرسة مستخدم أو البيانات غير صحيحة'}); }
     });
@@ -156,12 +188,7 @@ Module._load = function(request, parent, isMain) {
       const id=Number(req.params.id), x=req.body;
       const exists=db.prepare('SELECT id FROM schools WHERE id=?').get(id);
       if(!exists) return res.status(404).json({success:false,message:'المدرسة غير موجودة'});
-      db.prepare(`UPDATE schools SET name=COALESCE(?,name),logo_url=COALESCE(?,logo_url),primary_color=COALESCE(?,primary_color),
-        secondary_color=COALESCE(?,secondary_color),phone=COALESCE(?,phone),email=COALESCE(?,email),address=COALESCE(?,address),
-        status=COALESCE(?,status),plan=COALESCE(?,plan),subscription_status=COALESCE(?,subscription_status),max_students=COALESCE(?,max_students),
-        notes=COALESCE(?,notes),updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(
-          x.name??null,x.logo_url??null,x.primary_color??null,x.secondary_color??null,x.phone??null,x.email??null,x.address??null,
-          x.status??null,x.plan??null,x.subscription_status??null,x.max_students??null,x.notes??null,id);
+      db.prepare(`UPDATE schools SET name=COALESCE(?,name),logo_url=COALESCE(?,logo_url),primary_color=COALESCE(?,primary_color),secondary_color=COALESCE(?,secondary_color),phone=COALESCE(?,phone),email=COALESCE(?,email),address=COALESCE(?,address),status=COALESCE(?,status),plan=COALESCE(?,plan),subscription_status=COALESCE(?,subscription_status),max_students=COALESCE(?,max_students),notes=COALESCE(?,notes),updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(x.name??null,x.logo_url??null,x.primary_color??null,x.secondary_color??null,x.phone??null,x.email??null,x.address??null,x.status??null,x.plan??null,x.subscription_status??null,x.max_students??null,x.notes??null,id);
       res.json({success:true,message:'تم تحديث المدرسة'});
     });
 
@@ -175,10 +202,8 @@ Module._load = function(request, parent, isMain) {
     app.post('/api/saas/schools/:id/subscriptions', guard, (req,res) => {
       const id=Number(req.params.id), {plan,amount=0,billing_cycle='monthly',starts_at='',ends_at='',reference='',notes=''}=req.body;
       if(!plan) return res.status(400).json({success:false,message:'الخطة مطلوبة'});
-      const r=db.prepare(`INSERT INTO school_subscriptions(school_id,plan,amount,billing_cycle,starts_at,ends_at,reference,notes)
-        VALUES(?,?,?,?,?,?,?,?)`).run(id,plan,Number(amount),billing_cycle,starts_at,ends_at,reference,notes);
-      db.prepare(`UPDATE schools SET plan=?,subscription_status='active',subscription_start=?,subscription_end=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
-        .run(plan,starts_at||null,ends_at||null,id);
+      const r=db.prepare(`INSERT INTO school_subscriptions(school_id,plan,amount,billing_cycle,starts_at,ends_at,reference,notes) VALUES(?,?,?,?,?,?,?,?)`).run(id,plan,Number(amount),billing_cycle,starts_at,ends_at,reference,notes);
+      db.prepare(`UPDATE schools SET plan=?,subscription_status='active',subscription_start=?,subscription_end=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(plan,starts_at||null,ends_at||null,id);
       res.json({success:true,id:Number(r.lastInsertRowid),message:'تم تحديث اشتراك المدرسة'});
     });
 
@@ -191,22 +216,18 @@ Module._load = function(request, parent, isMain) {
     app.post('/api/saas/schools/:id/admin', guard, (req,res) => {
       const {username,password,full_name,email='',phone=''}=req.body;
       if(!username||!password||!full_name) return res.status(400).json({success:false,message:'بيانات المدير مطلوبة'});
-      const cols=db.prepare("PRAGMA table_info(users)").all().map(x=>x.name);
+      const cols=db.prepare('PRAGMA table_info(users)').all().map(x=>x.name);
       if(!cols.includes('school_id')) return res.status(500).json({success:false,message:'قاعدة البيانات تحتاج ترقية'});
       const crypto=require('crypto');
       try {
-        const r=db.prepare(`INSERT INTO users(username,password_hash,full_name,email,phone,role,school_id,must_change_password) VALUES(?,?,?,?,?,?,?,1)`).run(
-          username.trim(),crypto.createHash('sha256').update(String(password)).digest('hex'),full_name.trim(),email,phone,'مدير المدرسة',Number(req.params.id));
+        const r=db.prepare(`INSERT INTO users(username,password_hash,full_name,email,phone,role,school_id,must_change_password) VALUES(?,?,?,?,?,?,?,1)`).run(username.trim(),crypto.createHash('sha256').update(String(password)).digest('hex'),full_name.trim(),email,phone,'مدير المدرسة',Number(req.params.id));
         res.json({success:true,user_id:Number(r.lastInsertRowid),message:'تم إنشاء مدير المدرسة'});
       } catch(e){res.status(400).json({success:false,message:'اسم المستخدم مستخدم بالفعل أو تعذر إنشاء المدير'});}
     });
 
-    const cols=db.prepare('PRAGMA table_info(users)').all().map(x=>x.name);
-    if(!cols.includes('school_id')) db.exec('ALTER TABLE users ADD COLUMN school_id INTEGER');
-    const studentCols=db.prepare('PRAGMA table_info(students)').all().map(x=>x.name);
-    if(!studentCols.includes('school_id')) db.exec('ALTER TABLE students ADD COLUMN school_id INTEGER');
-    const parentCols=db.prepare('PRAGMA table_info(parents)').all().map(x=>x.name);
-    if(!parentCols.includes('school_id')) db.exec('ALTER TABLE parents ADD COLUMN school_id INTEGER');
+    ensureColumn(db, 'users', 'school_id', 'INTEGER');
+    ensureColumn(db, 'students', 'school_id', 'INTEGER');
+    ensureColumn(db, 'parents', 'school_id', 'INTEGER');
     db.prepare('UPDATE users SET school_id=? WHERE school_id IS NULL').run(defaultSchoolId);
     db.prepare('UPDATE students SET school_id=? WHERE school_id IS NULL').run(defaultSchoolId);
     db.prepare('UPDATE parents SET school_id=? WHERE school_id IS NULL').run(defaultSchoolId);
