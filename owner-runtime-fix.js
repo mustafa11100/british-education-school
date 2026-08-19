@@ -1,117 +1,24 @@
-const Module = require('module');
-const Database = require('better-sqlite3');
-const path = require('path');
-
-const originalLoad = Module._load;
-const db = new Database(path.join(__dirname, 'school.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-function hasColumn(table, column) {
-  return db.prepare(`PRAGMA table_info(${table})`).all().some(c => c.name === column);
+const Module=require('module');
+const Database=require('better-sqlite3');
+const path=require('path');
+const originalLoad=Module._load;
+const db=new Database(path.join(__dirname,'school.db'));
+db.pragma('journal_mode=WAL');
+db.pragma('foreign_keys=ON');
+function columns(table){return new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name));}
+function hasColumn(table,column){return columns(table).has(column);}
+function ensureColumn(table,column,definition){if(!hasColumn(table,column))db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);}
+function migrateSchools(){
+  db.exec(`CREATE TABLE IF NOT EXISTS schools(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,description TEXT,logo TEXT,active INTEGER DEFAULT 1,created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
+  for(const [c,d] of [['code','TEXT'],['description','TEXT'],['logo','TEXT'],['logo_url',"TEXT DEFAULT ''"],['primary_color',"TEXT DEFAULT '#173b70'"],['secondary_color',"TEXT DEFAULT '#24579b'"],['phone',"TEXT DEFAULT ''"],['email',"TEXT DEFAULT ''"],['address',"TEXT DEFAULT ''"],['status',"TEXT DEFAULT 'active'"],['plan',"TEXT DEFAULT 'basic'"],['subscription_status',"TEXT DEFAULT 'trial'"],['subscription_start','TEXT'],['subscription_end','TEXT'],['max_students','INTEGER DEFAULT 500'],['notes',"TEXT DEFAULT ''"],['active','INTEGER DEFAULT 1'],['created_at','TEXT DEFAULT CURRENT_TIMESTAMP'],['updated_at','TEXT DEFAULT CURRENT_TIMESTAMP']])ensureColumn('schools',c,d);
+  if(hasColumn('schools','code')){const used=new Set(db.prepare("SELECT code FROM schools WHERE code IS NOT NULL AND TRIM(code)<>''").all().map(x=>String(x.code)));const missing=db.prepare("SELECT id,name FROM schools WHERE code IS NULL OR TRIM(code)='' ORDER BY id").all();const set=db.prepare('UPDATE schools SET code=? WHERE id=?');for(const row of missing){const base=(String(row.name||'SCHOOL').replace(/[^\\p{L}\\p{N}]+/gu,'').slice(0,8).toUpperCase()||'SCHOOL');let code=`${base}-${String(row.id).padStart(3,'0')}`,n=1;while(used.has(code))code=`${base}-${String(row.id).padStart(3,'0')}-${n++}`;set.run(code,row.id);used.add(code);}}
+  db.exec(`CREATE TABLE IF NOT EXISTS attendance(id INTEGER PRIMARY KEY AUTOINCREMENT,student_id INTEGER NOT NULL,date TEXT NOT NULL,status TEXT NOT NULL,check_in TEXT,check_out TEXT,notes TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS results(id INTEGER PRIMARY KEY AUTOINCREMENT,student_id INTEGER NOT NULL,subject TEXT NOT NULL,term TEXT,score REAL,max_score REAL DEFAULT 100,notes TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 }
-function migrateSchools() {
-  db.exec(`CREATE TABLE IF NOT EXISTS schools (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    logo TEXT,
-    active INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );`);
-  for (const [column, sql] of [
-    ['description', 'ALTER TABLE schools ADD COLUMN description TEXT'],
-    ['logo', 'ALTER TABLE schools ADD COLUMN logo TEXT'],
-    ['active', 'ALTER TABLE schools ADD COLUMN active INTEGER DEFAULT 1'],
-    ['created_at', 'ALTER TABLE schools ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP']
-  ]) {
-    if (!hasColumn('schools', column)) db.exec(sql);
-  }
-  db.exec(`CREATE TABLE IF NOT EXISTS attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, date TEXT NOT NULL,
-    status TEXT NOT NULL, check_in TEXT, check_out TEXT, notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, subject TEXT NOT NULL,
-    term TEXT, score REAL, max_score REAL DEFAULT 100, notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );`);
-}
-try { migrateSchools(); } catch (e) { console.error('OWNER_RUNTIME_MIGRATION:', e.stack || e); }
-
-function isOwner(req) {
-  return ['مبرمج', 'مبرمج النظام', 'مالك المنصة', 'owner'].includes(req.user?.role);
-}
-function install(app) {
-  if (app.__ownerRuntimeFixInstalled) return;
-  app.__ownerRuntimeFixInstalled = true;
-  const originalUse = app.use.bind(app);
-  const originalGet = app.get.bind(app);
-  const originalPost = app.post.bind(app);
-  let installed = false;
-  const installRoutes = () => {
-    if (installed) return;
-    installed = true;
-    originalGet('/api/owner/full-overview', (req, res) => {
-      if (!isOwner(req)) return res.status(403).json({success:false, message:'هذه المنطقة مخصصة لمالك المنصة'});
-      try {
-        const count = t => db.prepare(`SELECT COUNT(*) AS c FROM ${t}`).get().c;
-        const pending = db.prepare("SELECT COUNT(*) AS c FROM admin_requests WHERE status IN ('new','review','pending')").get().c;
-        res.json({success:true, counts:{
-          schools:count('schools'), users:count('users'), students:count('students'),
-          teachers:db.prepare("SELECT COUNT(*) AS c FROM users WHERE role='معلم'").get().c,
-          parents:count('parents'), employees:count('employees'), classes:count('classes'), subjects:count('subjects'),
-          attendance:count('attendance'), results:count('results'), announcements:count('announcements'),
-          subscriptions:count('subscriptions'), pendingRequests:pending
-        }, recent:{
-          schools:db.prepare('SELECT * FROM schools ORDER BY id DESC LIMIT 5').all(),
-          activity:db.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 10').all()
-        }});
-      } catch (e) {
-        console.error('OWNER_FULL_OVERVIEW:', e.stack || e);
-        res.status(500).json({success:false, message:'حدث خطأ داخلي في الخادم', error:String(e.message || e)});
-      }
-    });
-    originalGet('/api/owner/schools', (req, res) => {
-      if (!isOwner(req)) return res.status(403).json({success:false, message:'هذه المنطقة مخصصة لمالك المنصة'});
-      try { res.json({success:true, schools:db.prepare('SELECT * FROM schools ORDER BY id DESC').all()}); }
-      catch (e) { console.error('OWNER_SCHOOLS_GET:', e.stack || e); res.status(500).json({success:false,message:'حدث خطأ داخلي في الخادم',error:String(e.message || e)}); }
-    });
-    originalPost('/api/owner/schools', (req, res) => {
-      if (!isOwner(req)) return res.status(403).json({success:false, message:'هذه المنطقة مخصصة لمالك المنصة'});
-      try {
-        const b = req.body || {};
-        const name = String(b.name || '').trim();
-        if (!name) return res.status(400).json({success:false,message:'اسم المدرسة مطلوب'});
-        const result = db.prepare('INSERT INTO schools(name,description,logo,active) VALUES(?,?,?,1)').run(
-          name, String(b.description || ''), String(b.logo || '')
-        );
-        if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_logs'").get() && req.user?.id) {
-          try { db.prepare('INSERT INTO audit_logs(user_id,action,details) VALUES(?,?,?)').run(req.user.id,'create_school',`school_id=${result.lastInsertRowid}`); } catch (_) {}
-        }
-        res.status(201).json({success:true,id:Number(result.lastInsertRowid),school:db.prepare('SELECT * FROM schools WHERE id=?').get(result.lastInsertRowid)});
-      } catch (e) {
-        console.error('OWNER_SCHOOLS_POST:', e.stack || e);
-        res.status(500).json({success:false,message:'تعذر إضافة المدرسة',error:String(e.message || e)});
-      }
-    });
-  };
-  app.use = function(pathOrMiddleware, ...handlers) {
-    const result = originalUse(pathOrMiddleware, ...handlers);
-    if (pathOrMiddleware === '/api/owner') installRoutes();
-    return result;
-  };
-}
-
-Module._load = function(request, ...args) {
-  const loaded = originalLoad.call(this, request, ...args);
-  if (request !== 'express') return loaded;
-  const wrapped = function(...args2) {
-    const app = loaded(...args2);
-    install(app);
-    return app;
-  };
-  Object.setPrototypeOf(wrapped, loaded);
-  wrapped.prototype = loaded.prototype;
-  for (const key of Object.keys(loaded)) wrapped[key] = loaded[key];
-  return wrapped;
-};
+try{migrateSchools();}catch(e){console.error('OWNER_RUNTIME_SCHEMA:',e.stack||e);}
+function isOwner(req){return ['مبرمج','مبرمج النظام','مالك المنصة','owner'].includes(req.user?.role)||['مبرمج','مبرمج النظام','مالك المنصة','owner'].includes(req.enhancedUser?.role);}
+function install(app){if(app.__ownerRuntimeFixInstalled)return;app.__ownerRuntimeFixInstalled=true;const originalUse=app.use.bind(app),originalGet=app.get.bind(app),originalPost=app.post.bind(app);let installed=false;const installRoutes=()=>{if(installed)return;installed=true;
+originalGet('/api/owner/full-overview',(req,res)=>{if(!isOwner(req))return res.status(403).json({success:false,message:'هذه المنطقة مخصصة لمالك المنصة'});try{const count=t=>db.prepare(`SELECT COUNT(*) AS c FROM ${t}`).get().c;const pending=hasColumn('admin_requests','status')?db.prepare("SELECT COUNT(*) AS c FROM admin_requests WHERE status IN ('new','review','pending')").get().c:0;res.json({success:true,counts:{schools:count('schools'),users:count('users'),students:count('students'),teachers:db.prepare("SELECT COUNT(*) AS c FROM users WHERE role='معلم'").get().c,parents:count('parents'),employees:count('employees'),classes:count('classes'),subjects:count('subjects'),attendance:count('attendance'),results:count('results'),announcements:count('announcements'),subscriptions:count('subscriptions'),pendingRequests:pending},recent:{schools:db.prepare('SELECT * FROM schools ORDER BY id DESC LIMIT 5').all(),activity:hasColumn('audit_logs','id')?db.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 10').all():[]}});}catch(e){console.error('OWNER_FULL_OVERVIEW:',e.stack||e);res.status(500).json({success:false,message:'حدث خطأ داخلي في الخادم',error:String(e.message||e)});}});
+originalGet('/api/owner/schools',(req,res)=>{if(!isOwner(req))return res.status(403).json({success:false,message:'هذه المنطقة مخصصة لمالك المنصة'});try{res.json({success:true,schools:db.prepare('SELECT * FROM schools ORDER BY id DESC').all()});}catch(e){console.error('OWNER_SCHOOLS_GET:',e.stack||e);res.status(500).json({success:false,message:'حدث خطأ داخلي في الخادم',error:String(e.message||e)});}});
+originalPost('/api/owner/schools',(req,res)=>{if(!isOwner(req))return res.status(403).json({success:false,message:'هذه المنطقة مخصصة لمالك المنصة'});try{const b=req.body||{},name=String(b.name||'').trim();if(!name)return res.status(400).json({success:false,message:'اسم المدرسة مطلوب'});const cols=columns('schools');const vals={name,description:String(b.description||''),logo:String(b.logo||''),active:1,logo_url:String(b.logo_url||b.logo||''),primary_color:String(b.primary_color||'#173b70'),secondary_color:String(b.secondary_color||'#24579b'),phone:String(b.phone||''),email:String(b.email||''),address:String(b.address||''),status:String(b.status||'active'),plan:String(b.plan||'basic'),subscription_status:String(b.subscription_status||'trial'),max_students:Number(b.max_students||500),notes:String(b.notes||'')};if(cols.has('code')){const base=(name.replace(/[^\\p{L}\\p{N}]+/gu,'').slice(0,8).toUpperCase()||'SCHOOL');let code=`${base}-${Date.now().toString().slice(-6)}`,n=1;while(db.prepare('SELECT 1 FROM schools WHERE code=?').get(code))code=`${base}-${Date.now().toString().slice(-6)}-${n++}`;vals.code=code;}const insertCols=[],placeholders=[],params=[];for(const [k,v] of Object.entries(vals)){if(cols.has(k)){insertCols.push(k);placeholders.push('?');params.push(v);}}const r=db.prepare(`INSERT INTO schools(${insertCols.join(',')}) VALUES(${placeholders.join(',')})`).run(...params);if(hasColumn('schools','updated_at'))db.prepare('UPDATE schools SET updated_at=CURRENT_TIMESTAMP WHERE id=?').run(r.lastInsertRowid);if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_logs'").get()&&req.user?.id){try{db.prepare('INSERT INTO audit_logs(user_id,action,details) VALUES(?,?,?)').run(req.user.id,'create_school',`school_id=${r.lastInsertRowid}`);}catch(_){}}res.status(201).json({success:true,id:Number(r.lastInsertRowid),school:db.prepare('SELECT * FROM schools WHERE id=?').get(r.lastInsertRowid)});}catch(e){console.error('OWNER_SCHOOLS_POST:',e.stack||e);res.status(500).json({success:false,message:'تعذر إضافة المدرسة',error:String(e.message||e)});}});
+};app.use=function(pathOrMiddleware,...handlers){const result=originalUse(pathOrMiddleware,...handlers);if(pathOrMiddleware==='/api/owner')installRoutes();return result;};}
+Module._load=function(request,...args){const loaded=originalLoad.call(this,request,...args);if(request!=='express')return loaded;const wrapped=function(...args2){const app=loaded(...args2);install(app);return app;};Object.setPrototypeOf(wrapped,loaded);wrapped.prototype=loaded.prototype;for(const key of Object.keys(loaded))wrapped[key]=loaded[key];return wrapped;};
