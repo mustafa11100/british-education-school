@@ -10,9 +10,19 @@ Module._load=function(request,parent,isMain){
     let captured=false;
     for(const [name,original] of Object.entries(originalMethods)){
       app[name]=function(...args){
-        if(!captured && args.some(x=>typeof x==='function'&&x.name==='auth')){
-          captured=true;
-          try{originalUse('/__auth_capture__',args.find(x=>typeof x==='function'&&x.name==='auth'));}catch(_){ }
+        if(!captured){
+          const auth=args.find(x=>typeof x==='function'&&x.name==='auth');
+          if(auth){
+            captured=true;
+            try{
+              // The owner dashboard APIs are protected by the same authentication
+              // middleware as the rest of the application. Mounting the captured
+              // middleware on /api/owner fixes the mismatch where the dashboard was
+              // logged in but its nested school APIs saw an unauthenticated request.
+              originalUse('/api/owner',auth);
+              originalUse('/__auth_capture__',auth);
+            }catch(_){ }
+          }
         }
         return original(...args);
       };
