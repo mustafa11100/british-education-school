@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduCore | لوحة المستخدم</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Tajawal,Tahoma,Arial,sans-serif;background:#f4f7fb;color:#172033}.top{height:70px;background:#fff;border-bottom:1px solid #e5eaf2;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:20}.brand{font-weight:900;color:#0b3b82;font-size:19px}.user{display:flex;gap:12px;align-items:center}.logout{border:0;background:#fff0f1;color:#a61b24;border-radius:9px;padding:9px 14px;font-weight:800;cursor:pointer}.layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 70px)}aside{background:linear-gradient(180deg,#092d68,#0b428d);padding:15px 10px;color:#fff}.nav{display:block;width:100%;border:0;background:transparent;color:#e8f0ff;text-align:right;padding:11px;border-radius:9px;cursor:pointer;font-size:14px;margin:3px 0}.nav:hover,.nav.active{background:#ffffff1b}.main{padding:24px;max-width:1500px;width:100%;margin:auto}.view{display:none}.view.active{display:block}.card{background:#fff;border:1px solid #e4e9f1;border-radius:15px;padding:21px;margin-bottom:18px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#fff;border:1px solid #e4e9f1;border-radius:14px;padding:17px}.num{font-size:28px;font-weight:900;margin-top:6px}.label{font-size:12px;color:#718096}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #edf0f4;text-align:right}th{background:#f8fafc}.empty{padding:30px;text-align:center;color:#718096}.btn{border:0;background:#1761cf;color:#fff;border-radius:9px;padding:10px 15px;font-weight:800;cursor:pointer}.btn.secondary{background:#eef3fb;color:#173b70}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}.field{margin:10px 0}.field label{display:block;font-weight:800;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #d6deea;border-radius:8px;padding:10px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}#login-screen{display:none;min-height:calc(100vh - 70px);align-items:center;justify-content:center}.loader-box{padding:20px}.notification{position:fixed;top:85px;left:20px;z-index:99999;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 30px #0002}.notification-error{color:#991b1b}.notification-success{color:#166534}@media(max-width:760px){.layout{grid-template-columns:1fr}aside{display:flex;overflow:auto;gap:5px}.nav{min-width:max-content}.main{padding:14px}.stats{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand">🎓 EduCore Platform</div><div class="user"><span id="school-name">المدرسة</span><b id="user-name">المستخدم</b><span id="user-role">مستخدم</span><button class="logout" onclick="logout()">تسجيل الخروج</button></div></header>
+<div id="login-screen"></div>
+<div id="app" class="layout">
+<aside>
+<button class="nav active" data-page="dashboard" onclick="navigate('dashboard')">🏠 الرئيسية</button>
+<button class="nav" data-page="users" onclick="navigate('users')">👥 المستخدمون</button>
+<button class="nav" data-page="schools" onclick="navigate('schools')">🏫 المدرسة</button>
+<button class="nav" data-page="students" onclick="navigate('students')">👨‍🎓 الطلاب</button>
+<button class="nav" data-page="employees" onclick="navigate('employees')">👥 الموظفون</button>
+<button class="nav" data-page="attendance" onclick="navigate('attendance')">📅 الحضور والغياب</button>
+<button class="nav" data-page="notes" onclick="navigate('notes')">📝 الملاحظات</button>
+<button class="nav" data-page="lessons" onclick="navigate('lessons')">📚 الدروس</button>
+<button class="nav" data-page="requests" onclick="navigate('requests')">📋 الطلبات</button>
+<button class="nav" data-page="announcements" onclick="navigate('announcements')">📢 الإعلانات</button>
+<button class="nav" data-page="audit" onclick="navigate('audit')">🧾 سجل العمليات</button>
+</aside>
+<main class="main">
+<section data-section="dashboard" class="view active"><div class="card"><h1>لوحة التحكم</h1><p>مرحبًا بك في منصة EduCore.</p><div class="stats"><div class="stat"><div class="label">المستخدمون</div><div id="total-users" class="num">0</div></div><div class="stat"><div class="label">الطلاب</div><div id="total-students" class="num">0</div></div><div class="stat"><div class="label">الموظفون</div><div id="total-employees" class="num">0</div></div><div class="stat"><div class="label">الحضور اليوم</div><div id="present-today" class="num">0</div></div></div></div><div class="card"><h2>آخر العمليات</h2><div id="recent-activities" class="empty">جاري تحميل البيانات...</div></div></section>
+<section data-section="users" class="view"><div class="card"><h2>👥 المستخدمون</h2><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الدور</th><th>الحالة</th></tr></thead><tbody id="users-table-body"><tr><td colspan="4">جاري التحميل...</td></tr></tbody></table></div></div></section>
+<section data-section="schools" class="view"><div class="card"><h2>🏫 المدرسة</h2><div id="schoolsList" class="empty">جاري تحميل بيانات المدرسة...</div></div></section>
+<section data-section="students" class="view"><div class="card"><h2>👨‍🎓 الطلاب</h2><div id="studentsList" class="empty">جاري التحميل...</div></div></section>
+<section data-section="employees" class="view"><div class="card"><h2>👥 الموظفون</h2><div id="employeesList" class="empty">يمكن فتح وحدة شؤون الموظفين من الزر الظاهر أسفل الشاشة.</div></div></section>
+<section data-section="attendance" class="view"><div class="card"><h2>📅 الحضور والغياب</h2><div id="attendanceList" class="empty">جاري التحميل...</div></div></section>
+<section data-section="notes" class="view"><div class="card"><h2>📝 الملاحظات</h2><div id="notesList" class="empty">جاري التحميل...</div></div></section>
+<section data-section="lessons" class="view"><div class="card"><h2>📚 الدروس</h2><div id="lessonsList" class="empty">جاري التحميل...</div></div></section>
+<section data-section="requests" class="view"><div class="card"><h2>📋 الطلبات</h2><div id="requestsList" class="empty">جاري التحميل...</div></div></section>
+<section data-section="announcements" class="view"><div class="card"><h2>📢 الإعلانات</h2><div id="announcementsList" class="empty">جاري التحميل...</div></div></section>
+<section data-section="audit" class="view"><div class="card"><h2>🧾 سجل العمليات</h2><div id="auditList" class="empty">جاري التحميل...</div></div></section>
+</main></div>
+<script src="/app.js"></script><script src="/portal.js"></script>
+<script>window.addEventListener('load',()=>{if(typeof checkSession==='function')checkSession();});</script>
+</body></html>
