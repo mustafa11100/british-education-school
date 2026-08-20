@@ -1,36 +1,6 @@
-const Module=require('module');
-const previous=Module._load;
-Module._load=function(request,parent,isMain){
-  const loaded=previous.apply(this,arguments);
-  if(request!=='express') return loaded;
-  const wrapped=function(){
-    const app=loaded();
-    const originalUse=app.use.bind(app);
-    const originalMethods={get:app.get.bind(app),post:app.post.bind(app),put:app.put.bind(app),patch:app.patch.bind(app),delete:app.delete.bind(app)};
-    let captured=false;
-    for(const [name,original] of Object.entries(originalMethods)){
-      app[name]=function(...args){
-        if(!captured){
-          const auth=args.find(x=>typeof x==='function'&&x.name==='auth');
-          if(auth){
-            captured=true;
-            try{
-              // The owner dashboard APIs are protected by the same authentication
-              // middleware as the rest of the application. Mounting the captured
-              // middleware on /api/owner fixes the mismatch where the dashboard was
-              // logged in but its nested school APIs saw an unauthenticated request.
-              originalUse('/api/owner',auth);
-              originalUse('/__auth_capture__',auth);
-            }catch(_){ }
-          }
-        }
-        return original(...args);
-      };
-    }
-    return app;
-  };
-  Object.setPrototypeOf(wrapped,loaded);
-  wrapped.prototype=loaded.prototype;
-  for(const k of Object.keys(loaded)) wrapped[k]=loaded[k];
-  return wrapped;
-};
+const Module=require('module');const previous=Module._load;
+Module._load=function(request,parent,isMain){const loaded=previous.apply(this,arguments);if(request!=='express')return loaded;const wrapped=function(){const app=loaded();const originalUse=app.use.bind(app);const originalMethods={get:app.get.bind(app),post:app.post.bind(app),put:app.put.bind(app),patch:app.patch.bind(app),delete:app.delete.bind(app)};
+const cookieAuth=(req,res,next)=>{try{if(!req.headers.authorization){const raw=String(req.headers.cookie||'');const m=raw.match(/(?:^|;\s*)educore_token=([^;]+)/);if(m)req.headers.authorization=`Bearer ${decodeURIComponent(m[1])}`}}catch(_){}next()};
+for(const [name,original] of Object.entries(originalMethods)){app[name]=function(...args){if(name==='post'&&args[0]==='/api/auth/login'&&typeof args[1]==='function'){const handler=args[1];args[1]=function(req,res,next){const oldJson=res.json.bind(res);res.json=function(body){try{if(body&&body.success&&body.token){const secure=process.env.NODE_ENV==='production'?'; Secure':'';res.setHeader('Set-Cookie',`educore_token=${encodeURIComponent(body.token)}; Path=/; HttpOnly; SameSite=Lax${secure}`)}}catch(_){}return oldJson(body)};return handler(req,res,next)}}return original(...args)};
+const oldUse=app.use.bind(app);app.use=function(...args){const pathArg=args[0];if(pathArg==='/api/owner'){const handlers=args.slice(1);return oldUse('/api/owner',cookieAuth,...handlers)}if(pathArg==='/api'){const handlers=args.slice(1);return oldUse('/api',cookieAuth,...handlers)}return oldUse(...args)};
+return app};Object.setPrototypeOf(wrapped,loaded);wrapped.prototype=loaded.prototype;for(const k of Object.keys(loaded))wrapped[k]=loaded[k];return wrapped};
