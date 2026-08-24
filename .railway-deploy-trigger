@@ -1,2 +1,3 @@
-Railway deployment trigger — 2026-08-19
-The employee-management.js Express wrapper fix is already present on main at 4746c0b19c581742adccd526d3fef4c4ee0f5a93.
+Railway deployment trigger — 2026-08-24
+EduCore runtime foundation update committed at 2644f481eb884f2bf59a35b55146ac335b2f0529.
+Includes Supabase client dependency and explicit body-parser dependency while preserving Node 20.20.2 and the existing SQLite bootstrap during the migration phase.
