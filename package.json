@@ -4,7 +4,7 @@
   "description":"منصة EduCore Platform لإدارة المدارس والمؤسسات التعليمية",
   "main":"server.js",
   "scripts":{
-    "start":"node bootstrap-db.js && node proxy2.js",
+    "start":"NODE_OPTIONS=--require=./auth-patch.js node bootstrap-db.js && NODE_OPTIONS=--require=./auth-patch.js node proxy2.js",
     "postinstall":"npm rebuild better-sqlite3 --build-from-source"
   },
   "dependencies":{
