@@ -1,3 +1,2 @@
-Railway deployment trigger — 2026-08-24
-EduCore runtime foundation update committed at 2644f481eb884f2bf59a35b55146ac335b2f0529.
-Includes Supabase client dependency and explicit body-parser dependency while preserving Node 20.20.2 and the existing SQLite bootstrap during the migration phase.
+Railway deployment trigger — 2026-08-25
+EduCore registration routing, owner request sync, and readable username fixes committed at 67212d78fddb0bc03c8922798c92066ba1637322.
