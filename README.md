@@ -1,18 +1,5 @@
-# EduCore Platform — Full Stack
+# EduCore V2
 
-منصة إدارة المدارس والمؤسسات التعليمية متعددة المؤسسات.
+Fresh rebuild of the EduCore school management platform.
 
-## الهوية
-- اسم المنصة: **EduCore Platform**
-- إنتاج وتطوير: **مصطفى عادل الحاج زيدان**
-- النسخة الحالية: Production refresh 2026-08-19
-
-## التشغيل
-- Node.js 20+
-- `npm install`
-- `npm start`
-
-## ملاحظات الإنتاج
-- يجب أن يشير Railway إلى فرع `main`.
-- يجب تنفيذ Deploy جديد بعد كل تحديث.
-- راجع متغيرات البيئة الخاصة بالبريد وHTTPS قبل الاستخدام الفعلي.
+The previous implementation is preserved in the `archive/educore-v1-before-rebuild` branch.
